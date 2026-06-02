@@ -1,0 +1,279 @@
+{
+	"info": {
+		"name": "API MJA Project",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password\"\n}"
+						},
+						"url": "{{baseUrl}}/login"
+					}
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/users"
+					}
+				},
+				{
+					"name": "Get User By Id",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/users/1"
+					}
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nama\": \"Admin User\",\n  \"roleId\": 1,\n  \"username\": \"admin\",\n  \"password\": \"password\",\n  \"createdBy\": \"system\"\n}"
+						},
+						"url": "{{baseUrl}}/users"
+					}
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nama\": \"Admin User\",\n  \"roleId\": 1,\n  \"username\": \"admin\",\n  \"password\": \"new-password\",\n  \"createdBy\": \"system\"\n}"
+						},
+						"url": "{{baseUrl}}/users/1"
+					}
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"url": "{{baseUrl}}/users/1"
+					}
+				}
+			]
+		},
+		{
+			"name": "Roles",
+			"item": [
+				{
+					"name": "Get All Roles",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/roles"
+					}
+				},
+				{
+					"name": "Get Role By Id",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/roles/1"
+					}
+				},
+				{
+					"name": "Create Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"namaRole\": \"Admin\",\n  \"description\": \"Administrator\",\n  \"createdBy\": \"system\"\n}"
+						},
+						"url": "{{baseUrl}}/roles"
+					}
+				},
+				{
+					"name": "Update Role",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"namaRole\": \"Admin\",\n  \"description\": \"Administrator updated\",\n  \"createdBy\": \"system\"\n}"
+						},
+						"url": "{{baseUrl}}/roles/1"
+					}
+				},
+				{
+					"name": "Delete Role",
+					"request": {
+						"method": "DELETE",
+						"url": "{{baseUrl}}/roles/1"
+					}
+				}
+			]
+		},
+		{
+			"name": "Menus",
+			"item": [
+				{
+					"name": "Get All Menus",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/menus"
+					}
+				},
+				{
+					"name": "Get Menu By Id",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/menus/1"
+					}
+				},
+				{
+					"name": "Create Menu",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"/dashboard\",\n  \"namaMenu\": \"Dashboard\",\n  \"parentId\": null,\n  \"menuParent\": null,\n  \"menuSubParent\": null,\n  \"iconMenu\": \"LayoutDashboard\",\n  \"levelMenu\": 1,\n  \"tipeMenu\": \"Header\",\n  \"noUrut\": 1,\n  \"createdBy\": \"system\"\n}"
+						},
+						"url": "{{baseUrl}}/menus"
+					}
+				},
+				{
+					"name": "Update Menu",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"/dashboard\",\n  \"namaMenu\": \"Dashboard\",\n  \"parentId\": null,\n  \"menuParent\": null,\n  \"menuSubParent\": null,\n  \"iconMenu\": \"LayoutDashboard\",\n  \"levelMenu\": 1,\n  \"tipeMenu\": \"Header\",\n  \"noUrut\": 1,\n  \"createdBy\": \"system\"\n}"
+						},
+						"url": "{{baseUrl}}/menus/1"
+					}
+				},
+				{
+					"name": "Delete Menu",
+					"request": {
+						"method": "DELETE",
+						"url": "{{baseUrl}}/menus/1"
+					}
+				}
+			]
+		},
+		{
+			"name": "Utility",
+			"item": [
+				{
+					"name": "Root",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": "{{baseUrl}}/"
+					}
+				},
+				{
+					"name": "Get Akses Role",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/akses/role/1"
+					}
+				},
+				{
+					"name": "Save Akses Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"id\": 1,\n    \"name\": \"Dashboard\",\n    \"checked\": true,\n    \"children\": [\n      {\n        \"id\": 2,\n        \"name\": \"Project\",\n        \"checked\": true\n      }\n    ]\n  }\n]"
+						},
+						"url": "{{baseUrl}}/saveAksesRole/1"
+					}
+				},
+				{
+					"name": "Get Akses By Email",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/getAkses/admin"
+					}
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:9090"
+		},
+		{
+			"key": "token",
+			"value": ""
+		}
+	]
+}
