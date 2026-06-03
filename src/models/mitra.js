@@ -7,7 +7,7 @@ const createNewMitra = async (body) => {
 
     // Check if mitra already exists
     const [existingMitra] = await dbPool.execute(
-      "SELECT * FROM tbl_mitra WHERE kodeMitra = ?",
+      "SELECT id FROM tbl_mitra WHERE kodeMitra = ?",
       [kodeMitra]
     );
 
@@ -39,7 +39,7 @@ const updateMitra = async (id, body) => {
 
     // Check if mitra exists
     const [existingMitra] = await dbPool.execute(
-      "SELECT * FROM tbl_mitra WHERE id = ?",
+      "SELECT kodeMitra FROM tbl_mitra WHERE id = ?",
       [id]
     );
     if (existingMitra.length === 0) {
@@ -52,10 +52,12 @@ const updateMitra = async (id, body) => {
     // Update the mitra data - only update available fields
     const SQLQuery = `UPDATE tbl_mitra SET
       kodeMitra = ?,
-      namaMitra = ?
+      namaMitra = ?,
+      updatedBy = ?,  
+      updatedDate = ?    
       WHERE id = ?`;
 
-    const values = [kodeMitra, namaMitra, id];
+    const values = [kodeMitra, namaMitra, updatedBy, updatedDate, id];
 
     await dbPool.execute(SQLQuery, values);
 
@@ -80,7 +82,7 @@ const deleteMitra = async (id) => {
   try {
     // Check if mitra exists
     const [existingMitra] = await dbPool.execute(
-      "SELECT * FROM tbl_mitra WHERE id = ?",
+      "SELECT kodeMitra FROM tbl_mitra WHERE id = ?",
       [id]
     );
     if (existingMitra.length === 0) {
@@ -100,7 +102,7 @@ const deleteMitra = async (id) => {
 const getMitraById = async (id) => {
   try {
     const [mitra] = await dbPool.execute(
-      "SELECT * FROM tbl_mitra WHERE id = ?",
+      "SELECT kodeMitra FROM tbl_mitra WHERE id = ?",
       [id]
     );
     if (mitra.length === 0) {
