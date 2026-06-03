@@ -65,7 +65,32 @@ const updateMitra = async (req, res) => {
   }
 };
 
+const deleteMitra = async (req, res) => {
+  const { id } = req.params;
+
+  console.log("DELETE REQUEST:", { id });
+
+  try {
+    await MitraModel.deleteMitra(id);
+    res.status(200).json({
+      message: "Delete Mitra success",
+      data: null,
+    });
+  } catch (error) {
+    if (error.message === "data not found") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   createNewMitra,
   updateMitra,
+  deleteMitra,
 };

@@ -76,7 +76,29 @@ const updateMitra = async (id, body) => {
   }
 };
 
+const deleteMitra = async (id) => {
+  try {
+    // Check if mitra exists
+    const [existingMitra] = await dbPool.execute(
+      "SELECT * FROM tbl_mitra WHERE id = ?",
+      [id]
+    );
+    if (existingMitra.length === 0) {
+      throw new Error("data not found");
+    }
+
+    // Execute DELETE query
+    const SQLQuery = "DELETE FROM tbl_mitra WHERE id = ?";
+    const result = await dbPool.execute(SQLQuery, [id]);
+
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   createNewMitra,
   updateMitra,
+  deleteMitra,
 };
