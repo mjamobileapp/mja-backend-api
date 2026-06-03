@@ -33,25 +33,44 @@ const createNewMitra = async (body) => {
   }
 };
 
-const updateMitra = async (id) => {
-  const [mitra] = await dbPool.execute("SELECT * FROM tbl_mitra WHERE id = ?", [
-    id,
-  ]);
-  if (mitra.length === 0) {
-    throw new Error("data not found");
+const updateMitra = async (id, body) => {
+  try {
+    const { kodeMitra, namaMitra, updatedBy } = body;
+
+    // Check if mitra exists
+    const [existingMitra] = await dbPool.execute(
+      "SELECT * FROM tbl_mitra WHERE id = ?",
+      [id]
+    );
+    if (existingMitra.length === 0) {
+      throw new Error("data not found");
+    }
+
+    // Get current timestamp
+    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+
+    // Update the mitra data
+    const SQLQuery = `UPDATE tbl_mitra SET
+      kodeMitra = ?,
+      namaMitra = ?,
+      updatedBy = ?,
+      updatedDate = ?
+      WHERE id = ?`;
+
+    const values = [kodeMitra, namaMitra, updatedBy, updatedDate, id];
+
+    await dbPool.execute(SQLQuery, values);
+
+    // Fetch and return the updated mitra data
+    const [updatedMitra] = await dbPool.execute(
+      "SELECT * FROM tbl_mitra WHERE id = ?",
+      [id]
+    );
+
+    return updatedMitra[0];
+  } catch (error) {
+    throw error;
   }
-
-  const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
-  await dbPool.execute("UPDATE tbl_mitra SET updatedDate = ? WHERE id = ?", [
-    updatedDate,
-    id,
-  ]);
-
-  const [updatedMitra] = await dbPool.execute(
-    "SELECT * FROM tbl_mitra WHERE id = ?",
-    [id]
-  );
-  return updatedMitra[0];
 };
 
 module.exports = {

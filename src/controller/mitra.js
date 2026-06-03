@@ -35,8 +35,19 @@ const createNewMitra = async (req, res) => {
 
 const updateMitra = async (req, res) => {
   const { id } = req.params;
+  const { body } = req;
+
+  console.log("UPDATE REQUEST:", { id, body });
+
+  // Validate required fields
+  if (!body.kodeMitra || !body.namaMitra || !body.updatedBy) {
+    return res.status(400).json({
+      message: "Bad request, missing required fields",
+    });
+  }
+
   try {
-    const data = await MitraModel.updateMitra(id);
+    const data = await MitraModel.updateMitra(id, body);
     res.status(200).json({
       message: "UPDATE Mitra success",
       data: data,
