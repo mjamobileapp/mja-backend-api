@@ -1,0 +1,42 @@
+buatkan issue.md yang berisi perencanaan untuk nanti diimplementasikan oleh junior programmer atau ai model yang lebih murah.
+
+Isi dari planningnya adalah sebagai berikut:
+
+1. buat table Mitra:
+`id` INT AUTO_INCREMENT PRIMARY KEY,
+`kodeMitra` VARCHAR(50) NOT NULL UNIQUE,
+`namaMitra` VARCHAR(100) NOT NULL,
+`createdDate` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+`createdBy` VARCHAR(100) NOT NULL,
+
+2. buatkan api untuk registrasi mitra baru
+
+Endpoint : POST /mitra
+
+Request Body:
+{
+  "kodeMitra": "Hamdan",
+  "kodeMitra": 1,
+  "password": "adminmja123",
+  "createdBy": "system"
+}
+
+Response Body (Success) :
+{
+    "message": "CREATE new Mitra success",
+    "data": {
+        "kodeMitra": "Hamdan",
+		"kodeMitra": 1,
+		"password": "adminmja123",
+		"createdBy": "system"
+    }
+}
+
+Response Body (Error) :
+{
+    "error": "Mitra sudah terdaftar",
+}
+
+Struktur file sesuaikan dengan yang sudah ada.
+
+Jelaskan tahapan-tahapan yang harus dilakukan untuk mengimplementasikan fitur ini, anggap nanti yang mengimplementasikan adalah junior programmer atau model AI yang lebih murah.
