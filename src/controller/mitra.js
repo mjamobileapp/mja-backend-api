@@ -33,6 +33,28 @@ const createNewMitra = async (req, res) => {
   }
 };
 
+const updateMitra = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const data = await MitraModel.updateMitra(id);
+    res.status(200).json({
+      message: "UPDATE Mitra success",
+      data: data,
+    });
+  } catch (error) {
+    if (error.message === "data not found") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   createNewMitra,
+  updateMitra,
 };

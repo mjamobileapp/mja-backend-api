@@ -17,7 +17,7 @@ const createNewMitra = async (body) => {
 
     const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
 
-        const SQLQuery = `INSERT INTO tbl_mitra (
+    const SQLQuery = `INSERT INTO tbl_mitra (
       kodeMitra,
       namaMitra,
       createdBy,
@@ -33,6 +33,28 @@ const createNewMitra = async (body) => {
   }
 };
 
+const updateMitra = async (id) => {
+  const [mitra] = await dbPool.execute("SELECT * FROM tbl_mitra WHERE id = ?", [
+    id,
+  ]);
+  if (mitra.length === 0) {
+    throw new Error("data not found");
+  }
+
+  const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+  await dbPool.execute("UPDATE tbl_mitra SET updatedDate = ? WHERE id = ?", [
+    updatedDate,
+    id,
+  ]);
+
+  const [updatedMitra] = await dbPool.execute(
+    "SELECT * FROM tbl_mitra WHERE id = ?",
+    [id]
+  );
+  return updatedMitra[0];
+};
+
 module.exports = {
   createNewMitra,
+  updateMitra,
 };
