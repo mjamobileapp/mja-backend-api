@@ -1,3 +1,4 @@
+
 ## 🚀 Project MJA Smart Laundry
 Project MJA Smart Laundry adalah sebuah aplikasi berbasis mobile yang dirancang untuk memberikan solusi manajemen operasional terpadu (End-to-End) yang menggabungkan kecanggihan Aplikasi Mobile dengan Internet of Things (IoT). Aplikasi ini bertujuan untuk mengotomatisasi bisnis, menutup celah kecurangan, dan memantau seluruh cabang dalam satu genggaman.
 
