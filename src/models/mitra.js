@@ -102,7 +102,7 @@ const deleteMitra = async (id) => {
 const getMitraById = async (id) => {
   try {
     const [mitra] = await dbPool.execute(
-      "SELECT kodeMitra FROM tbl_mitra WHERE id = ?",
+      "SELECT * FROM tbl_mitra WHERE id = ?",
       [id]
     );
     if (mitra.length === 0) {
