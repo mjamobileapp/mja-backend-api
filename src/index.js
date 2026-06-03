@@ -13,6 +13,7 @@ const roleRoutes = require("./routes/roles");
 const menuRoutes = require("./routes/menus");
 const aksesRoutes = require("./routes/akses");
 const mitraRoutes = require("./routes/mitra");
+const cabangRoutes = require("./routes/cabang");
 
 const app = express();
 const PORT = process.env.PORT || 9090;
@@ -68,6 +69,7 @@ app.use("/roles", roleRoutes);
 app.use("/menus", menuRoutes);
 app.use("/akses", aksesRoutes);
 app.use("/mitra", mitraRoutes);
+app.use("/cabang", cabangRoutes);
 // ================= rencana ==================
 
 app.get("/", (req, res) => {
