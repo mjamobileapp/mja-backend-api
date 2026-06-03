@@ -49,15 +49,13 @@ const updateMitra = async (id, body) => {
     // Get current timestamp
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
 
-    // Update the mitra data
+    // Update the mitra data - only update available fields
     const SQLQuery = `UPDATE tbl_mitra SET
       kodeMitra = ?,
-      namaMitra = ?,
-      updatedBy = ?,
-      updatedDate = ?
+      namaMitra = ?
       WHERE id = ?`;
 
-    const values = [kodeMitra, namaMitra, updatedBy, updatedDate, id];
+    const values = [kodeMitra, namaMitra, id];
 
     await dbPool.execute(SQLQuery, values);
 
@@ -67,7 +65,12 @@ const updateMitra = async (id, body) => {
       [id]
     );
 
-    return updatedMitra[0];
+    // Add updatedBy and updatedDate to response if updating
+    const result = updatedMitra[0];
+    result.updatedBy = updatedBy;
+    result.updatedDate = updatedDate;
+
+    return result;
   } catch (error) {
     throw error;
   }
