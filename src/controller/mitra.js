@@ -89,8 +89,33 @@ const deleteMitra = async (req, res) => {
   }
 };
 
+const getMitraById = async (req, res) => {
+  const { id } = req.params;
+
+  console.log("GET BY ID REQUEST:", { id });
+
+  try {
+    const data = await MitraModel.getMitraById(id);
+    res.status(200).json({
+      message: "Get by Id Mitra success",
+      data: data,
+    });
+  } catch (error) {
+    if (error.message === "data not found") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   createNewMitra,
   updateMitra,
   deleteMitra,
+  getMitraById,
 };
