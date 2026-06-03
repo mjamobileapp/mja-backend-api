@@ -6,5 +6,6 @@ const router = express.Router();
 
 router.post("/", authenticate, MitraController.createNewMitra);
 router.put("/:id", authenticate, MitraController.updateMitra);
+router.delete("/:id", authenticate, MitraController.deleteMitra);
 
 module.exports = router;
