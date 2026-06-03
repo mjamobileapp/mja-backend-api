@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt");
 
 const createNewMitra = async (body) => {
   try {
-    const { kodeMitra, namaMitra, password, createdBy } = body;
+    const { kodeMitra, namaMitra, createdBy } = body;
 
     // Check if mitra already exists
     const [existingMitra] = await dbPool.execute(
@@ -15,19 +15,17 @@ const createNewMitra = async (body) => {
       throw new Error("Mitra sudah terdaftar");
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
     const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
 
-    const SQLQuery = `INSERT INTO tbl_mitra (
+        const SQLQuery = `INSERT INTO tbl_mitra (
       kodeMitra,
       namaMitra,
-      password,
       createdBy,
       createdDate
      )
-      VALUES (?,?,?,?,?)`;
+      VALUES (?,?,?,?)`;
 
-    const values = [kodeMitra, namaMitra, hashedPassword, createdBy, dateNow];
+    const values = [kodeMitra, namaMitra, createdBy, dateNow];
 
     return await dbPool.execute(SQLQuery, values);
   } catch (error) {

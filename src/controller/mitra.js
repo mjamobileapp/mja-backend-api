@@ -2,8 +2,9 @@ const MitraModel = require("../models/mitra");
 
 const createNewMitra = async (req, res) => {
   const { body } = req;
+  console.log("BODY REQUEST:", body);
 
-  if (!body.kodeMitra || !body.namaMitra || !body.password || !body.createdBy) {
+  if (!body.kodeMitra || !body.namaMitra || !body.createdBy) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
     });
@@ -11,12 +12,11 @@ const createNewMitra = async (req, res) => {
 
   try {
     await MitraModel.createNewMitra(body);
-    res.status(201).json({
+        res.status(201).json({
       message: "CREATE new Mitra success",
       data: {
         kodeMitra: body.kodeMitra,
         namaMitra: body.namaMitra,
-        password: body.password,
         createdBy: body.createdBy,
       },
     });
