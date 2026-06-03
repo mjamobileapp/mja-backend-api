@@ -113,9 +113,27 @@ const getMitraById = async (req, res) => {
   }
 };
 
+const getAllMitra = async (req, res) => {
+  console.log("GET ALL REQUEST");
+
+  try {
+    const data = await MitraModel.getAllMitra();
+    res.status(200).json({
+      message: "Get All Mitra success",
+      data: data,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   createNewMitra,
   updateMitra,
   deleteMitra,
   getMitraById,
+  getAllMitra,
 };

@@ -112,9 +112,21 @@ const getMitraById = async (id) => {
   }
 };
 
+const getAllMitra = async () => {
+  try {
+    const [mitras] = await dbPool.execute(
+      "SELECT * FROM tbl_mitra"
+    );
+    return mitras;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   createNewMitra,
   updateMitra,
   deleteMitra,
   getMitraById,
+  getAllMitra,
 };
