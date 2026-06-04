@@ -4,6 +4,24 @@ const createNewMesin = async (body) => {
   try {
     const { idMitra, cabangId, namaMesin, tipeMesin, kapasitas, ipAddressEsp, macAddress, status, createdBy } = body;
 
+    // 1. Validasi Mitra Exist
+    const [existingMitra] = await dbPool.execute(
+      "SELECT id FROM tbl_mitra WHERE id = ?",
+      [idMitra]
+    );
+    if (existingMitra.length === 0) {
+      throw new Error("Mitra tidak ditemukan");
+    }
+
+    // 2. Validasi Cabang Exist dan sesuai dengan Mitra
+    const [existingCabang] = await dbPool.execute(
+      "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ?",
+      [cabangId, idMitra]
+    );
+    if (existingCabang.length === 0) {
+      throw new Error("Cabang tidak ditemukan atau tidak sesuai dengan Mitra");
+    }
+
     // Check if mesin already exists
     const [existingMesin] = await dbPool.execute(
       "SELECT id FROM tbl_mesin WHERE ipAddressEsp = ?",
@@ -41,6 +59,24 @@ const createNewMesin = async (body) => {
 const updateMesin = async (id, body) => {
   try {
     const { idMitra, cabangId, namaMesin, tipeMesin, kapasitas, ipAddressEsp, macAddress, status, updatedBy } = body;
+
+    // 1. Validasi Mitra Exist
+    const [existingMitra] = await dbPool.execute(
+      "SELECT id FROM tbl_mitra WHERE id = ?",
+      [idMitra]
+    );
+    if (existingMitra.length === 0) {
+      throw new Error("Mitra tidak ditemukan");
+    }
+
+    // 2. Validasi Cabang Exist dan sesuai dengan Mitra
+    const [existingCabang] = await dbPool.execute(
+      "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ?",
+      [cabangId, idMitra]
+    );
+    if (existingCabang.length === 0) {
+      throw new Error("Cabang tidak ditemukan atau tidak sesuai dengan Mitra");
+    }
 
     // Check if mesin exists
     const [existingMesin] = await dbPool.execute(
