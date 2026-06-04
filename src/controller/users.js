@@ -1,5 +1,4 @@
 const UsersModel = require("../models/users");
-const dbPool = require("../config/database");
 const bcrypt = require("bcrypt"); // Ensure bcrypt is installed
 const { generateToken } = require("../utils/jwt");
 

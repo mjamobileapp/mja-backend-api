@@ -1,11 +1,33 @@
 const dbPool = require("../config/database");
 
 const createNewCabang = async (body) => {
+  const connection = await dbPool.getConnection();
   try {
-    const { idMitra, kodeCabang, namaCabang, alamatCabang, createdBy } = body;
+    await connection.beginTransaction();
+
+    // 1. Validasi Mitra Exist
+    const { idMitra, namaCabang, alamatCabang, createdBy } = body;
+    const [mitra] = await connection.execute("SELECT id FROM tbl_mitra WHERE id = ?", [idMitra]);
+    if (mitra.length === 0) throw new Error("Mitra tidak ditemukan");
+
+    // 2. Generate Kode Otomatis
+    const prefix = `CBG-${idMitra}-`;
+    const [rows] = await connection.execute(
+      `SELECT kodeCabang FROM tbl_cabang 
+       WHERE kodeCabang LIKE ? 
+       ORDER BY id DESC LIMIT 1 FOR UPDATE`,
+      [`${prefix}%`]
+    );
+
+    let urutan = 1;
+    if (rows.length > 0) {
+      const lastSequence = parseInt(rows[0].kodeCabang.split("-")[2], 10);
+      urutan = lastSequence + 1;
+    }
+    const kodeCabang = `${prefix}${urutan.toString().padStart(4, "0")}`;
 
     // Check if cabang already exists
-    const [existingCabang] = await dbPool.execute(
+    const [existingCabang] = await connection.execute(
       "SELECT id FROM tbl_cabang WHERE kodeCabang = ?",
       [kodeCabang]
     );
@@ -28,9 +50,15 @@ const createNewCabang = async (body) => {
 
     const values = [idMitra, kodeCabang, namaCabang, alamatCabang, createdBy, dateNow];
 
-    return await dbPool.execute(SQLQuery, values);
+    await connection.execute(SQLQuery, values);
+    await connection.commit();
+
+    return { kodeCabang, ...body };
   } catch (error) {
+    await connection.rollback();
     throw error;
+  } finally {
+    connection.release();
   }
 };
 

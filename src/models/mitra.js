@@ -1,21 +1,33 @@
 const dbPool = require("../config/database");
-
-const getLastMitraCode = async (prefix) => {
-  const [rows] = await dbPool.execute(
-    `SELECT kodeMitra FROM tbl_mitra 
-     WHERE kodeMitra LIKE ? 
-     ORDER BY kodeMitra DESC LIMIT 1`,
-    [`${prefix}%`]
-  );
-  return rows;
-};
+const { getTodayStringYYYYMMDD } = require("../utils/date");
 
 const createNewMitra = async (body) => {
+  const connection = await dbPool.getConnection();
   try {
-    const { kodeMitra, namaMitra, alamatMitra, createdBy } = body;
+    await connection.beginTransaction();
+
+    // 1. Generate Kode Otomatis
+    const todayStr = getTodayStringYYYYMMDD();
+    const prefix = `MTR-${todayStr}-`;
+
+    const [rows] = await connection.execute(
+      `SELECT kodeMitra FROM tbl_mitra 
+       WHERE kodeMitra LIKE ? 
+       ORDER BY kodeMitra DESC LIMIT 1 FOR UPDATE`,
+      [`${prefix}%`]
+    );
+
+    let urutan = 1;
+    if (rows.length > 0) {
+      const lastSequence = parseInt(rows[0].kodeMitra.split("-")[2], 10);
+      urutan = lastSequence + 1;
+    }
+    const kodeMitra = `${prefix}${urutan.toString().padStart(4, "0")}`;
+
+    const { namaMitra, alamatMitra, createdBy } = body;
 
     // Check if mitra already exists
-    const [existingMitra] = await dbPool.execute(
+    const [existingMitra] = await connection.execute(
       "SELECT id FROM tbl_mitra WHERE kodeMitra = ?",
       [kodeMitra]
     );
@@ -37,9 +49,15 @@ const createNewMitra = async (body) => {
 
     const values = [kodeMitra, namaMitra, alamatMitra, createdBy, dateNow];
 
-    return await dbPool.execute(SQLQuery, values);
+    await connection.execute(SQLQuery, values);
+    await connection.commit();
+
+    return { kodeMitra, ...body };
   } catch (error) {
+    await connection.rollback();
     throw error;
+  } finally {
+    connection.release();
   }
 };
 
@@ -136,7 +154,6 @@ const getAllMitra = async () => {
 };
 
 module.exports = {
-  getLastMitraCode,
   createNewMitra,
   updateMitra,
   deleteMitra,
