@@ -1,22 +1,45 @@
 const MitraModel = require("../models/mitra");
+const { getTodayStringYYYYMMDD } = require("../utils/date");
 
 const createNewMitra = async (req, res) => {
   const { body } = req;
   console.log("BODY REQUEST:", body);
 
-  if (!body.kodeMitra || !body.namaMitra || !body.createdBy) {
+  if (!body.namaMitra || !body.alamatMitra || !body.createdBy) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
     });
   }
 
   try {
+    // 1. Buat format tanggal hari ini (Contoh: '20260604')
+    const todayStr = getTodayStringYYYYMMDD();
+    const prefix = `MTR-${todayStr}-`;
+
+    // 2. Cari kode terakhir untuk mendapatkan nomor urut selanjutnya menggunakan MitraModel
+    const rows = await MitraModel.getLastMitraCode(prefix);
+
+    let urutanSelanjutnya = 1;
+    if (rows.length > 0) {
+      const lastCode = rows[0].kodeMitra;
+      const splitCode = lastCode.split("-");
+      const lastSequence = parseInt(splitCode[2], 10);
+      urutanSelanjutnya = lastSequence + 1;
+    }
+
+    const seqString = urutanSelanjutnya.toString().padStart(4, "0");
+    const newKodeMitra = `${prefix}${seqString}`;
+
+    // 3. Masukkan kode baru ke dalam body dan simpan menggunakan MitraModel
+    body.kodeMitra = newKodeMitra;
     await MitraModel.createNewMitra(body);
-        res.status(201).json({
+
+    res.status(201).json({
       message: "CREATE new Mitra success",
       data: {
-        kodeMitra: body.kodeMitra,
+        kodeMitra: newKodeMitra,
         namaMitra: body.namaMitra,
+        alamatMitra: body.alamatMitra,
         createdBy: body.createdBy,
       },
     });
@@ -40,7 +63,7 @@ const updateMitra = async (req, res) => {
   console.log("UPDATE REQUEST:", { id, body });
 
   // Validate required fields
-  if (!body.kodeMitra || !body.namaMitra || !body.updatedBy) {
+  if (!body.namaMitra || !body.alamatMitra || !body.updatedBy) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
     });
