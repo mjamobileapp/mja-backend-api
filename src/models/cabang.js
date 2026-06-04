@@ -1,5 +1,4 @@
 const dbPool = require("../config/database");
-const bcrypt = require("bcrypt");
 
 const createNewCabang = async (body) => {
   try {

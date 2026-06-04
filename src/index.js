@@ -14,11 +14,13 @@ const menuRoutes = require("./routes/menus");
 const aksesRoutes = require("./routes/akses");
 const mitraRoutes = require("./routes/mitra");
 const cabangRoutes = require("./routes/cabang");
+const mesinRoutes = require("./routes/mesin");
 
 const app = express();
 const PORT = process.env.PORT || 9090;
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
-console.log("STATIC PATH:", path.join(__dirname, "uploads"));
+const uploadsPath = path.join(__dirname, "..", "uploads");
+app.use("/uploads", express.static(uploadsPath));
+console.log("STATIC UPLOADS PATH:", uploadsPath);
 
 /* ===========================================================
    1. GLOBAL MIDDLEWARE
@@ -54,7 +56,7 @@ app.use(express.json());
 /* ===========================================================
    2. STATIC FILES (PENTING: taruh sebelum routes!)
 =============================================================*/
-app.use("/assets", express.static("public/images"));
+app.use("/assets", express.static(path.join(__dirname, "..", "public", "images")));
 
 /* ===========================================================
    3. CONFIG UPLOAD (MULTER)
@@ -70,6 +72,7 @@ app.use("/menus", menuRoutes);
 app.use("/akses", aksesRoutes);
 app.use("/mitra", mitraRoutes);
 app.use("/cabang", cabangRoutes);
+app.use("/mesin", mesinRoutes);
 // ================= rencana ==================
 
 app.get("/", (req, res) => {
@@ -82,12 +85,11 @@ app.get("/", (req, res) => {
 // =====================================
 
 app.use((err, req, res, next) => {
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, OPTIONS, PUT, PATCH, DELETE",
-  );
+  console.error("ERROR LOG:", err.stack); // Tambahkan log untuk memudahkan debug
+
+  res.status(err.status || 500);
   res.json({
-    message: err.message,
+    message: err.message || "Internal Server Error",
   });
 });
 
