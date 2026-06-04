@@ -1,0 +1,13 @@
+const express = require("express");
+const MesinController = require("../controller/mesin");
+const { authenticate } = require("../middleware/auth");
+
+const router = express.Router();
+
+router.post("/", authenticate, MesinController.createNewMesin);
+router.get("/", authenticate, MesinController.getAllMesin);
+router.get("/:id", authenticate, MesinController.getMesinById);
+router.put("/:id", authenticate, MesinController.updateMesin);
+router.delete("/:id", authenticate, MesinController.deleteMesin);
+
+module.exports = router;
