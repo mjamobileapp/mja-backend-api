@@ -27,7 +27,7 @@ const createNewMesin = async (req, res) => {
       },
     });
   } catch (error) {
-    if (error.message === "Mesin sudah terdaftar") {
+    if (error.message === "Mitra tidak ditemukan" || error.message === "Cabang tidak ditemukan" || error.message === "Cabang tidak ditemukan atau tidak sesuai dengan Mitra" || error.message === "Mesin dengan IP Address yang sama sudah terdaftar") {
       return res.status(400).json({
         error: error.message,
       });
@@ -59,6 +59,11 @@ const updateMesin = async (req, res) => {
       data: data,
     });
   } catch (error) {
+    if (error.message === "Mitra tidak ditemukan" || error.message === "Cabang tidak ditemukan" || error.message === "Cabang tidak ditemukan atau tidak sesuai dengan Mitra") {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
     if (error.message === "data not found") {
       return res.status(404).json({
         error: error.message,
