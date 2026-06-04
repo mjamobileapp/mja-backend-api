@@ -4,26 +4,20 @@ const createNewCabang = async (req, res) => {
   const { body } = req;
   console.log("BODY REQUEST:", body);
 
-  if (!body.idMitra || !body.kodeCabang || !body.namaCabang || !body.alamatCabang || !body.createdBy) {
+  if (!body.idMitra || !body.namaCabang || !body.alamatCabang || !body.createdBy) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
     });
   }
 
   try {
-    await CabangModel.createNewCabang(body);
-        res.status(201).json({
+    const result = await CabangModel.createNewCabang(body);
+    res.status(201).json({
       message: "CREATE new Cabang success",
-      data: {
-        idMitra: body.idMitra,
-        kodeCabang: body.kodeCabang,
-        namaCabang: body.namaCabang,
-        alamatCabang: body.alamatCabang,
-        createdBy: body.createdBy,
-      },
+      data: result,
     });
   } catch (error) {
-    if (error.message === "Cabang sudah terdaftar") {
+    if (error.message === "Cabang sudah terdaftar" || error.message === "Mitra tidak ditemukan") {
       return res.status(400).json({
         error: error.message,
       });
