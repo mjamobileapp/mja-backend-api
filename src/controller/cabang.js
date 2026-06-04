@@ -36,7 +36,7 @@ const updateCabang = async (req, res) => {
   console.log("UPDATE REQUEST:", { id, body });
 
   // Validate required fields
-  if (!body.idMitra || !body.kodeCabang || !body.namaCabang || !body.alamatCabang || !body.updatedBy) {
+  if (!body.namaCabang || !body.alamatCabang || !body.updatedBy) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
     });

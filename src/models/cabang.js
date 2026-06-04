@@ -64,7 +64,7 @@ const createNewCabang = async (body) => {
 
 const updateCabang = async (id, body) => {
   try {
-    const { idMitra, kodeCabang, namaCabang, alamatCabang, updatedBy } = body;
+    const {namaCabang, alamatCabang, updatedBy } = body;
 
     // Check if cabang exists
     const [existingCabang] = await dbPool.execute(
@@ -80,15 +80,13 @@ const updateCabang = async (id, body) => {
 
     // Update the cabang data - only update available fields
     const SQLQuery = `UPDATE tbl_cabang SET
-      idMitra = ?,
-      kodeCabang = ?,
       namaCabang = ?,
       alamatCabang = ?,
       updatedBy = ?,  
       updatedDate = ?    
       WHERE id = ?`;
 
-    const values = [idMitra, kodeCabang, namaCabang, alamatCabang, updatedBy, updatedDate, id];
+    const values = [namaCabang, alamatCabang, updatedBy, updatedDate, id];
 
     await dbPool.execute(SQLQuery, values);
 
