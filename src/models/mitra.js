@@ -1,8 +1,18 @@
 const dbPool = require("../config/database");
 
+const getLastMitraCode = async (prefix) => {
+  const [rows] = await dbPool.execute(
+    `SELECT kodeMitra FROM tbl_mitra 
+     WHERE kodeMitra LIKE ? 
+     ORDER BY kodeMitra DESC LIMIT 1`,
+    [`${prefix}%`]
+  );
+  return rows;
+};
+
 const createNewMitra = async (body) => {
   try {
-    const { kodeMitra, namaMitra, createdBy } = body;
+    const { kodeMitra, namaMitra, alamatMitra, createdBy } = body;
 
     // Check if mitra already exists
     const [existingMitra] = await dbPool.execute(
@@ -19,12 +29,13 @@ const createNewMitra = async (body) => {
     const SQLQuery = `INSERT INTO tbl_mitra (
       kodeMitra,
       namaMitra,
+      alamatMitra,
       createdBy,
       createdDate
      )
-      VALUES (?,?,?,?)`;
+      VALUES (?,?,?,?,?)`;
 
-    const values = [kodeMitra, namaMitra, createdBy, dateNow];
+    const values = [kodeMitra, namaMitra, alamatMitra, createdBy, dateNow];
 
     return await dbPool.execute(SQLQuery, values);
   } catch (error) {
@@ -34,7 +45,7 @@ const createNewMitra = async (body) => {
 
 const updateMitra = async (id, body) => {
   try {
-    const { kodeMitra, namaMitra, updatedBy } = body;
+    const { namaMitra, alamatMitra, updatedBy } = body;
 
     // Check if mitra exists
     const [existingMitra] = await dbPool.execute(
@@ -50,13 +61,13 @@ const updateMitra = async (id, body) => {
 
     // Update the mitra data - only update available fields
     const SQLQuery = `UPDATE tbl_mitra SET
-      kodeMitra = ?,
       namaMitra = ?,
+      alamatMitra = ?,
       updatedBy = ?,  
       updatedDate = ?    
       WHERE id = ?`;
 
-    const values = [kodeMitra, namaMitra, updatedBy, updatedDate, id];
+    const values = [namaMitra, alamatMitra, updatedBy, updatedDate, id];
 
     await dbPool.execute(SQLQuery, values);
 
@@ -125,6 +136,7 @@ const getAllMitra = async () => {
 };
 
 module.exports = {
+  getLastMitraCode,
   createNewMitra,
   updateMitra,
   deleteMitra,
