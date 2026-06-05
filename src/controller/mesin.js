@@ -17,7 +17,11 @@ const createNewMesin = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    if (error.message === "Mitra tidak ditemukan" || error.message === "Cabang tidak ditemukan" || error.message === "Cabang tidak ditemukan atau tidak sesuai dengan Mitra" || error.message === "Mesin dengan IP Address yang sama sudah terdaftar") {
+    if (
+      error.message === "Mitra tidak ditemukan atau tidak aktif" || 
+      error.message === "Cabang tidak ditemukan / tidak aktif / tidak sesuai dengan Mitra" || 
+      error.message === "Mesin dengan IP Address yang sama sudah terdaftar"
+    ) {
       return res.status(400).json({
         error: error.message,
       });
