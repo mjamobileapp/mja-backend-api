@@ -64,11 +64,13 @@ const updateMitra = async (req, res) => {
 
 const deleteMitra = async (req, res) => {
   const { id } = req.params;
+  // Mengambil username dari middleware authenticate (req.user)
+  const username = req.user.username;
 
-  console.log("DELETE REQUEST:", { id });
+  console.log("DELETE REQUEST:", { id, updatedBy: username });
 
   try {
-    await MitraModel.deleteMitra(id);
+    await MitraModel.deleteMitra(id, username);
     res.status(200).json({
       message: "Delete Mitra success",
       data: null,

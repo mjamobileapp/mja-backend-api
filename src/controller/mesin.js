@@ -11,20 +11,10 @@ const createNewMesin = async (req, res) => {
   }
 
   try {
-    await MesinModel.createNewMesin(body);
-        res.status(201).json({
+    const result = await MesinModel.createNewMesin(body);
+    res.status(201).json({
       message: "CREATE new Mesin success",
-      data: {
-        idMitra: body.idMitra,
-        cabangId: body.cabangId,
-        namaMesin: body.namaMesin,
-        tipeMesin: body.tipeMesin,
-        kapasitas: body.kapasitas,
-        ipAddressEsp: body.ipAddressEsp,
-        macAddress: body.macAddress,
-        status: body.status,
-        createdBy: body.createdBy,
-      },
+      data: result,
     });
   } catch (error) {
     if (error.message === "Mitra tidak ditemukan" || error.message === "Cabang tidak ditemukan" || error.message === "Cabang tidak ditemukan atau tidak sesuai dengan Mitra" || error.message === "Mesin dengan IP Address yang sama sudah terdaftar") {
@@ -46,7 +36,7 @@ const updateMesin = async (req, res) => {
   console.log("UPDATE REQUEST:", { id, body });
 
   // Validate required fields
-  if (!body.idMitra || !body.cabangId || !body.namaMesin || !body.tipeMesin || !body.kapasitas || !body.ipAddressEsp || !body.macAddress || !body.status || !body.updatedBy) {
+  if (!body.namaMesin || !body.tipeMesin || !body.kapasitas || !body.ipAddressEsp || !body.macAddress || !body.updatedBy) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
     });
@@ -59,11 +49,6 @@ const updateMesin = async (req, res) => {
       data: data,
     });
   } catch (error) {
-    if (error.message === "Mitra tidak ditemukan" || error.message === "Cabang tidak ditemukan" || error.message === "Cabang tidak ditemukan atau tidak sesuai dengan Mitra") {
-      return res.status(400).json({
-        error: error.message,
-      });
-    }
     if (error.message === "data not found") {
       return res.status(404).json({
         error: error.message,
@@ -78,16 +63,23 @@ const updateMesin = async (req, res) => {
 
 const deleteMesin = async (req, res) => {
   const { id } = req.params;
+  // Mengambil username dari middleware authenticate (req.user)
+  const username = req.user.username;
 
-  console.log("DELETE REQUEST:", { id });
+  console.log("DELETE REQUEST:", { id, deletedBy: username });
 
   try {
-    await MesinModel.deleteMesin(id);
+    await MesinModel.deleteMesin(id, username);
     res.status(200).json({
       message: "Delete Mesin success",
       data: null,
     });
   } catch (error) {
+    if (error.message === "Mesin sedang menyala") {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
     if (error.message === "data not found") {
       return res.status(404).json({
         error: error.message,
