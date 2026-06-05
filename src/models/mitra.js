@@ -43,16 +43,17 @@ const createNewMitra = async (body) => {
       namaMitra,
       alamatMitra,
       createdBy,
-      createdDate
+      createdDate,
+      statusAktif
      )
-      VALUES (?,?,?,?,?)`;
+      VALUES (?,?,?,?,?,?)`;
 
-    const values = [kodeMitra, namaMitra, alamatMitra, createdBy, dateNow];
+    const values = [kodeMitra, namaMitra, alamatMitra, createdBy, dateNow, true];
 
     await connection.execute(SQLQuery, values);
     await connection.commit();
 
-    return { kodeMitra, ...body };
+    return { kodeMitra, ...body, statusAktif: true };
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -67,7 +68,7 @@ const updateMitra = async (id, body) => {
 
     // Check if mitra exists
     const [existingMitra] = await dbPool.execute(
-      "SELECT kodeMitra FROM tbl_mitra WHERE id = ?",
+      "SELECT kodeMitra FROM tbl_mitra WHERE id = ? AND statusAktif = 1",
       [id]
     );
     if (existingMitra.length === 0) {
@@ -110,15 +111,15 @@ const deleteMitra = async (id) => {
   try {
     // Check if mitra exists
     const [existingMitra] = await dbPool.execute(
-      "SELECT kodeMitra FROM tbl_mitra WHERE id = ?",
+      "SELECT kodeMitra FROM tbl_mitra WHERE id = ? AND statusAktif = 1",
       [id]
     );
     if (existingMitra.length === 0) {
       throw new Error("data not found");
     }
 
-    // Execute DELETE query
-    const SQLQuery = "DELETE FROM tbl_mitra WHERE id = ?";
+    // Execute UPDATE query for soft delete
+    const SQLQuery = "UPDATE tbl_mitra SET statusAktif = 0 WHERE id = ?";
     const result = await dbPool.execute(SQLQuery, [id]);
 
     return result;
@@ -142,11 +143,21 @@ const getMitraById = async (id) => {
   }
 };
 
-const getAllMitra = async () => {
+const getAllMitra = async (status) => {
   try {
-    const [mitras] = await dbPool.execute(
-      "SELECT * FROM tbl_mitra"
-    );
+    let SQLQuery = "SELECT * FROM tbl_mitra";
+
+    if (status === "all") {
+      // Ambil semua data tanpa filter statusAktif
+    } else if (status === "inactive") {
+      // Ambil hanya yang nonaktif (statusAktif = 0)
+      SQLQuery += " WHERE statusAktif = 0";
+    } else {
+      // Default: Ambil hanya yang aktif (statusAktif = 1)
+      SQLQuery += " WHERE statusAktif = 1";
+    }
+
+    const [mitras] = await dbPool.execute(SQLQuery);
     return mitras;
   } catch (error) {
     throw error;

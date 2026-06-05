@@ -111,10 +111,11 @@ const getMitraById = async (req, res) => {
 };
 
 const getAllMitra = async (req, res) => {
-  console.log("GET ALL REQUEST");
+  const { status } = req.query;
+  console.log("GET ALL REQUEST - Status Filter:", status || "active (default)");
 
   try {
-    const data = await MitraModel.getAllMitra();
+    const data = await MitraModel.getAllMitra(status);
     res.status(200).json({
       message: "Get All Mitra success",
       data: data,

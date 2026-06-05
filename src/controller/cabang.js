@@ -110,12 +110,32 @@ const getCabangById = async (req, res) => {
 };
 
 const getAllCabang = async (req, res) => {
-  console.log("GET ALL REQUEST");
+  const { status } = req.query;
+  console.log("GET ALL REQUEST - Status Filter:", status || "active (default)");
 
   try {
-    const data = await CabangModel.getAllCabang();
+    const data = await CabangModel.getAllCabang(status);
     res.status(200).json({
       message: "Get All Cabang success",
+      data: data,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
+const getCabangByIdMitra = async (req, res) => {
+  const { idMitra } = req.params;
+
+  console.log("GET BY ID MITRA REQUEST:", { idMitra });
+
+  try {
+    const data = await CabangModel.getCabangByIdMitra(idMitra);
+    res.status(200).json({
+      message: "Get Cabang by Id Mitra success",
       data: data,
     });
   } catch (error) {
@@ -132,4 +152,5 @@ module.exports = {
   deleteCabang,
   getCabangById,
   getAllCabang,
+  getCabangByIdMitra,
 };
