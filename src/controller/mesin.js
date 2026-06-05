@@ -117,12 +117,45 @@ const getMesinById = async (req, res) => {
 };
 
 const getAllMesin = async (req, res) => {
-  console.log("GET ALL REQUEST");
+  const { status } = req.query;
+  console.log("GET ALL REQUEST - Status Filter:", status || "active (default)");
 
   try {
-    const data = await MesinModel.getAllMesin();
+    const data = await MesinModel.getAllMesin(status);
     res.status(200).json({
       message: "Get All Mesin success",
+      data: data,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
+const getMesinByIdMitra = async (req, res) => {
+  const { idMitra } = req.params;
+  try {
+    const data = await MesinModel.getMesinByIdMitra(idMitra);
+    res.status(200).json({
+      message: "Get Mesin by Id Mitra success",
+      data: data,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
+const getMesinByIdCabang = async (req, res) => {
+  const { cabangId } = req.params;
+  try {
+    const data = await MesinModel.getMesinByIdCabang(cabangId);
+    res.status(200).json({
+      message: "Get Mesin by Id Cabang success",
       data: data,
     });
   } catch (error) {
@@ -139,4 +172,6 @@ module.exports = {
   deleteMesin,
   getMesinById,
   getAllMesin,
+  getMesinByIdMitra,
+  getMesinByIdCabang,
 };

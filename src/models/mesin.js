@@ -147,10 +147,44 @@ const getMesinById = async (id) => {
   }
 };
 
-const getAllMesin = async () => {
+const getAllMesin = async (status) => {
+  try {
+    let SQLQuery = "SELECT * FROM tbl_mesin";
+
+    if (status === "all") {
+      // Ambil semua data tanpa filter
+    } else if (status === "inactive") {
+      // Ambil hanya yang nonaktif
+      SQLQuery += " WHERE statusAktif = 0";
+    } else {
+      // Default: Ambil hanya yang aktif
+      SQLQuery += " WHERE statusAktif = 1";
+    }
+
+    const [mesins] = await dbPool.execute(SQLQuery);
+    return mesins;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const getMesinByIdMitra = async (idMitra) => {
   try {
     const [mesins] = await dbPool.execute(
-      "SELECT * FROM tbl_mesin"
+      "SELECT * FROM tbl_mesin WHERE idMitra = ? AND statusAktif = 1",
+      [idMitra]
+    );
+    return mesins;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const getMesinByIdCabang = async (cabangId) => {
+  try {
+    const [mesins] = await dbPool.execute(
+      "SELECT * FROM tbl_mesin WHERE cabangId = ? AND statusAktif = 1",
+      [cabangId]
     );
     return mesins;
   } catch (error) {
@@ -164,4 +198,6 @@ module.exports = {
   deleteMesin,
   getMesinById,
   getAllMesin,
+  getMesinByIdMitra,
+  getMesinByIdCabang,
 };
