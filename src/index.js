@@ -65,14 +65,14 @@ app.use("/assets", express.static(path.join(__dirname, "..", "public", "images")
 /* ===========================================================
    4. ROUTES
 =============================================================*/
-app.use("/users", usersRoutes);
-app.use("/login", loginRoutes);
-app.use("/roles", roleRoutes);
-app.use("/menus", menuRoutes);
-app.use("/akses", aksesRoutes);
-app.use("/mitra", mitraRoutes);
-app.use("/cabang", cabangRoutes);
-app.use("/mesin", mesinRoutes);
+app.use("/api/backoffice/users", usersRoutes);
+app.use("/api/backoffice/login", loginRoutes);
+app.use("/api/backoffice/roles", roleRoutes);
+app.use("/api/backoffice/menus", menuRoutes);
+app.use("/api/backoffice/akses", aksesRoutes);
+app.use("/api/backoffice/mitra", mitraRoutes);
+app.use("/api/backoffice/cabang", cabangRoutes);
+app.use("/api/backoffice/mesin", mesinRoutes);
 // ================= rencana ==================
 
 app.get("/", (req, res) => {
