@@ -63,11 +63,13 @@ const updateCabang = async (req, res) => {
 
 const deleteCabang = async (req, res) => {
   const { id } = req.params;
+  // Mengambil username dari middleware authenticate (req.user)
+  const username = req.user.username;
 
-  console.log("DELETE REQUEST:", { id });
+  console.log("DELETE REQUEST:", { id, updatedBy: username });
 
   try {
-    await CabangModel.deleteCabang(id);
+    await CabangModel.deleteCabang(id, username);
     res.status(200).json({
       message: "Delete Cabang success",
       data: null,

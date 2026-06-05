@@ -107,7 +107,7 @@ const updateMitra = async (id, body) => {
   }
 };
 
-const deleteMitra = async (id) => {
+const deleteMitra = async (id, updatedBy) => {
   try {
     // Check if mitra exists
     const [existingMitra] = await dbPool.execute(
@@ -118,9 +118,12 @@ const deleteMitra = async (id) => {
       throw new Error("data not found");
     }
 
+    // Get current timestamp
+    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+
     // Execute UPDATE query for soft delete
-    const SQLQuery = "UPDATE tbl_mitra SET statusAktif = 0 WHERE id = ?";
-    const result = await dbPool.execute(SQLQuery, [id]);
+    const SQLQuery = "UPDATE tbl_mitra SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
+    const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 
     return result;
   } catch (error) {

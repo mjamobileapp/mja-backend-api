@@ -6,25 +6,25 @@ const createNewMesin = async (body) => {
 
     // 1. Validasi Mitra Exist
     const [existingMitra] = await dbPool.execute(
-      "SELECT id FROM tbl_mitra WHERE id = ?",
+      "SELECT id FROM tbl_mitra WHERE id = ? AND statusAktif = TRUE",
       [idMitra]
     );
     if (existingMitra.length === 0) {
-      throw new Error("Mitra tidak ditemukan");
+      throw new Error("Mitra tidak ditemukan atau tidak aktif");
     }
 
     // 2. Validasi Cabang Exist dan sesuai dengan Mitra
     const [existingCabang] = await dbPool.execute(
-      "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ?",
+      "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ? AND statusAktif = TRUE",
       [cabangId, idMitra]
     );
     if (existingCabang.length === 0) {
-      throw new Error("Cabang tidak ditemukan atau tidak sesuai dengan Mitra");
+      throw new Error("Cabang tidak ditemukan / tidak aktif / tidak sesuai dengan Mitra");
     }
 
     // Check if mesin already exists
     const [existingMesin] = await dbPool.execute(
-      "SELECT id FROM tbl_mesin WHERE ipAddressEsp = ?",
+      "SELECT id FROM tbl_mesin WHERE ipAddressEsp = ? AND statusAktif = TRUE",
       [ipAddressEsp]
     );
 
@@ -44,13 +44,16 @@ const createNewMesin = async (body) => {
       macAddress,
       status,
       createdBy,
-      createdDate
+      createdDate,
+      statusAktif
      )
-      VALUES (?,?,?,?,?,?,?,?,?,?)`;
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)`;
 
-    const values = [idMitra, cabangId, namaMesin, tipeMesin, kapasitas, ipAddressEsp, macAddress, status, createdBy, dateNow];
+    const values = [idMitra, cabangId, namaMesin, tipeMesin, kapasitas, ipAddressEsp, macAddress, status, createdBy, dateNow, true];
 
-    return await dbPool.execute(SQLQuery, values);
+    const [result] = await dbPool.execute(SQLQuery, values);
+    
+    return { id: result.insertId, ...body, statusAktif: true };
   } catch (error) {
     throw error;
   }
@@ -58,25 +61,7 @@ const createNewMesin = async (body) => {
 
 const updateMesin = async (id, body) => {
   try {
-    const { idMitra, cabangId, namaMesin, tipeMesin, kapasitas, ipAddressEsp, macAddress, status, updatedBy } = body;
-
-    // 1. Validasi Mitra Exist
-    const [existingMitra] = await dbPool.execute(
-      "SELECT id FROM tbl_mitra WHERE id = ?",
-      [idMitra]
-    );
-    if (existingMitra.length === 0) {
-      throw new Error("Mitra tidak ditemukan");
-    }
-
-    // 2. Validasi Cabang Exist dan sesuai dengan Mitra
-    const [existingCabang] = await dbPool.execute(
-      "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ?",
-      [cabangId, idMitra]
-    );
-    if (existingCabang.length === 0) {
-      throw new Error("Cabang tidak ditemukan atau tidak sesuai dengan Mitra");
-    }
+    const { namaMesin, tipeMesin, kapasitas, ipAddressEsp, macAddress, updatedBy } = body;
 
     // Check if mesin exists
     const [existingMesin] = await dbPool.execute(
@@ -92,19 +77,16 @@ const updateMesin = async (id, body) => {
 
     // Update the mesin data - only update available fields
     const SQLQuery = `UPDATE tbl_mesin SET
-      idMitra = ?,
-      cabangId = ?,
       namaMesin = ?,
       tipeMesin = ?,
       kapasitas = ?,
       ipAddressEsp = ?,
       macAddress = ?,
-      status = ?,
       updatedBy = ?,  
       updatedDate = ?    
       WHERE id = ?`;
 
-    const values = [idMitra, cabangId, namaMesin, tipeMesin, kapasitas, ipAddressEsp, macAddress, status, updatedBy, updatedDate, id];
+    const values = [namaMesin, tipeMesin, kapasitas, ipAddressEsp, macAddress, updatedBy, updatedDate, id];
 
     await dbPool.execute(SQLQuery, values);
 
@@ -121,20 +103,28 @@ const updateMesin = async (id, body) => {
   }
 };
 
-const deleteMesin = async (id) => {
+const deleteMesin = async (id, updatedBy) => {
   try {
-    // Check if mesin exists
+    // 1. Cek apakah mesin eksis dan aktif
     const [existingMesin] = await dbPool.execute(
-      "SELECT id FROM tbl_mesin WHERE id = ?",
+      "SELECT id, status FROM tbl_mesin WHERE id = ? AND statusAktif = 1",
       [id]
     );
+    
     if (existingMesin.length === 0) {
       throw new Error("data not found");
     }
 
-    // Execute DELETE query
-    const SQLQuery = "DELETE FROM tbl_mesin WHERE id = ?";
-    const result = await dbPool.execute(SQLQuery, [id]);
+    // 2. Tolak jika mesin sedang menyala (status = in_use)
+    if (existingMesin[0].status === "in_use") {
+      throw new Error("Mesin sedang menyala");
+    }
+
+    // 3. Soft delete: update statusAktif menjadi 0 dan update updatedBy
+    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+    const SQLQuery = "UPDATE tbl_mesin SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
+    
+    const [result] = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 
     return result;
   } catch (error) {
@@ -157,10 +147,44 @@ const getMesinById = async (id) => {
   }
 };
 
-const getAllMesin = async () => {
+const getAllMesin = async (status) => {
+  try {
+    let SQLQuery = "SELECT * FROM tbl_mesin";
+
+    if (status === "all") {
+      // Ambil semua data tanpa filter
+    } else if (status === "inactive") {
+      // Ambil hanya yang nonaktif
+      SQLQuery += " WHERE statusAktif = 0";
+    } else {
+      // Default: Ambil hanya yang aktif
+      SQLQuery += " WHERE statusAktif = 1";
+    }
+
+    const [mesins] = await dbPool.execute(SQLQuery);
+    return mesins;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const getMesinByIdMitra = async (idMitra) => {
   try {
     const [mesins] = await dbPool.execute(
-      "SELECT * FROM tbl_mesin"
+      "SELECT * FROM tbl_mesin WHERE idMitra = ? AND statusAktif = 1",
+      [idMitra]
+    );
+    return mesins;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const getMesinByIdCabang = async (cabangId) => {
+  try {
+    const [mesins] = await dbPool.execute(
+      "SELECT * FROM tbl_mesin WHERE cabangId = ? AND statusAktif = 1",
+      [cabangId]
     );
     return mesins;
   } catch (error) {
@@ -174,4 +198,6 @@ module.exports = {
   deleteMesin,
   getMesinById,
   getAllMesin,
+  getMesinByIdMitra,
+  getMesinByIdCabang,
 };

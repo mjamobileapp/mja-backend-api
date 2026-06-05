@@ -7,8 +7,8 @@ const createNewCabang = async (body) => {
 
     // 1. Validasi Mitra Exist
     const { idMitra, namaCabang, alamatCabang, createdBy } = body;
-    const [mitra] = await connection.execute("SELECT id FROM tbl_mitra WHERE id = ?", [idMitra]);
-    if (mitra.length === 0) throw new Error("Mitra tidak ditemukan");
+    const [mitra] = await connection.execute("SELECT id FROM tbl_mitra WHERE id = ? AND statusAktif = TRUE", [idMitra]);
+    if (mitra.length === 0) throw new Error("Mitra tidak ditemukan atau tidak aktif");
 
     // 2. Generate Kode Otomatis
     const prefix = `CBG-${idMitra}-`;
@@ -108,7 +108,7 @@ const updateCabang = async (id, body) => {
   }
 };
 
-const deleteCabang = async (id) => {
+const deleteCabang = async (id, updatedBy) => {
   try {
     // Check if cabang exists
     const [existingCabang] = await dbPool.execute(
@@ -119,9 +119,12 @@ const deleteCabang = async (id) => {
       throw new Error("data not found");
     }
 
+    // Get current timestamp
+    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+
     // Execute UPDATE query for soft delete
-    const SQLQuery = "UPDATE tbl_cabang SET statusAktif = 0 WHERE id = ?";
-    const result = await dbPool.execute(SQLQuery, [id]);
+    const SQLQuery = "UPDATE tbl_cabang SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
+    const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 
     return result;
   } catch (error) {
