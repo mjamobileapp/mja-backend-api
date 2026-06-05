@@ -10,5 +10,6 @@ router.get("/:id", authenticate, CabangController.getCabangById);
 router.get("/mitra/:idMitra", authenticate, CabangController.getCabangByIdMitra);
 router.put("/:id", authenticate, CabangController.updateCabang);
 router.delete("/:id", authenticate, CabangController.deleteCabang);
+router.post("/:id/restore", authenticate, CabangController.restoreCabang);
 
 module.exports = router;

@@ -192,10 +192,35 @@ const getMesinByIdCabang = async (cabangId) => {
   }
 };
 
+const restoreMesin = async (id, updatedBy) => {
+  try {
+    // Check if mesin exists and is currently inactive
+    const [existingMesin] = await dbPool.execute(
+      "SELECT id FROM tbl_mesin WHERE id = ? AND statusAktif = 0",
+      [id]
+    );
+    if (existingMesin.length === 0) {
+      throw new Error("data not found");
+    }
+
+    // Get current timestamp
+    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+
+    // Execute UPDATE query to set statusAktif back to 1 (true)
+    const SQLQuery = "UPDATE tbl_mesin SET statusAktif = 1, updatedBy = ?, updatedDate = ? WHERE id = ?";
+    const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
+
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   createNewMesin,
   updateMesin,
   deleteMesin,
+  restoreMesin,
   getMesinById,
   getAllMesin,
   getMesinByIdMitra,

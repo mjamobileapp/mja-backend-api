@@ -11,5 +11,6 @@ router.get("/mitra/:idMitra", authenticate, MesinController.getMesinByIdMitra);
 router.get("/cabang/:cabangId", authenticate, MesinController.getMesinByIdCabang);
 router.put("/:id", authenticate, MesinController.updateMesin);
 router.delete("/:id", authenticate, MesinController.deleteMesin);
+router.post("/:id/restore", authenticate, MesinController.restoreMesin);
 
 module.exports = router;

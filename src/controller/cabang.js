@@ -12,12 +12,13 @@ const createNewCabang = async (req, res) => {
 
   try {
     const result = await CabangModel.createNewCabang(body);
+
     res.status(201).json({
       message: "CREATE new Cabang success",
       data: result,
     });
   } catch (error) {
-    if (error.message === "Cabang sudah terdaftar" || error.message === "Mitra tidak ditemukan") {
+    if (error.message === "Mitra tidak ditemukan atau tidak aktif" || error.message === "Cabang sudah terdaftar") {
       return res.status(400).json({
         error: error.message,
       });
@@ -131,7 +132,6 @@ const getAllCabang = async (req, res) => {
 
 const getCabangByIdMitra = async (req, res) => {
   const { idMitra } = req.params;
-
   console.log("GET BY ID MITRA REQUEST:", { idMitra });
 
   try {
@@ -148,10 +148,36 @@ const getCabangByIdMitra = async (req, res) => {
   }
 };
 
+const restoreCabang = async (req, res) => {
+  const { id } = req.params;
+  const username = req.user.username;
+
+  console.log("RESTORE CABANG REQUEST:", { id, updatedBy: username });
+
+  try {
+    await CabangModel.restoreCabang(id, username);
+    res.status(200).json({
+      message: "Restore Cabang success",
+      data: null,
+    });
+  } catch (error) {
+    if (error.message === "data not found") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   createNewCabang,
   updateCabang,
   deleteCabang,
+  restoreCabang,
   getCabangById,
   getAllCabang,
   getCabangByIdMitra,
