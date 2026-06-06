@@ -9,8 +9,8 @@ const getAllUsers = async (req, res) => {
     const mappedData = data.map((data) => ({
       id: data.id,
       nama: data.nama,
-      idRole: data.id_role,
-      namaRole: data.role_name,
+      idRole: data.roleId,
+      namaRole: data.namaRole,
       username: data.username,
     }));
     res.json({
@@ -31,12 +31,18 @@ const getUserById = async (req, res) => {
   try {
     const [data] = await UsersModel.getUserById(id);
     const dataResult = data[0];
-    // console.log(dataResult);
+
+    if (!dataResult) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
     const mappedData = {
       id: dataResult.id,
       nama: dataResult.nama,
-      idRole: dataResult.id_role,
-      namaRole: dataResult.role_name,
+      idRole: dataResult.roleId,
+      namaRole: dataResult.namaRole,
       username: dataResult.username,
     };
     // console.log(mappedData);
@@ -91,6 +97,10 @@ const loginUser = async (req, res) => {
     }
 
     const [dataUser_] = await UsersModel.identitiyUser(username);
+    if (dataUser_.length === 0) {
+      return res.status(401).json({ message: "user belum mempunya role" });
+    }
+
     const dataUser = dataUser_[0];
     // console.log(dataUser);
     const token = generateToken(dataUser);
@@ -106,7 +116,7 @@ const loginUser = async (req, res) => {
         id: dataUser.id_user,
         username: dataUser.username,
         nama: dataUser.nama,
-        role: dataUser.role_name,
+        role: dataUser.namaRole,
         token: token,
       },
     });
