@@ -16,6 +16,7 @@ const mitraRoutes = require("./routes/mitra");
 const cabangRoutes = require("./routes/cabang");
 const mesinRoutes = require("./routes/mesin");
 const masterItemRoutes = require("./routes/masterItem");
+const userOwnerRoutes = require("./routes/userOwner");
 
 const app = express();
 const PORT = process.env.PORT || 9090;
@@ -75,6 +76,7 @@ app.use("/api/backoffice/mitra", mitraRoutes);
 app.use("/api/backoffice/cabang", cabangRoutes);
 app.use("/api/backoffice/mesin", mesinRoutes);
 app.use("/api/backoffice/item", masterItemRoutes);
+app.use("/api/backoffice/userowner", userOwnerRoutes);
 // ================= rencana ==================
 
 app.get("/", (req, res) => {
