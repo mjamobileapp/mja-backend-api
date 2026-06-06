@@ -19,13 +19,22 @@ const getAllUser = () => {
 };
 
 const getDataRole = (id) => {
-  const SQLQuery = `select * from tbl_role where id=${id}`;
-  return dbPool.execute(SQLQuery);
+  const SQLQuery = `select * from tbl_role where id=?`;
+  return dbPool.execute(SQLQuery, [id]);
 };
 
 const getUserById = (id) => {
-  const SQLQuery = `Select * from tbl_users where id=${id}`;
-  return dbPool.execute(SQLQuery);
+  const SQLQuery = `Select 
+   mu.id,
+   mu.username,
+   mu.nama,
+   mu.roleId,
+   mr.namaRole 
+   From tbl_users as mu
+   inner join tbl_role as mr
+   on mu.roleId = mr.id
+   where mu.id=?`;
+  return dbPool.execute(SQLQuery, [id]);
 };
 
 const createNewUser = async (body) => {
@@ -73,8 +82,8 @@ const createNewUser = async (body) => {
 };
 
 const validateUser = (username) => {
-  const SQLQuery = `SELECT * FROM tbl_users WHERE username='${username}'`;
-  return dbPool.execute(SQLQuery);
+  const SQLQuery = `SELECT * FROM tbl_users WHERE username=?`;
+  return dbPool.execute(SQLQuery, [username]);
 };
 
 const identitiyUser = (username) => {
@@ -85,8 +94,8 @@ b.id as id_role,
 b.namaRole
 from tbl_users a inner join tbl_role b
 on a.roleId = b.id
-where username ='${username}'`;
-  return dbPool.execute(SQLQuery);
+where username = ?`;
+  return dbPool.execute(SQLQuery, [username]);
 };
 
 const updateUser = async (body, id) => {
@@ -133,8 +142,8 @@ const updateUser = async (body, id) => {
 };
 
 const deleteUser = (id) => {
-  const SQLQuery = `DELETE FROM tbl_users WHERE id=${id}`;
-  return dbPool.execute(SQLQuery);
+  const SQLQuery = `DELETE FROM tbl_users WHERE id=?`;
+  return dbPool.execute(SQLQuery, [id]);
 };
 
 module.exports = {
