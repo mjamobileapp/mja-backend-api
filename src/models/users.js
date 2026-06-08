@@ -1,20 +1,31 @@
 const dbPool = require("../config/database");
 const bcrypt = require("bcrypt");
 
-const getAllUser = () => {
-  const SQLQuery = `Select 
+const getAllUser = (status) => {
+  let SQLQuery = `Select 
    mu.id,
    mu.username,
    mu.nama,
    mu.password,
    mu.createdDate,
    mu.createdBy,  
+   mu.statusAktif,
    mu.roleId,
    mr.namaRole 
    From tbl_users as mu
    inner join tbl_role as mr
    on mu.roleId = mr.id
-    order by mu.createdDate desc`;
+  `;
+
+  if (status === "all") {
+    // Ambil semua data tanpa filter statusAktif
+  } else if (status === "inactive") {
+    SQLQuery += " WHERE mu.statusAktif = 0";
+  } else {
+    SQLQuery += " WHERE mu.statusAktif = 1";
+  }
+
+  SQLQuery += " order by mu.createdDate desc";
   return dbPool.execute(SQLQuery);
 };
 
@@ -28,6 +39,7 @@ const getUserById = (id) => {
    mu.id,
    mu.username,
    mu.nama,
+   mu.statusAktif,
    mu.roleId,
    mr.namaRole 
    From tbl_users as mu
@@ -45,12 +57,22 @@ const createNewUser = async (body) => {
       username: body.username,
       password: body.password,
       createdBy: body.createdBy,
+      statusAktif: true,
     };
 
     console.log(dataPegawai);
 
     if (!body.password) {
       throw new Error("Password is required");
+    }
+
+    const [existingUser] = await dbPool.execute(
+      "SELECT id FROM tbl_users WHERE username = ?",
+      [dataPegawai.username]
+    );
+
+    if (existingUser.length > 0) {
+      throw new Error("User sudah terdaftar");
     }
 
     const hashedPassword = await bcrypt.hash(body.password, 10); // Hash the password
@@ -61,9 +83,10 @@ const createNewUser = async (body) => {
       username,
       password,
       createdBy,
-      createdDate
+      createdDate,
+      statusAktif
      )
-      VALUES (?,?,?,?,?,?)`;
+      VALUES (?,?,?,?,?,?,?)`;
 
     const values = [
       dataPegawai.nama,
@@ -72,17 +95,19 @@ const createNewUser = async (body) => {
       hashedPassword,
       dataPegawai.createdBy,
       dateNow,
+      dataPegawai.statusAktif,
     ];
     // console.log(values);
-    return dbPool.execute(SQLQuery, values);
+    await dbPool.execute(SQLQuery, values);
+    return { ...body, statusAktif: true };
   } catch (error) {
     console.error("Failed to create new user:", error.message);
-    throw new Error("Failed to create new user: " + error.message);
+    throw error;
   }
 };
 
 const validateUser = (username) => {
-  const SQLQuery = `SELECT * FROM tbl_users WHERE username=?`;
+  const SQLQuery = `SELECT * FROM tbl_users WHERE username=? AND statusAktif = 1`;
   return dbPool.execute(SQLQuery, [username]);
 };
 
@@ -90,11 +115,12 @@ const identitiyUser = (username) => {
   const SQLQuery = `select a.id as id_user, 
 a.username, 
 a.nama, 
+a.statusAktif,
 b.id as id_role,
 b.namaRole
 from tbl_users a inner join tbl_role b
 on a.roleId = b.id
-where username = ?`;
+where username = ? AND a.statusAktif = 1`;
   return dbPool.execute(SQLQuery, [username]);
 };
 
@@ -102,6 +128,26 @@ const updateUser = async (body, id) => {
   try {
     // ambil data body
     const { nama, username, roleId, password, createdBy } = body;
+
+    const [existingUser] = await dbPool.execute(
+      "SELECT username FROM tbl_users WHERE id = ? AND statusAktif = 1",
+      [id]
+    );
+
+    if (existingUser.length === 0) {
+      throw new Error("data not found");
+    }
+
+    if (username !== existingUser[0].username) {
+      const [duplicate] = await dbPool.execute(
+        "SELECT id FROM tbl_users WHERE username = ? AND id != ?",
+        [username, id]
+      );
+
+      if (duplicate.length > 0) {
+        throw new Error("User sudah terdaftar");
+      }
+    }
 
     const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
     // --- cek apakah password diisi ---
@@ -137,13 +183,46 @@ const updateUser = async (body, id) => {
     return result;
   } catch (error) {
     console.error("Failed to update user:", error.message);
-    throw new Error("Failed to update user: " + error.message);
+    throw error;
   }
 };
 
-const deleteUser = (id) => {
-  const SQLQuery = `DELETE FROM tbl_users WHERE id=?`;
-  return dbPool.execute(SQLQuery, [id]);
+const deleteUser = async (id, updatedBy) => {
+  try {
+    const [existingUser] = await dbPool.execute(
+      "SELECT id FROM tbl_users WHERE id = ? AND statusAktif = 1",
+      [id]
+    );
+
+    if (existingUser.length === 0) {
+      throw new Error("data not found");
+    }
+
+    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+    const SQLQuery = "UPDATE tbl_users SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
+    return dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
+  } catch (error) {
+    throw error;
+  }
+};
+
+const restoreUser = async (id, updatedBy) => {
+  try {
+    const [existingUser] = await dbPool.execute(
+      "SELECT id FROM tbl_users WHERE id = ? AND statusAktif = 0",
+      [id]
+    );
+
+    if (existingUser.length === 0) {
+      throw new Error("data not found");
+    }
+
+    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+    const SQLQuery = "UPDATE tbl_users SET statusAktif = 1, updatedBy = ?, updatedDate = ? WHERE id = ?";
+    return dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
+  } catch (error) {
+    throw error;
+  }
 };
 
 module.exports = {
@@ -152,6 +231,7 @@ module.exports = {
   createNewUser,
   updateUser,
   deleteUser,
+  restoreUser,
   getDataRole,
   validateUser,
   identitiyUser,

@@ -19,4 +19,7 @@ router.put("/:id", authenticate, UserController.updateUser);
 // DELETE - DELETE
 router.delete("/:id", authenticate, UserController.deleteUser);
 
+// RESTORE - POST
+router.post("/:id/restore", authenticate, UserController.restoreUser);
+
 module.exports = router;
