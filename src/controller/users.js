@@ -3,8 +3,9 @@ const bcrypt = require("bcrypt"); // Ensure bcrypt is installed
 const { generateToken } = require("../utils/jwt");
 
 const getAllUsers = async (req, res) => {
+  const { status } = req.query;
   try {
-    const [data] = await UsersModel.getAllUser();
+    const [data] = await UsersModel.getAllUser(status);
     console.log(data);
     const mappedData = data.map((data) => ({
       id: data.id,
@@ -12,6 +13,7 @@ const getAllUsers = async (req, res) => {
       idRole: data.roleId,
       namaRole: data.namaRole,
       username: data.username,
+      statusAktif: data.statusAktif,
     }));
     res.json({
       message: "GET all Master User success",
@@ -44,6 +46,7 @@ const getUserById = async (req, res) => {
       idRole: dataResult.roleId,
       namaRole: dataResult.namaRole,
       username: dataResult.username,
+      statusAktif: dataResult.statusAktif,
     };
     // console.log(mappedData);
     res.json({
@@ -69,12 +72,18 @@ const createNewUser = async (req, res) => {
   }
 
   try {
-    await UsersModel.createNewUser(body);
+    const data = await UsersModel.createNewUser(body);
     res.status(201).json({
       message: "CREATE new User success",
-      data: body,
+      data: data,
     });
   } catch (error) {
+    if (error.message === "User sudah terdaftar") {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
+
     console.error("Failed to create new user:", error.message);
     res.status(500).json({
       message: "Server Error",
@@ -98,7 +107,7 @@ const loginUser = async (req, res) => {
 
     const [dataUser_] = await UsersModel.identitiyUser(username);
     if (dataUser_.length === 0) {
-      return res.status(401).json({ message: "user belum mempunya role" });
+      return res.status(401).json({ message: "user belum mempunyai role" });
     }
 
     const dataUser = dataUser_[0];
@@ -117,6 +126,7 @@ const loginUser = async (req, res) => {
         username: dataUser.username,
         nama: dataUser.nama,
         role: dataUser.namaRole,
+        statusAktif: dataUser.statusAktif,
         token: token,
       },
     });
@@ -137,9 +147,22 @@ const updateUser = async (req, res) => {
       data: {
         id: id,
         ...body,
+        statusAktif: true,
       },
     });
   } catch (error) {
+    if (error.message === "data not found") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+
+    if (error.message === "User sudah terdaftar") {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
+
     res.status(500).json({
       message: "Server Error",
       serverMessage: error,
@@ -149,13 +172,43 @@ const updateUser = async (req, res) => {
 
 const deleteUser = async (req, res) => {
   const { id } = req.params;
+  const username = req.user.username;
   try {
-    await UsersModel.deleteUser(id);
+    await UsersModel.deleteUser(id, username);
     res.json({
       message: "DELETE Users success",
       data: null,
     });
   } catch (error) {
+    if (error.message === "data not found") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error,
+    });
+  }
+};
+
+const restoreUser = async (req, res) => {
+  const { id } = req.params;
+  const username = req.user.username;
+  try {
+    await UsersModel.restoreUser(id, username);
+    res.json({
+      message: "RESTORE Users success",
+      data: null,
+    });
+  } catch (error) {
+    if (error.message === "data not found") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+
     res.status(500).json({
       message: "Server Error",
       serverMessage: error,
@@ -169,5 +222,6 @@ module.exports = {
   createNewUser,
   updateUser,
   deleteUser,
+  restoreUser,
   loginUser,
 };
