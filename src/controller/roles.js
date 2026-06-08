@@ -6,7 +6,7 @@ const getAllRoles = async (req, res) => {
     // console.log(data);
     const mappedData = data.map((item) => ({
       id: item.id,
-      namaRole: item.role_name,
+      namaRole: item.namaRole,
       description: item.description,
       cretedDate: item.created_date,
     }));
@@ -31,7 +31,7 @@ const getRoleById = async (req, res) => {
     // console.log(data);
     const mappedData = {
       id: dataResult.id,
-      namaRole: dataResult.role_name,
+      namaRole: dataResult.namaRole,
       description: dataResult.description,
     };
     res.json({
