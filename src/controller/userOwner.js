@@ -5,9 +5,13 @@ const createNewUserOwner = async (req, res) => {
   const { body } = req;
 
   // 1. Validasi field yang dibutuhkan di level controller
-  if (!body.username || !body.role || !body.idMitra || !body.namaLengkap || !body.noTelp || !body.email || !body.createdBy) {
+  const requiredFields = ['username', 'role', 'idMitra', 'namaLengkap', 'noTelp', 'email', 'createdBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 
@@ -150,14 +154,6 @@ const resetDeviceId = async (req, res) => {
   const { body } = req;
   const usernameToken = req.user.username;
 
-  // 1. Validasi field yang dibutuhkan
-  if (!body.deviceId || !body.deviceName) {
-    return res.status(400).json({
-      message: "Bad request, missing required fields",
-      missingFields: ["deviceId", "deviceName"].filter((field) => !body[field]),
-    });
-  }
-
   try {
     const username = await UserOwnerModel.resetDeviceId(id, body, usernameToken);
     res.status(200).json({
@@ -182,10 +178,13 @@ const changePassword = async (req, res) => {
   const usernameToken = req.user.username;
 
   // 1. Validasi field yang dibutuhkan
-  if (!body.oldPassword || !body.newPassword || !body.ConfirmNewPassword) {
+  const requiredPasswordFields = ['oldPassword', 'newPassword', 'ConfirmNewPassword'];
+  const missingPasswordFields = requiredPasswordFields.filter(field => !body[field]);
+
+  if (missingPasswordFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
-      missingFields: ["oldPassword", "newPassword", "ConfirmNewPassword"].filter((field) => !body[field]),
+      missingFields: missingPasswordFields,
     });
   }
 

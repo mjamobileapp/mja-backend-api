@@ -64,10 +64,14 @@ const getUserById = async (req, res) => {
 const createNewUser = async (req, res) => {
   const { body } = req;
 
-  // Validate required fields
-  if (!body.nama || !body.username) {
+    // Validate required fields
+  const requiredFields = ['nama', 'username', 'password', 'roleId', 'createdBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
-      message: "All fields are required",
+      message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 
@@ -139,6 +143,16 @@ const loginUser = async (req, res) => {
 const updateUser = async (req, res) => {
   const { id } = req.params;
   const { body } = req;
+
+    const requiredFields = ['nama', 'username', 'roleId', 'updatedBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
+    return res.status(400).json({
+      message: "Bad request, missing required fields",
+      missingFields: missingFields,
+    });
+  }
 
   try {
     await UsersModel.updateUser(body, id);

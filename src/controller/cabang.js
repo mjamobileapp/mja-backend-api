@@ -4,9 +4,13 @@ const createNewCabang = async (req, res) => {
   const { body } = req;
   console.log("BODY REQUEST:", body);
 
-  if (!body.idMitra || !body.namaCabang || !body.alamatCabang || !body.createdBy) {
+    const requiredFields = ['idMitra', 'namaCabang', 'alamatCabang', 'createdBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 
@@ -36,10 +40,14 @@ const updateCabang = async (req, res) => {
 
   console.log("UPDATE REQUEST:", { id, body });
 
-  // Validate required fields
-  if (!body.namaCabang || !body.alamatCabang || !body.updatedBy) {
+    // Validate required fields
+  const requiredFields = ['namaCabang', 'alamatCabang', 'updatedBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 
