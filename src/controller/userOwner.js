@@ -1,4 +1,5 @@
 const UserOwnerModel = require("../models/userOwner");
+const { sendUserOwnerCredentialEmail, sendResetPasswordEmail } = require("../utils/email");
 
 const createNewUserOwner = async (req, res) => {
   const { body } = req;
@@ -14,6 +15,16 @@ const createNewUserOwner = async (req, res) => {
     // 2. Panggil Model untuk menyimpan data
     const result = await UserOwnerModel.createNewUserOwner(body);
 
+    // 3. Kirim email kredensial ke user
+    try {
+      await sendUserOwnerCredentialEmail({
+        to: result.email,
+        username: result.username,
+      });
+    } catch (emailError) {
+      console.error("Gagal mengirim email create owner:", emailError.message);
+    }
+
     res.status(201).json({
       message: "CREATE new User Owner success",
       data: result,
@@ -22,7 +33,9 @@ const createNewUserOwner = async (req, res) => {
     // 3. Handle error validasi spesifik (400 Bad Request)
     if (
       error.message === "Mitra tidak ditemukan atau tidak aktif" || 
-      error.message === "User Owner sudah terdaftar" ||
+      error.message === "Username sudah terdaftar" ||
+      error.message === "Email sudah terdaftar" ||
+      error.message === "Nomor Telepon sudah terdaftar" ||
       error.message === "Format email tidak valid"
     ) {
       return res.status(400).json({
@@ -87,7 +100,12 @@ const updateUserOwner = async (req, res) => {
     });
   } catch (error) {
     if (error.message === "data not found") return res.status(404).json({ error: error.message });
-    if (error.message === "User Owner sudah terdaftar" || error.message === "Format email tidak valid") {
+    if (
+      error.message === "Username sudah terdaftar" ||
+      error.message === "Email sudah terdaftar" ||
+      error.message === "Nomor Telepon sudah terdaftar" ||
+      error.message === "Format email tidak valid"
+    ) {
       return res.status(400).json({ error: error.message });
     }
     
@@ -212,8 +230,20 @@ const resetPassword = async (req, res) => {
 
   try {
     const result = await UserOwnerModel.resetPassword(id, body, usernameToken);
+
+    // 3. Kirim email password baru ke user
+    try {
+      await sendResetPasswordEmail({
+        to: result.email,
+        username: result.username,
+        // newPassword: result.newPassword, --- IGNORE ---
+      });
+    } catch (emailError) {
+      console.error("Gagal mengirim email reset password:", emailError.message);
+    }
+
     res.status(200).json({
-      message: "Password reset successfully",
+      message: "Send Link Reset Password Successfully",
       data: result,
     });
   } catch (error) {
