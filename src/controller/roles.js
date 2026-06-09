@@ -59,10 +59,13 @@ const createNewRole = async (req, res) => {
   };
 
   // console.log(mapData);
-  if (!body.namaRole || !body.description || !body.createdBy) {
+    const requiredFields = ['namaRole', 'description', 'createdBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
-      message: "Anda mengirimkan data yang salah",
-      data: null,
+      message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 
@@ -91,6 +94,16 @@ const updateRole = async (req, res) => {
     createdBy: body.createdBy,
     createdDate: mysqlTimestamp,
   };
+    const requiredFields = ['namaRole', 'description', 'updatedBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
+    return res.status(400).json({
+      message: "Bad request, missing required fields",
+      missingFields: missingFields,
+    });
+  }
+
   try {
     await RoleModels.updateRole(mapData, idRole);
     res.json({

@@ -4,9 +4,13 @@ const createNewMesin = async (req, res) => {
   const { body } = req;
   console.log("BODY REQUEST:", body);
 
-  if (!body.idMitra || !body.cabangId || !body.namaMesin || !body.tipeMesin || !body.kapasitas || !body.ipAddressEsp || !body.macAddress || !body.status || !body.createdBy) {
+    const requiredFields = ['idMitra', 'cabangId', 'namaMesin', 'tipeMesin', 'kapasitas', 'ipAddressEsp', 'macAddress', 'status', 'createdBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 
@@ -39,10 +43,14 @@ const updateMesin = async (req, res) => {
 
   console.log("UPDATE REQUEST:", { id, body });
 
-  // Validate required fields
-  if (!body.namaMesin || !body.tipeMesin || !body.kapasitas || !body.ipAddressEsp || !body.macAddress || !body.updatedBy) {
+    // Validate required fields
+  const requiredFields = ['namaMesin', 'tipeMesin', 'kapasitas', 'ipAddressEsp', 'macAddress', 'updatedBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 

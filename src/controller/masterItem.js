@@ -3,10 +3,14 @@ const MasterItemModel = require("../models/masterItem");
 const createNewMasterItem = async (req, res) => {
   const { body } = req;
 
-  // 1. Validasi Request Body
-  if (!body.namaItem || !body.tipeItem || !body.createdBy) {
+    // 1. Validasi Request Body
+  const requiredFields = ['namaItem', 'tipeItem', 'createdBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 
@@ -64,9 +68,13 @@ const updateMasterItem = async (req, res) => {
   const { id } = req.params;
   const { body } = req;
 
-  if (!body.namaItem || !body.tipeItem || !body.updatedBy) {
+    const requiredFields = ['namaItem', 'tipeItem', 'updatedBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 
