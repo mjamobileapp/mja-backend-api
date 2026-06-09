@@ -1,5 +1,6 @@
 const nodemailer = require("nodemailer");
 const EmailTemplateModel = require("../models/emailTemplate");
+const jwt = require("jsonwebtoken");
 
 const getTransporter = () => {
   const requiredConfig = [
@@ -39,16 +40,32 @@ const compileTemplate = (template, data) => {
   return content;
 };
 
+/**
+ * Mengonversi durasi human-readable ke format yang dimengerti jsonwebtoken (ms library)
+ * Contoh: "24 Jam" -> "24h", "1 Hari" -> "1d", "30 Menit" -> "30m"
+ */
+const convertExpiryToJwt = (duration) => {
+  if (!duration) return "24h";
+  return duration.toLowerCase()
+    .replace(/ jam/g, "h")
+    .replace(/ hari/g, "d")
+    .replace(/ menit/g, "m")
+    .trim();
+};
+
 const sendUserOwnerCredentialEmail = async ({ to, username }) => {
   const transporter = getTransporter();
   const template = await EmailTemplateModel.getTemplateByKode("CREATE_USER_OWNER");
 
   if (!template) throw new Error("Email template CREATE_USER_OWNER not found");
 
+  // Generate Token dengan masa berlaku dari .env
+  const token = jwt.sign({ username, type: 'activation' }, process.env.JWT_SECRET || 'MJA_SECRET_KEY', { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) });
+
   const placeholders = {
     APP_NAME: process.env.APP_NAME,
     USERNAME: username,
-    ACTIVATION_LINK: `${process.env.FRONTEND_URL}/activate-account?username=${encodeURIComponent(username)}`,
+    ACTIVATION_LINK: `${process.env.FRONTEND_URL}/activate-account?token=${token}`,
     EXPIRY_DURATION: process.env.EMAIL_EXPIRY_DURATION,
     YEAR: new Date().getFullYear(),
   };
@@ -67,10 +84,13 @@ const sendResetPasswordEmail = async ({ to, username }) => {
 
   if (!template) throw new Error("Email template RESET_PASSWORD_OWNER not found");
 
+  // Generate Token dengan masa berlaku dari .env
+  const token = jwt.sign({ username, type: 'reset_password' }, process.env.JWT_SECRET || 'MJA_SECRET_KEY', { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) });
+
   const placeholders = {
     APP_NAME: process.env.APP_NAME,
     USERNAME: username,
-    ACTIVATION_LINK: `${process.env.FRONTEND_URL}/activate-account?username=${encodeURIComponent(username)}`,
+    ACTIVATION_LINK: `${process.env.FRONTEND_URL}/activate-account?token=${token}`,
     EXPIRY_DURATION: process.env.EMAIL_EXPIRY_DURATION,
     YEAR: new Date().getFullYear(),
   };
