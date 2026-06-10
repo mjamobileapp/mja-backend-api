@@ -1,11 +1,13 @@
-const UserOwnerModel = require("../models/userOwner");
+const KasirModel = require("../models/kasir");
 const { sendUserMobileCredentialEmail, sendResetPasswordEmail } = require("../utils/email");
 
-const createNewUserOwner = async (req, res) => {
+const createNewUserKasir = async (req, res) => {
   const { body } = req;
+  const idMitra = req.user.idMitra;
+  const usernameToken = req.user.username;
 
   // 1. Validasi field yang dibutuhkan di level controller
-  const requiredFields = ['username', 'role', 'idMitra', 'namaLengkap', 'noTelp', 'email', 'createdBy'];
+  const requiredFields = ['username', 'namaLengkap', 'noTelp', 'email', 'cabangId'];
   const missingFields = requiredFields.filter(field => !body[field]);
 
   if (missingFields.length > 0) {
@@ -17,20 +19,25 @@ const createNewUserOwner = async (req, res) => {
 
   try {
     // 2. Panggil Model untuk menyimpan data
-    const result = await UserOwnerModel.createNewUserOwner(body);
+    const result = await KasirModel.createNewUserKasir({
+      ...body,
+      idMitra,
+      createdBy: usernameToken,
+    });
 
     // 3. Kirim email kredensial ke user
     try {
       await sendUserMobileCredentialEmail({
         to: result.email,
         username: result.username,
+        role: "kasir",
       });
     } catch (emailError) {
-      console.error("Gagal mengirim email create owner:", emailError.message);
+      console.error("Gagal mengirim email create kasir:", emailError.message);
     }
 
     res.status(201).json({
-      message: "CREATE new User Owner success",
+      message: "CREATE new Kasir success",
       data: result,
     });
   } catch (error) {
@@ -40,7 +47,8 @@ const createNewUserOwner = async (req, res) => {
       error.message === "Username sudah terdaftar" ||
       error.message === "Email sudah terdaftar" ||
       error.message === "Nomor Telepon sudah terdaftar" ||
-      error.message === "Format email tidak valid"
+      error.message === "Format email tidak valid" ||
+      error.message === "Cabang tidak ditemukan atau tidak sesuai dengan Mitra"
     ) {
       return res.status(400).json({
         error: error.message,
@@ -55,12 +63,14 @@ const createNewUserOwner = async (req, res) => {
   }
 };
 
-const getAllUserOwner = async (req, res) => {
-  const { idMitra, status } = req.query;
+const getAllUserKasir = async (req, res) => {
+  const idMitra = req.user.idMitra;
+  const { status } = req.query;
+
   try {
-    const data = await UserOwnerModel.getAllUserOwner(idMitra, status);
+    const data = await KasirModel.getAllUserKasir(idMitra, status);
     res.status(200).json({
-      message: "Get All User Owner success",
+      message: "Get All Kasir success",
       data: data,
     });
   } catch (error) {
@@ -68,12 +78,14 @@ const getAllUserOwner = async (req, res) => {
   }
 };
 
-const getUserOwnerById = async (req, res) => {
+const getUserKasirById = async (req, res) => {
   const { id } = req.params;
+  const idMitra = req.user.idMitra;
+
   try {
-    const data = await UserOwnerModel.getUserOwnerById(id);
+    const data = await KasirModel.getUserKasirById(id, idMitra);
     res.status(200).json({
-      message: "Get User Owner by Id success",
+      message: "Get Kasir by Id success",
       data: data,
     });
   } catch (error) {
@@ -82,11 +94,13 @@ const getUserOwnerById = async (req, res) => {
   }
 };
 
-const updateUserOwner = async (req, res) => {
+const updateUserKasir = async (req, res) => {
   const { id } = req.params;
   const { body } = req;
+  const idMitra = req.user.idMitra;
+  const usernameToken = req.user.username;
 
-  const requiredFields = ['namaLengkap', 'noTelp', 'email', 'updatedBy'];
+  const requiredFields = ['namaLengkap', 'noTelp', 'email'];
   const missingFields = requiredFields.filter(field => !body[field]);
 
   if (missingFields.length > 0) {
@@ -97,9 +111,9 @@ const updateUserOwner = async (req, res) => {
   }
 
   try {
-    const data = await UserOwnerModel.updateUserOwner(id, body);
+    const data = await KasirModel.updateUserKasir(id, { ...body, updatedBy: usernameToken }, idMitra);
     res.status(200).json({
-      message: "UPDATE User Owner success",
+      message: "UPDATE Kasir success",
       data: data,
     });
   } catch (error) {
@@ -108,7 +122,8 @@ const updateUserOwner = async (req, res) => {
       error.message === "Username sudah terdaftar" ||
       error.message === "Email sudah terdaftar" ||
       error.message === "Nomor Telepon sudah terdaftar" ||
-      error.message === "Format email tidak valid"
+      error.message === "Format email tidak valid" ||
+      error.message === "Cabang tidak ditemukan atau tidak sesuai dengan Mitra"
     ) {
       return res.status(400).json({ error: error.message });
     }
@@ -117,14 +132,15 @@ const updateUserOwner = async (req, res) => {
   }
 };
 
-const deleteUserOwner = async (req, res) => {
+const deleteUserKasir = async (req, res) => {
   const { id } = req.params;
-  const username = req.user.username;
+  const idMitra = req.user.idMitra;
+  const usernameToken = req.user.username;
 
   try {
-    await UserOwnerModel.deleteUserOwner(id, username);
+    await KasirModel.deleteUserKasir(id, usernameToken, idMitra);
     res.status(200).json({
-      message: "Delete User Owner success",
+      message: "Delete Kasir success",
       data: null,
     });
   } catch (error) {
@@ -133,14 +149,15 @@ const deleteUserOwner = async (req, res) => {
   }
 };
 
-const restoreUserOwner = async (req, res) => {
+const restoreUserKasir = async (req, res) => {
   const { id } = req.params;
-  const username = req.user.username;
+  const idMitra = req.user.idMitra;
+  const usernameToken = req.user.username;
 
   try {
-    await UserOwnerModel.restoreUserOwner(id, username);
+    await KasirModel.restoreUserKasir(id, usernameToken, idMitra);
     res.status(200).json({
-      message: "Restore User Owner success",
+      message: "Restore Kasir success",
       data: null,
     });
   } catch (error) {
@@ -152,10 +169,11 @@ const restoreUserOwner = async (req, res) => {
 const resetDeviceId = async (req, res) => {
   const { id } = req.params;
   const { body } = req;
+  const idMitra = req.user.idMitra;
   const usernameToken = req.user.username;
 
   try {
-    const username = await UserOwnerModel.resetDeviceId(id, body, usernameToken);
+    const username = await KasirModel.resetDeviceId(id, body, usernameToken, idMitra);
     res.status(200).json({
       message: "Reset Device ID success",
       data: {
@@ -175,6 +193,7 @@ const resetDeviceId = async (req, res) => {
 const changePassword = async (req, res) => {
   const { id } = req.params;
   const { body } = req;
+  const idMitra = req.user.idMitra;
   const usernameToken = req.user.username;
 
   // 1. Validasi field yang dibutuhkan
@@ -196,7 +215,7 @@ const changePassword = async (req, res) => {
   }
 
   try {
-    const username = await UserOwnerModel.changePassword(id, body, usernameToken);
+    const username = await KasirModel.changePassword(id, body, usernameToken, idMitra);
     res.status(200).json({
       message: "Password changed successfully",
       data: {
@@ -217,6 +236,7 @@ const changePassword = async (req, res) => {
 const resetPassword = async (req, res) => {
   const { id } = req.params;
   const { body } = req;
+  const idMitra = req.user.idMitra;
   const usernameToken = req.user.username;
 
   // 1. Validasi field username di body
@@ -228,14 +248,14 @@ const resetPassword = async (req, res) => {
   }
 
   try {
-    const result = await UserOwnerModel.resetPassword(id, body, usernameToken);
+    const result = await KasirModel.resetPassword(id, body, usernameToken, idMitra);
 
-    // 3. Kirim email password baru ke user
+    // 2. Kirim email password baru ke user
     try {
       await sendResetPasswordEmail({
         to: result.email,
         username: result.username,
-        // newPassword: result.newPassword, --- IGNORE ---
+        role: "kasir",
       });
     } catch (emailError) {
       console.error("Gagal mengirim email reset password:", emailError.message);
@@ -246,7 +266,7 @@ const resetPassword = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    // 2. Handle error spesifik
+    // 3. Handle error spesifik
     if (error.message === "data not found") {
       return res.status(404).json({
         error: "Data Not Found",
@@ -257,12 +277,12 @@ const resetPassword = async (req, res) => {
 };
 
 module.exports = {
-  createNewUserOwner,
-  getAllUserOwner,
-  getUserOwnerById,
-  updateUserOwner,
-  deleteUserOwner,
-  restoreUserOwner,
+  createNewUserKasir,
+  getAllUserKasir,
+  getUserKasirById,
+  updateUserKasir,
+  deleteUserKasir,
+  restoreUserKasir,
   resetDeviceId,
   changePassword,
   resetPassword,
