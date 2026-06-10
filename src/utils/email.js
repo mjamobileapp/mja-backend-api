@@ -53,11 +53,14 @@ const convertExpiryToJwt = (duration) => {
     .trim();
 };
 
-const sendUserOwnerCredentialEmail = async ({ to, username }) => {
+const sendUserMobileCredentialEmail = async ({ to, username, role }) => {
   const transporter = getTransporter();
-  const template = await EmailTemplateModel.getTemplateByKode("CREATE_USER_OWNER");
+  
+  // Pilih template berdasarkan role
+  const kodeTemplate = role === "kasir" ? "CREATE_USER_KASIR" : "CREATE_USER_OWNER";
+  const template = await EmailTemplateModel.getTemplateByKode(kodeTemplate);
 
-  if (!template) throw new Error("Email template CREATE_USER_OWNER not found");
+  if (!template) throw new Error(`Email template ${kodeTemplate} not found`);
 
   // Generate Token dengan masa berlaku dari .env
   const token = jwt.sign({ username, type: 'activation' }, process.env.JWT_SECRET || 'MJA_SECRET_KEY', { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) });
@@ -78,11 +81,14 @@ const sendUserOwnerCredentialEmail = async ({ to, username }) => {
   });
 };
 
-const sendResetPasswordEmail = async ({ to, username }) => {
+const sendResetPasswordEmail = async ({ to, username, role }) => {
   const transporter = getTransporter();
-  const template = await EmailTemplateModel.getTemplateByKode("RESET_PASSWORD_OWNER");
+  
+  // Pilih template berdasarkan role
+  const kodeTemplate = role === "kasir" ? "RESET_PASSWORD_KASIR" : "RESET_PASSWORD_OWNER";
+  const template = await EmailTemplateModel.getTemplateByKode(kodeTemplate);
 
-  if (!template) throw new Error("Email template RESET_PASSWORD_OWNER not found");
+  if (!template) throw new Error(`Email template ${kodeTemplate} not found`);
 
   // Generate Token dengan masa berlaku dari .env
   const token = jwt.sign({ username, type: 'reset_password' }, process.env.JWT_SECRET || 'MJA_SECRET_KEY', { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) });
@@ -104,6 +110,6 @@ const sendResetPasswordEmail = async ({ to, username }) => {
 };
 
 module.exports = {
-  sendUserOwnerCredentialEmail,
+  sendUserMobileCredentialEmail,
   sendResetPasswordEmail,
 };

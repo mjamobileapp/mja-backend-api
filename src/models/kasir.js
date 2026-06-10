@@ -14,6 +14,14 @@ const createNewUserKasir = async (body) => {
       createdBy,
     } = body;
 
+    // Debug log
+    console.log("createNewUserKasir body:", { username, idMitra, cabangId, namaLengkap, noTelp, email, createdBy });
+
+    // Validasi parameter wajib
+    if (!username || !idMitra || !cabangId || !namaLengkap || !noTelp || !email || !createdBy) {
+      throw new Error("Parameter tidak lengkap");
+    }
+
     // 0. Validasi Format Email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -53,7 +61,9 @@ const createNewUserKasir = async (body) => {
     }
 
     // 3. Generate Random Password & Hash
+    console.log("Before generateAndHashPassword");
     const { password, hashedPassword } = await generateAndHashPassword(8);
+    console.log("After generateAndHashPassword");
 
     // 4. Persiapkan timestamp
     const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");

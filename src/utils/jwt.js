@@ -2,13 +2,21 @@ const jwt = require("jsonwebtoken");
 
 const generateToken = (user) => {
   console.log(user);
+  
+  // Bangun payload JWT
+  const payload = {
+    id: user.id,
+    username: user.username,
+    role: user.id_role,
+  };
+  
+  // Tambahkan idMitra jika ada
+  if (user.idMitra) {
+    payload.idMitra = user.idMitra;
+  }
+  
   return jwt.sign(
-    {
-      id: user.id,
-      username: user.username,
-      // Tambahkan role atau level di sini
-      role: user.id_role,
-    },
+    payload,
     process.env.JWT_SECRET,
     { expiresIn: "1d" }
   );

@@ -1,5 +1,5 @@
 const KasirModel = require("../models/kasir");
-const { sendUserOwnerCredentialEmail, sendResetPasswordEmail } = require("../utils/email");
+const { sendUserMobileCredentialEmail, sendResetPasswordEmail } = require("../utils/email");
 
 const createNewUserKasir = async (req, res) => {
   const { body } = req;
@@ -27,10 +27,10 @@ const createNewUserKasir = async (req, res) => {
 
     // 3. Kirim email kredensial ke user
     try {
-      await sendUserOwnerCredentialEmail({
+      await sendUserMobileCredentialEmail({
         to: result.email,
         username: result.username,
-        password: result.password,
+        role: "kasir",
       });
     } catch (emailError) {
       console.error("Gagal mengirim email create kasir:", emailError.message);
@@ -255,6 +255,7 @@ const resetPassword = async (req, res) => {
       await sendResetPasswordEmail({
         to: result.email,
         username: result.username,
+        role: "kasir",
       });
     } catch (emailError) {
       console.error("Gagal mengirim email reset password:", emailError.message);

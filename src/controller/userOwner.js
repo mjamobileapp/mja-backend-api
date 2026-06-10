@@ -1,5 +1,5 @@
 const UserOwnerModel = require("../models/userOwner");
-const { sendUserOwnerCredentialEmail, sendResetPasswordEmail } = require("../utils/email");
+const { sendUserMobileCredentialEmail, sendResetPasswordEmail } = require("../utils/email");
 
 const createNewUserOwner = async (req, res) => {
   const { body } = req;
@@ -21,7 +21,7 @@ const createNewUserOwner = async (req, res) => {
 
     // 3. Kirim email kredensial ke user
     try {
-      await sendUserOwnerCredentialEmail({
+      await sendUserMobileCredentialEmail({
         to: result.email,
         username: result.username,
       });
