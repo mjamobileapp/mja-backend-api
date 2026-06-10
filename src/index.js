@@ -18,6 +18,7 @@ const mesinRoutes = require("./routes/mesin");
 const masterItemRoutes = require("./routes/masterItem");
 const userOwnerRoutes = require("./routes/userOwner");
 const mobileRoutes = require("./routes/mobile");
+const kasirRoutes = require("./routes/kasir");
 
 const app = express();
 const PORT = process.env.PORT || 9090;
@@ -79,6 +80,7 @@ app.use("/api/backoffice/mesin", mesinRoutes);
 app.use("/api/backoffice/item", masterItemRoutes);
 app.use("/api/backoffice/userowner", userOwnerRoutes);
 app.use("/api/mobile", mobileRoutes);
+app.use("/api/owner/kasir", kasirRoutes);
 // ================= rencana ==================
 
 app.get("/", (req, res) => {
