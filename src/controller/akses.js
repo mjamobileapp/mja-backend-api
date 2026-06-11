@@ -18,7 +18,7 @@ const getAksesRole = async (req, res) => {
       const [aksesResultRows] = await dbPool.execute(
         `SELECT m.id, m.namaMenu, m.parentId, m.noUrut, COALESCE(ar.akses, 0) AS checked
          FROM tbl_menu m
-         LEFT JOIN tbl_akses ar ON m.id = ar.id AND ar.roleId = ?
+         LEFT JOIN tbl_akses ar ON m.id = ar.menuId AND ar.roleId = ?
          ORDER BY m.noUrut ASC`,
         [idRole]
       );
