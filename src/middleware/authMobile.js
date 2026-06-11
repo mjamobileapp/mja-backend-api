@@ -13,6 +13,14 @@ const authenticateMobile = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Validasi: token harus dari JWT mobile (memiliki idMitra)
+    if (!decoded.idMitra) {
+      return res.status(401).json({ 
+        message: "Token tidak valid untuk akses mobile" 
+      });
+    }
+
     req.user = decoded;
     next();
   } catch (err) {

@@ -14,14 +14,6 @@ const createNewUserKasir = async (body) => {
       createdBy,
     } = body;
 
-    // Debug log
-    console.log("createNewUserKasir body:", { username, idMitra, cabangId, namaLengkap, noTelp, email, createdBy });
-
-    // Validasi parameter wajib
-    if (!username || !idMitra || !cabangId || !namaLengkap || !noTelp || !email || !createdBy) {
-      throw new Error("Parameter tidak lengkap");
-    }
-
     // 0. Validasi Format Email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
