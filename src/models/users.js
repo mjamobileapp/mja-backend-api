@@ -127,7 +127,7 @@ where username = ? AND a.statusAktif = 1`;
 const updateUser = async (body, id) => {
   try {
     // ambil data body
-    const { nama, username, roleId, password, createdBy } = body;
+    const { nama, username, roleId, password, updatedBy } = body;
 
     const [existingUser] = await dbPool.execute(
       "SELECT username FROM tbl_users WHERE id = ? AND statusAktif = 1",
@@ -164,10 +164,10 @@ const updateUser = async (body, id) => {
         nama = ?, 
         roleId = ?, 
         username = ?, 
-        createdBy = ?,
-        createdDate = ?
+        updatedBy = ?,
+        updatedDate = ?
     `;
-    const values = [nama, roleId, username, createdBy, dateNow];
+    const values = [nama, roleId, username, updatedBy, dateNow];
 
     if (hashedPassword) {
       SQLQuery += `, password = ?`;
