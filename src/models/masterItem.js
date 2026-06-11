@@ -67,6 +67,20 @@ const getMasterItemById = async (id) => {
   }
 };
 
+const getMasterItemByTipe = async (tipeItem) => {
+  try {
+    const [items] = await dbPool.execute(
+      "SELECT * FROM tbl_master_item_expense WHERE tipeItem = ? AND statusAktif = 1",
+      [tipeItem]
+    );
+
+    if (items.length === 0) throw new Error("data not found");
+    return items;
+  } catch (error) {
+    throw error;
+  }
+};
+
 const deleteMasterItem = async (id, updatedBy) => {
   try {
     const [existing] = await dbPool.execute("SELECT id FROM tbl_master_item_expense WHERE id = ? AND statusAktif = 1", [id]);
@@ -135,6 +149,7 @@ module.exports = {
   createNewMasterItem,
   getAllMasterItem,
   getMasterItemById,
+  getMasterItemByTipe,
   updateMasterItem,
   deleteMasterItem,
   restoreMasterItem,
