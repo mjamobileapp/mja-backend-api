@@ -64,6 +64,29 @@ const getMasterItemById = async (req, res) => {
   }
 };
 
+const getMasterItemByTipe = async (req, res) => {
+  const { tipeItem } = req.params;
+
+  // Validasi sederhana tipeItem
+  const validTypes = ["stok", "non_stok"];
+  if (!validTypes.includes(tipeItem)) {
+    return res.status(400).json({
+      error: "Tipe item tidak valid. Gunakan 'stok' atau 'non_stok'.",
+    });
+  }
+
+  try {
+    const data = await MasterItemModel.getMasterItemByTipe(tipeItem);
+    res.status(200).json({
+      message: "Get by Tipe Item Success",
+      data: data,
+    });
+  } catch (error) {
+    if (error.message === "data not found") return res.status(404).json({ error: error.message });
+    res.status(500).json({ message: "Server Error", serverMessage: error.message });
+  }
+};
+
 const updateMasterItem = async (req, res) => {
   const { id } = req.params;
   const { body } = req;
@@ -131,6 +154,7 @@ module.exports = {
   createNewMasterItem,
   getAllMasterItem,
   getMasterItemById,
+  getMasterItemByTipe,
   updateMasterItem,
   deleteMasterItem,
   restoreMasterItem,
