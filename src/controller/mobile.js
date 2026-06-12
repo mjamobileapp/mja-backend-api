@@ -135,37 +135,62 @@ const activateAccount = async (req, res) => {
       // 4. Verifikasi token JWT
       const decoded = jwt.verify(token, process.env.JWT_SECRET || "MJA_SECRET_KEY");
 
-      // 5. Validasi type token — harus 'activation'
-      if (decoded.type !== "activation") {
+      const { username } = decoded;
+
+      // 5. Cari user di database
+      const user = await UserMobileModel.getUserByUsernameWithoutStatusFilter(username);
+
+      // 6. Validasi berdasarkan type token
+      if (decoded.type === "activation") {
+        // Aktivasi akun baru
+
+        // 6a. Cek apakah user sudah aktif
+        if (user.statusAktif === 1) {
+          return res.status(400).json({
+            error: "Akun sudah aktif",
+          });
+        }
+
+        // 6b. Hash password baru
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // 6c. Update statusAktif menjadi 1 (aktif) dan update password
+        await UserMobileModel.updateStatusAktifByUsername(username);
+        await UserMobileModel.updatePasswordByUsername(username, hashedPassword);
+
+      } else if (decoded.type === "reset_password") {
+        // Reset password (tanpa update statusAktif)
+
+        // Validasi: user harus sudah aktif
+        if (user.statusAktif === 0) {
+          return res.status(400).json({
+            error: "Akun belum diaktivasi, silakan aktivasi terlebih dahulu",
+          });
+        }
+
+        // Hash password baru
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Update password saja
+        await UserMobileModel.updatePasswordByUsername(username, hashedPassword);
+
+      } else {
+        // Type token tidak dikenal
         return res.status(400).json({
           error: "Token tidak valid",
         });
       }
 
-      const { username } = decoded;
-
-      // 6. Cek apakah user sudah aktif
-      const user = await UserMobileModel.getUserByUsernameWithoutStatusFilter(username);
-
-      if (user.statusAktif === 1) {
-        return res.status(400).json({
-          error: "Akun sudah aktif",
-        });
-      }
-
-      // 7. Hash password baru
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // 8. Update statusAktif menjadi 1 (aktif) dan update password
-      await UserMobileModel.updateStatusAktifByUsername(username);
-      await UserMobileModel.updatePasswordByUsername(username, hashedPassword);
-
-      // 9. Ambil data user terbaru setelah aktivasi
+      // 7. Ambil data user terbaru setelah proses
       const activatedUser = await UserMobileModel.getUserByUsernameWithoutStatusFilter(username);
 
-      // 10. Return response sukses
+      // 8. Return response sukses (pesan berbeda tergantung type)
+      const message = decoded.type === "activation"
+        ? "Akun berhasil diaktivasi"
+        : "Password berhasil diubah";
+
       res.status(200).json({
-        message: "Akun berhasil diaktivasi",
+        message: message,
         data: activatedUser,
       });
     } catch (error) {
