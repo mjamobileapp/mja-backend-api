@@ -8,7 +8,5 @@ router.get("/", SettingStokController.getAllSettings);
 router.get("/mitra/:idMitra", SettingStokController.getSettingByIdMitra);
 router.post("/", SettingStokController.createNewSetting);
 router.put("/:id", SettingStokController.updateSetting);
-router.delete("/:id", SettingStokController.deleteSetting);
-router.patch("/:id/restore", SettingStokController.restoreSetting);
 
 module.exports = router;
