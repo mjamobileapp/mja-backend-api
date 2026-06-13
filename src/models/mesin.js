@@ -92,7 +92,7 @@ const updateMesin = async (id, body) => {
 
     // Fetch and return the updated mesin data
     const [updatedMesin] = await dbPool.execute(
-      "SELECT * FROM tbl_mesin WHERE id = ?",
+      "SELECT m.*, mitra.namaMitra, cabang.namaCabang FROM tbl_mesin m LEFT JOIN tbl_mitra mitra ON m.idMitra = mitra.id LEFT JOIN tbl_cabang cabang ON m.cabangId = cabang.id WHERE m.id = ?",
       [id]
     );
 
@@ -149,16 +149,16 @@ const getMesinById = async (id) => {
 
 const getAllMesin = async (status) => {
   try {
-    let SQLQuery = "SELECT * FROM tbl_mesin";
+    let SQLQuery = "SELECT m.*, mitra.namaMitra, cabang.namaCabang FROM tbl_mesin m LEFT JOIN tbl_mitra mitra ON m.idMitra = mitra.id LEFT JOIN tbl_cabang cabang ON m.cabangId = cabang.id";
 
     if (status === "all") {
       // Ambil semua data tanpa filter
     } else if (status === "inactive") {
       // Ambil hanya yang nonaktif
-      SQLQuery += " WHERE statusAktif = 0";
+       SQLQuery += " WHERE m.statusAktif = 0";
     } else {
       // Default: Ambil hanya yang aktif
-      SQLQuery += " WHERE statusAktif = 1";
+      SQLQuery += " WHERE m.statusAktif = 1";
     }
 
     const [mesins] = await dbPool.execute(SQLQuery);
@@ -171,7 +171,7 @@ const getAllMesin = async (status) => {
 const getMesinByIdMitra = async (idMitra) => {
   try {
     const [mesins] = await dbPool.execute(
-      "SELECT * FROM tbl_mesin WHERE idMitra = ? AND statusAktif = 1",
+      "SELECT m.*, mitra.namaMitra, cabang.namaCabang FROM tbl_mesin m LEFT JOIN tbl_mitra mitra ON m.idMitra = mitra.id LEFT JOIN tbl_cabang cabang ON m.cabangId = cabang.id WHERE m.idMitra = ? AND m.statusAktif = 1",
       [idMitra]
     );
     return mesins;
@@ -183,7 +183,7 @@ const getMesinByIdMitra = async (idMitra) => {
 const getMesinByIdCabang = async (cabangId) => {
   try {
     const [mesins] = await dbPool.execute(
-      "SELECT * FROM tbl_mesin WHERE cabangId = ? AND statusAktif = 1",
+      "SELECT m.*, mitra.namaMitra, cabang.namaCabang FROM tbl_mesin m LEFT JOIN tbl_mitra mitra ON m.idMitra = mitra.id LEFT JOIN tbl_cabang cabang ON m.cabangId = cabang.id WHERE m.cabangId = ? AND m.statusAktif = 1",
       [cabangId]
     );
     return mesins;
