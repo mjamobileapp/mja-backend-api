@@ -38,7 +38,7 @@ const allowedOrigins = [
   "http://dev.appadentis.cloud",
   "http://appadentis.cloud",
   "https://appadentis.cloud",
-  "http://148.230.102.45:3100/",
+  "http://148.230.102.45:3100",
 ];
 
 // CORS
