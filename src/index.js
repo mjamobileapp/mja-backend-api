@@ -19,6 +19,7 @@ const masterItemRoutes = require("./routes/masterItem");
 const userOwnerRoutes = require("./routes/userOwner");
 const mobileRoutes = require("./routes/mobile");
 const kasirRoutes = require("./routes/kasir");
+const settingStokMitraRoutes = require("./routes/settingStokMitra");
 
 const app = express();
 const PORT = process.env.PORT || 9090;
@@ -37,6 +38,7 @@ const allowedOrigins = [
   "http://dev.appadentis.cloud",
   "http://appadentis.cloud",
   "https://appadentis.cloud",
+  "http://148.230.102.45:3100/",
 ];
 
 // CORS
@@ -81,6 +83,7 @@ app.use("/api/backoffice/item", masterItemRoutes);
 app.use("/api/backoffice/userowner", userOwnerRoutes);
 app.use("/api/mobile", mobileRoutes);
 app.use("/api/owner/kasir", kasirRoutes);
+app.use("/api/backoffice/stokmitra", settingStokMitraRoutes);
 // ================= rencana ==================
 
 app.get("/", (req, res) => {
