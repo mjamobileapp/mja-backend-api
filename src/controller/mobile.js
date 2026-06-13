@@ -145,17 +145,17 @@ const activateAccount = async (req, res) => {
         // Aktivasi akun baru
 
         // 6a. Cek apakah user sudah aktif
-        if (user.statusAktif === 1) {
-          return res.status(400).json({
-            error: "Akun sudah aktif",
-          });
-        }
+        // if (user.statusAktif === 1) {
+        //   return res.status(400).json({
+        //     error: "Akun sudah aktif",
+        //   });
+        // }
 
         // 6b. Hash password baru
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // 6c. Update statusAktif menjadi 1 (aktif) dan update password
-        await UserMobileModel.updateStatusAktifByUsername(username);
+        // await UserMobileModel.updateStatusAktifByUsername(username);
         await UserMobileModel.updatePasswordByUsername(username, hashedPassword);
 
       } else if (decoded.type === "reset_password") {
