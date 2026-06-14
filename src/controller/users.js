@@ -230,12 +230,65 @@ const restoreUser = async (req, res) => {
   }
 };
 
+const changePassword = async (req, res) => {
+  const { id } = req.params;
+  const { body } = req;
+  const username = req.user.username;
+
+  // 1. Validasi required fields
+  const requiredFields = ["oldPassword", "newPassword", "ConfirmNewPassword"];
+  const missingFields = requiredFields.filter((field) => !body[field]);
+
+  if (missingFields.length > 0) {
+    return res.status(400).json({
+      message: "Bad request, missing required fields",
+      missingFields: missingFields,
+    });
+  }
+
+  // 2. Validasi ConfirmNewPassword harus sama dengan newPassword
+  if (body.newPassword !== body.ConfirmNewPassword) {
+    return res.status(400).json({
+      error: "Konfirmasi password baru tidak cocok",
+    });
+  }
+
+  try {
+    const resultUsername = await UsersModel.changePassword(id, body, username);
+
+    res.json({
+      message: "Password changed successfully",
+      data: {
+        username: resultUsername,
+      },
+    });
+  } catch (error) {
+    if (error.message === "data not found") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+
+    if (error.message === "Password lama salah") {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error,
+    });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
   createNewUser,
   updateUser,
   deleteUser,
-  restoreUser,
+    restoreUser,
   loginUser,
+  changePassword,
 };

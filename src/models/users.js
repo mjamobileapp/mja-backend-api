@@ -225,6 +225,40 @@ const restoreUser = async (id, updatedBy) => {
   }
 };
 
+const changePassword = async (id, body, updatedBy) => {
+  try {
+    const { oldPassword, newPassword } = body;
+
+    // 1. Ambil data user termasuk password hashed
+    const [rows] = await dbPool.execute(
+      "SELECT id, username, password FROM tbl_users WHERE id = ? AND statusAktif = 1",
+      [id]
+    );
+
+    if (rows.length === 0) throw new Error("data not found");
+
+    const user = rows[0];
+
+    // 2. Verifikasi password lama
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      throw new Error("Password lama salah");
+    }
+
+    // 3. Hash password baru
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+
+    // 4. Update password di database
+    const SQLQuery = "UPDATE tbl_users SET password = ?, updatedBy = ?, updatedDate = ? WHERE id = ?";
+    await dbPool.execute(SQLQuery, [hashedPassword, updatedBy, updatedDate, id]);
+
+    return user.username;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   getAllUser,
   getUserById,
@@ -233,6 +267,7 @@ module.exports = {
   deleteUser,
   restoreUser,
   getDataRole,
-  validateUser,
+    validateUser,
   identitiyUser,
+  changePassword,
 };
