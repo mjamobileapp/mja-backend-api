@@ -215,20 +215,10 @@ const changePassword = async (req, res) => {
 };
 
 const resetPassword = async (req, res) => {
-  const { id } = req.params;
-  const { body } = req;
-  const usernameToken = req.user.username;
-
-  // 1. Validasi field username di body
-  if (!body.username) {
-    return res.status(400).json({
-      message: "Bad request, missing required fields",
-      missingFields: ["username"],
-    });
-  }
+  const { email } = req.params;
 
   try {
-    const result = await UserOwnerModel.resetPassword(id, body, usernameToken);
+    const result = await UserOwnerModel.resetPassword(email);
 
     // 3. Kirim email password baru ke user
     try {

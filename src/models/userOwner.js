@@ -268,24 +268,15 @@ const changePassword = async (id, body, updatedBy) => {
   }
 };
 
-const resetPassword = async (id, body, updatedBy) => {
+const resetPassword = async (email) => {
   try {
-    const { username } = body;
-
-    // 1. Validasi eksistensi dan kecocokan username
+    // 1. Validasi eksistensi email
     const [rows] = await dbPool.execute(
-      "SELECT username, email FROM tbl_users_mobile WHERE id = ? AND username = ? AND statusAktif = 1",
-      [id, username]
+      "SELECT username, email FROM tbl_users_mobile WHERE email = ? AND role = 'owner' AND statusAktif = 1",
+      [email]
     );
 
     if (rows.length === 0) throw new Error("data not found");
-
-    // 2. Generate Password baru
-    // const { password, hashedPassword } = await generateAndHashPassword(8);
-    // const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
-
-    // const SQLQuery = "UPDATE tbl_users_mobile SET password = ?, updatedBy = ?, updatedDate = ? WHERE id = ?";
-    // await dbPool.execute(SQLQuery, [hashedPassword, updatedBy, updatedDate, id]);
 
     return { username: rows[0].username, email: rows[0].email};
   } catch (error) {
