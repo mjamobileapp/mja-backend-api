@@ -20,6 +20,7 @@ const userOwnerRoutes = require("./routes/userOwner");
 const mobileRoutes = require("./routes/mobile");
 const kasirRoutes = require("./routes/kasir");
 const settingStokMitraRoutes = require("./routes/settingStokMitra");
+const dashboardRoutes = require("./routes/dashboard");
 
 const app = express();
 const PORT = process.env.PORT || 9090;
@@ -84,6 +85,7 @@ app.use("/api/backoffice/userowner", userOwnerRoutes);
 app.use("/api/mobile", mobileRoutes);
 app.use("/api/owner/kasir", kasirRoutes);
 app.use("/api/backoffice/stokmitra", settingStokMitraRoutes);
+app.use("/api/backoffice/dashboard", dashboardRoutes);
 // ================= rencana ==================
 
 app.get("/", (req, res) => {
