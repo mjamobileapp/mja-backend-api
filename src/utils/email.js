@@ -68,7 +68,7 @@ const sendUserMobileCredentialEmail = async ({ to, username, role }) => {
   const placeholders = {
     APP_NAME: process.env.APP_NAME,
     USERNAME: username,
-    ACTIVATION_LINK: `${process.env.FRONTEND_URL}/activate-account?token=${token}`,
+    ACTIVATION_LINK: `${process.env.FRONTEND_URL}/activate-account?token=${token}&type=activation`,
     EXPIRY_DURATION: process.env.EMAIL_EXPIRY_DURATION,
     YEAR: new Date().getFullYear(),
   };
@@ -85,7 +85,15 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
   const transporter = getTransporter();
   
   // Pilih template berdasarkan role
-  const kodeTemplate = role === "kasir" ? "RESET_PASSWORD_KASIR" : "RESET_PASSWORD_OWNER";
+  let kodeTemplate;
+  if (role === "backoffice") {
+    kodeTemplate = "RESET_PASSWORD_BACKOFFICE";
+  }else if (role === "kasir") {
+    kodeTemplate = "RESET_PASSWORD_KASIR";
+  } else {
+    kodeTemplate = "RESET_PASSWORD_OWNER"; // Default ke owner jika role tidak dikenali
+  }
+
   const template = await EmailTemplateModel.getTemplateByKode(kodeTemplate);
 
   if (!template) throw new Error(`Email template ${kodeTemplate} not found`);
@@ -96,7 +104,7 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
   const placeholders = {
     APP_NAME: process.env.APP_NAME,
     USERNAME: username,
-    ACTIVATION_LINK: `${process.env.FRONTEND_URL}/activate-account?token=${token}`,
+    ACTIVATION_LINK: `${process.env.FRONTEND_URL}/activate-account?token=${token}&type=reset_password`,
     EXPIRY_DURATION: process.env.EMAIL_EXPIRY_DURATION,
     YEAR: new Date().getFullYear(),
   };
