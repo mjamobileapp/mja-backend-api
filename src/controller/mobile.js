@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const UserMobileModel = require("../models/userMobile");
+const UsersModel = require("../models/users");
 const { generateToken } = require("../utils/jwt");
 
 const loginUser = async (req, res) => {
@@ -135,10 +136,18 @@ const activateAccount = async (req, res) => {
       // 4. Verifikasi token JWT
       const decoded = jwt.verify(token, process.env.JWT_SECRET || "MJA_SECRET_KEY");
 
-      const { username } = decoded;
+      const { username, role } = decoded;
+      const isBackoffice = role === "backoffice";
 
       // 5. Cari user di database
-      const user = await UserMobileModel.getUserByUsernameWithoutStatusFilter(username);
+      let user;
+      if (isBackoffice) {
+        const [rows] = await UsersModel.getUserByUsername(username);
+        user = rows[0];
+        if (!user) throw new Error("data not found");
+      } else {
+        user = await UserMobileModel.getUserByUsernameWithoutStatusFilter(username);
+      }
 
       // 6. Validasi berdasarkan type token
       if (decoded.type === "activation") {
@@ -156,7 +165,11 @@ const activateAccount = async (req, res) => {
 
         // 6c. Update statusAktif menjadi 1 (aktif) dan update password
         // await UserMobileModel.updateStatusAktifByUsername(username);
-        await UserMobileModel.updatePasswordByUsername(username, hashedPassword);
+        if (isBackoffice) {
+          await UsersModel.updatePasswordByUsername(username, hashedPassword);
+        } else {
+          await UserMobileModel.updatePasswordByUsername(username, hashedPassword);
+        }
 
       } else if (decoded.type === "reset_password") {
         // Reset password (tanpa update statusAktif)
@@ -172,7 +185,11 @@ const activateAccount = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Update password saja
-        await UserMobileModel.updatePasswordByUsername(username, hashedPassword);
+        if (isBackoffice) {
+          await UsersModel.updatePasswordByUsername(username, hashedPassword);
+        } else {
+          await UserMobileModel.updatePasswordByUsername(username, hashedPassword);
+        }
 
       } else {
         // Type token tidak dikenal
@@ -182,7 +199,14 @@ const activateAccount = async (req, res) => {
       }
 
       // 7. Ambil data user terbaru setelah proses
-      const activatedUser = await UserMobileModel.getUserByUsernameWithoutStatusFilter(username);
+      let activatedUser;
+      if (isBackoffice) {
+        const [rows] = await UsersModel.getUserByUsername(username);
+        activatedUser = rows[0];
+        delete activatedUser.password;
+      } else {
+        activatedUser = await UserMobileModel.getUserByUsernameWithoutStatusFilter(username);
+      }
 
       // 8. Return response sukses (pesan berbeda tergantung type)
       const message = decoded.type === "activation"

@@ -25,4 +25,7 @@ router.post("/:id/restore", authenticate, UserController.restoreUser);
 // CHANGE PASSWORD - POST
 router.post("/:id/changepassword", authenticate, UserController.changePassword);
 
+// RESET PASSWORD - POST (Public/Tanpa Token)
+router.post("/:email/resetpassword", UserController.resetPassword);
+
 module.exports = router;

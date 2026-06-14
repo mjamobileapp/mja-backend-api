@@ -259,6 +259,31 @@ const changePassword = async (id, body, updatedBy) => {
   }
 };
 
+const resetPassword = async (email) => {
+  try {
+    const [rows] = await dbPool.execute(
+      "SELECT username FROM tbl_users WHERE username = ? AND statusAktif = 1",
+      [email]
+    );
+
+    if (rows.length === 0) throw new Error("Email tidak ditemukan");
+
+    return { username: rows[0].username, email: rows[0].username };
+  } catch (error) {
+    throw error;
+  }
+};
+
+const getUserByUsername = (username) => {
+  const SQLQuery = `SELECT * FROM tbl_users WHERE username=?`;
+  return dbPool.execute(SQLQuery, [username]);
+};
+
+const updatePasswordByUsername = async (username, password) => {
+  const SQLQuery = `UPDATE tbl_users SET password = ? WHERE username = ?`;
+  return dbPool.execute(SQLQuery, [password, username]);
+};
+
 module.exports = {
   getAllUser,
   getUserById,
@@ -267,7 +292,10 @@ module.exports = {
   deleteUser,
   restoreUser,
   getDataRole,
-    validateUser,
+  validateUser,
   identitiyUser,
   changePassword,
+  resetPassword,
+  getUserByUsername,
+  updatePasswordByUsername,
 };
