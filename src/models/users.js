@@ -274,6 +274,16 @@ const resetPassword = async (email) => {
   }
 };
 
+const getUserByUsername = (username) => {
+  const SQLQuery = `SELECT * FROM tbl_users WHERE username=?`;
+  return dbPool.execute(SQLQuery, [username]);
+};
+
+const updatePasswordByUsername = async (username, password) => {
+  const SQLQuery = `UPDATE tbl_users SET password = ? WHERE username = ?`;
+  return dbPool.execute(SQLQuery, [password, username]);
+};
+
 module.exports = {
   getAllUser,
   getUserById,
@@ -286,4 +296,6 @@ module.exports = {
   identitiyUser,
   changePassword,
   resetPassword,
+  getUserByUsername,
+  updatePasswordByUsername,
 };

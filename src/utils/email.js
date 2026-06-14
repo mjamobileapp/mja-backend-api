@@ -63,7 +63,11 @@ const sendUserMobileCredentialEmail = async ({ to, username, role }) => {
   if (!template) throw new Error(`Email template ${kodeTemplate} not found`);
 
   // Generate Token dengan masa berlaku dari .env
-  const token = jwt.sign({ username, type: 'activation' }, process.env.JWT_SECRET || 'MJA_SECRET_KEY', { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) });
+  const token = jwt.sign(
+    { username, type: 'activation', role: role || 'owner' }, 
+    process.env.JWT_SECRET || 'MJA_SECRET_KEY', 
+    { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) }
+  );
 
   const placeholders = {
     APP_NAME: process.env.APP_NAME,
@@ -99,7 +103,11 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
   if (!template) throw new Error(`Email template ${kodeTemplate} not found`);
 
   // Generate Token dengan masa berlaku dari .env
-  const token = jwt.sign({ username, type: 'reset_password' }, process.env.JWT_SECRET || 'MJA_SECRET_KEY', { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) });
+  const token = jwt.sign(
+    { username, type: 'reset_password', role: role || 'owner' }, 
+    process.env.JWT_SECRET || 'MJA_SECRET_KEY', 
+    { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) }
+  );
 
   const placeholders = {
     APP_NAME: process.env.APP_NAME,

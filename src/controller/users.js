@@ -295,6 +295,9 @@ const resetPassword = async (req, res) => {
       console.error("Gagal mengirim email reset password backoffice:", emailError.message);
     }
 
+    // Hapus email dari result sebelum dikirim dalam response data
+    delete result.email;
+
     res.status(200).json({
       message: "Send Link Reset Password Successfully",
       data: result,
