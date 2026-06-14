@@ -109,16 +109,11 @@ const createNewUserKasir = async (body) => {
   }
 };
 
-const getAllUserKasir = async (idMitra, status) => {
+const getAllUserKasir = async (status) => {
   try {
     let SQLQuery = "SELECT * FROM tbl_users_mobile WHERE role = 'kasir'";
     let conditions = [];
     let values = [];
-
-    if (idMitra) {
-      conditions.push("idMitra = ?");
-      values.push(idMitra);
-    }
 
     if (status === "all") {
       // No status filter
@@ -145,11 +140,11 @@ const getAllUserKasir = async (idMitra, status) => {
   }
 };
 
-const getUserKasirById = async (id, idMitra) => {
+const getUserKasirById = async (id) => {
   try {
     const [user] = await dbPool.execute(
-      "SELECT * FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir'",
-      [id, idMitra]
+      "SELECT * FROM tbl_users_mobile WHERE id = ? AND role = 'kasir'",
+      [id]
     );
     if (user.length === 0) throw new Error("data not found");
     delete user[0].password;
@@ -161,7 +156,7 @@ const getUserKasirById = async (id, idMitra) => {
   }
 };
 
-const updateUserKasir = async (id, body, idMitra) => {
+const updateUserKasir = async (id, body) => {
   try {
     const { namaLengkap, noTelp, email, cabangId, updatedBy } = body;
 
@@ -173,8 +168,8 @@ const updateUserKasir = async (id, body, idMitra) => {
 
     // 1. Cek eksistensi
     const [existing] = await dbPool.execute(
-      "SELECT * FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir'",
-      [id, idMitra]
+      "SELECT * FROM tbl_users_mobile WHERE id = ? AND role = 'kasir'",
+      [id]
     );
     if (existing.length === 0) throw new Error("data not found");
 
@@ -192,7 +187,7 @@ const updateUserKasir = async (id, body, idMitra) => {
     if (cabangId) {
       const [existingCabang] = await dbPool.execute(
         "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ? AND statusAktif = TRUE",
-        [cabangId, idMitra]
+        [cabangId, existing[0].idMitra]
       );
       if (existingCabang.length === 0) {
         throw new Error("Cabang tidak ditemukan atau tidak sesuai dengan Mitra");
@@ -224,11 +219,11 @@ const updateUserKasir = async (id, body, idMitra) => {
   }
 };
 
-const deleteUserKasir = async (id, updatedBy, idMitra) => {
+const deleteUserKasir = async (id, updatedBy) => {
   try {
     const [existing] = await dbPool.execute(
-      "SELECT id FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 1",
-      [id, idMitra]
+      "SELECT id FROM tbl_users_mobile WHERE id = ? AND role = 'kasir' AND statusAktif = 1",
+      [id]
     );
     if (existing.length === 0) throw new Error("data not found");
 
@@ -241,11 +236,11 @@ const deleteUserKasir = async (id, updatedBy, idMitra) => {
   }
 };
 
-const restoreUserKasir = async (id, updatedBy, idMitra) => {
+const restoreUserKasir = async (id, updatedBy) => {
   try {
     const [existing] = await dbPool.execute(
-      "SELECT id FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 0",
-      [id, idMitra]
+      "SELECT id FROM tbl_users_mobile WHERE id = ? AND role = 'kasir' AND statusAktif = 0",
+      [id]
     );
     if (existing.length === 0) throw new Error("data not found");
 
@@ -258,12 +253,12 @@ const restoreUserKasir = async (id, updatedBy, idMitra) => {
   }
 };
 
-const resetDeviceId = async (id, body, updatedBy, idMitra) => {
+const resetDeviceId = async (id, body, updatedBy) => {
   try {
     // 1. Validasi eksistensi berdasarkan id dan mitra
     const [existing] = await dbPool.execute(
-      "SELECT username FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 1",
-      [id, idMitra]
+      "SELECT username FROM tbl_users_mobile WHERE id = ? AND role = 'kasir' AND statusAktif = 1",
+      [id]
     );
 
     if (existing.length === 0) throw new Error("data not found");
@@ -278,14 +273,14 @@ const resetDeviceId = async (id, body, updatedBy, idMitra) => {
   }
 };
 
-const changePassword = async (id, body, updatedBy, idMitra) => {
+const changePassword = async (id, body, updatedBy) => {
   try {
     const { oldPassword, newPassword } = body;
 
     // 1. Ambil data user termasuk password hashed
     const [rows] = await dbPool.execute(
-      "SELECT username, password FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 1",
-      [id, idMitra]
+      "SELECT username, password FROM tbl_users_mobile WHERE id = ? AND role = 'kasir' AND statusAktif = 1",
+      [id]
     );
 
     if (rows.length === 0) throw new Error("data not found");
@@ -312,23 +307,15 @@ const changePassword = async (id, body, updatedBy, idMitra) => {
   }
 };
 
-const resetPassword = async (id, body, updatedBy, idMitra) => {
+const resetPassword = async (email) => {
   try {
-    const { username } = body;
-
-    // 1. Validasi eksistensi dan kecocokan username
+    // 1. Validasi eksistensi email
     const [rows] = await dbPool.execute(
-      "SELECT username, email FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND username = ? AND role = 'kasir' AND statusAktif = 1",
-      [id, idMitra, username]
+      "SELECT username, email FROM tbl_users_mobile WHERE email = ? AND role = 'kasir' AND statusAktif = 1",
+      [email]
     );
 
     if (rows.length === 0) throw new Error("data not found");
-
-    // 2. Generate Password baru (commended out di userOwner, ikuti pattern yang sama)
-    // const { password, hashedPassword } = await generateAndHashPassword(8);
-    // const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
-    // const SQLQuery = "UPDATE tbl_users_mobile SET password = ?, updatedBy = ?, updatedDate = ? WHERE id = ?";
-    // await dbPool.execute(SQLQuery, [hashedPassword, updatedBy, updatedDate, id]);
 
     return { username: rows[0].username, email: rows[0].email };
   } catch (error) {

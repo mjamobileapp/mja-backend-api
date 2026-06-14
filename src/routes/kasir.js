@@ -11,7 +11,7 @@ router.get("/:id", authenticateMobile, KasirController.getUserKasirById);
 router.put("/:id", authenticateMobile, KasirController.updateUserKasir);
 router.put("/:id/resetdeviceid", authenticateMobile, KasirController.resetDeviceId);
 router.post("/:id/changepassword", authenticateMobile, KasirController.changePassword);
-router.post("/:id/resetpassword", authenticateMobile, KasirController.resetPassword);
+router.post("/:email/resetpassword", KasirController.resetPassword);
 router.delete("/:id", authenticateMobile, KasirController.deleteUserKasir);
 router.post("/:id/restore", authenticateMobile, KasirController.restoreUserKasir);
 

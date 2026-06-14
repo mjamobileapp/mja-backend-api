@@ -64,11 +64,10 @@ const createNewUserKasir = async (req, res) => {
 };
 
 const getAllUserKasir = async (req, res) => {
-  const idMitra = req.user.idMitra;
   const { status } = req.query;
 
   try {
-    const data = await KasirModel.getAllUserKasir(idMitra, status);
+    const data = await KasirModel.getAllUserKasir(status);
     res.status(200).json({
       message: "Get All Kasir success",
       data: data,
@@ -80,10 +79,9 @@ const getAllUserKasir = async (req, res) => {
 
 const getUserKasirById = async (req, res) => {
   const { id } = req.params;
-  const idMitra = req.user.idMitra;
 
   try {
-    const data = await KasirModel.getUserKasirById(id, idMitra);
+    const data = await KasirModel.getUserKasirById(id);
     res.status(200).json({
       message: "Get Kasir by Id success",
       data: data,
@@ -97,7 +95,6 @@ const getUserKasirById = async (req, res) => {
 const updateUserKasir = async (req, res) => {
   const { id } = req.params;
   const { body } = req;
-  const idMitra = req.user.idMitra;
   const usernameToken = req.user.username;
 
   const requiredFields = ['namaLengkap', 'noTelp', 'email'];
@@ -111,7 +108,7 @@ const updateUserKasir = async (req, res) => {
   }
 
   try {
-    const data = await KasirModel.updateUserKasir(id, { ...body, updatedBy: usernameToken }, idMitra);
+    const data = await KasirModel.updateUserKasir(id, { ...body, updatedBy: usernameToken });
     res.status(200).json({
       message: "UPDATE Kasir success",
       data: data,
@@ -134,11 +131,10 @@ const updateUserKasir = async (req, res) => {
 
 const deleteUserKasir = async (req, res) => {
   const { id } = req.params;
-  const idMitra = req.user.idMitra;
   const usernameToken = req.user.username;
 
   try {
-    await KasirModel.deleteUserKasir(id, usernameToken, idMitra);
+    await KasirModel.deleteUserKasir(id, usernameToken);
     res.status(200).json({
       message: "Delete Kasir success",
       data: null,
@@ -151,11 +147,10 @@ const deleteUserKasir = async (req, res) => {
 
 const restoreUserKasir = async (req, res) => {
   const { id } = req.params;
-  const idMitra = req.user.idMitra;
   const usernameToken = req.user.username;
 
   try {
-    await KasirModel.restoreUserKasir(id, usernameToken, idMitra);
+    await KasirModel.restoreUserKasir(id, usernameToken);
     res.status(200).json({
       message: "Restore Kasir success",
       data: null,
@@ -169,11 +164,10 @@ const restoreUserKasir = async (req, res) => {
 const resetDeviceId = async (req, res) => {
   const { id } = req.params;
   const { body } = req;
-  const idMitra = req.user.idMitra;
   const usernameToken = req.user.username;
 
   try {
-    const username = await KasirModel.resetDeviceId(id, body, usernameToken, idMitra);
+    const username = await KasirModel.resetDeviceId(id, body, usernameToken);
     res.status(200).json({
       message: "Reset Device ID success",
       data: {
@@ -193,7 +187,6 @@ const resetDeviceId = async (req, res) => {
 const changePassword = async (req, res) => {
   const { id } = req.params;
   const { body } = req;
-  const idMitra = req.user.idMitra;
   const usernameToken = req.user.username;
 
   // 1. Validasi field yang dibutuhkan
@@ -215,7 +208,7 @@ const changePassword = async (req, res) => {
   }
 
   try {
-    const username = await KasirModel.changePassword(id, body, usernameToken, idMitra);
+    const username = await KasirModel.changePassword(id, body, usernameToken);
     res.status(200).json({
       message: "Password changed successfully",
       data: {
@@ -234,21 +227,10 @@ const changePassword = async (req, res) => {
 };
 
 const resetPassword = async (req, res) => {
-  const { id } = req.params;
-  const { body } = req;
-  const idMitra = req.user.idMitra;
-  const usernameToken = req.user.username;
-
-  // 1. Validasi field username di body
-  if (!body.username) {
-    return res.status(400).json({
-      message: "Bad request, missing required fields",
-      missingFields: ["username"],
-    });
-  }
+  const { email } = req.params;
 
   try {
-    const result = await KasirModel.resetPassword(id, body, usernameToken, idMitra);
+    const result = await KasirModel.resetPassword(email);
 
     // 2. Kirim email password baru ke user
     try {
