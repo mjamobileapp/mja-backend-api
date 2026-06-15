@@ -5,7 +5,7 @@ const createNewUserOwner = async (req, res) => {
   const { body } = req;
 
   // 1. Validasi field yang dibutuhkan di level controller
-  const requiredFields = ['username', 'role', 'idMitra', 'namaLengkap', 'noTelp', 'email', 'createdBy'];
+  const requiredFields = ['username', 'idMitra', 'namaLengkap', 'noTelp', 'email', 'createdBy'];
   const missingFields = requiredFields.filter(field => !body[field]);
 
   if (missingFields.length > 0) {
@@ -24,6 +24,7 @@ const createNewUserOwner = async (req, res) => {
       await sendUserMobileCredentialEmail({
         to: result.email,
         username: result.username,
+        role: result.role,
       });
     } catch (emailError) {
       console.error("Gagal mengirim email create owner:", emailError.message);
@@ -195,6 +196,13 @@ const changePassword = async (req, res) => {
     });
   }
 
+  // 3. Validasi password lama dan baru tidak boleh sama
+  if (body.oldPassword === body.newPassword) {
+    return res.status(400).json({
+      error: "Password baru tidak boleh sama dengan password lama",
+    });
+  }
+
   try {
     const username = await UserOwnerModel.changePassword(id, body, usernameToken);
     res.status(200).json({
@@ -225,6 +233,7 @@ const resetPassword = async (req, res) => {
       await sendResetPasswordEmail({
         to: result.email,
         username: result.username,
+        role: result.role,
         // newPassword: result.newPassword, --- IGNORE ---
       });
     } catch (emailError) {

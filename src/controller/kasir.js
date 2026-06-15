@@ -7,7 +7,7 @@ const createNewUserKasir = async (req, res) => {
   const usernameToken = req.user.username;
 
   // 1. Validasi field yang dibutuhkan di level controller
-  const requiredFields = ['username', 'role', 'idMitra', 'cabangId',  'namaLengkap', 'noTelp', 'email', 'createdBy'];
+  const requiredFields = ['username', 'idMitra', 'cabangId',  'namaLengkap', 'noTelp', 'email', 'createdBy'];
   const missingFields = requiredFields.filter(field => !body[field]);
 
   if (missingFields.length > 0) {
