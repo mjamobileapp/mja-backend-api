@@ -72,7 +72,7 @@ const sendUserMobileCredentialEmail = async ({ to, username, role }) => {
   const placeholders = {
     APP_NAME: process.env.APP_NAME,
     USERNAME: username,
-    ACTIVATION_LINK: `${process.env.FRONTEND_URL}/activate-account?token=${token}&type=activation`,
+    ACTIVATION_LINK: `${process.env.FRONTEND_URL}/activate-account?token=${token}`,
     EXPIRY_DURATION: process.env.EMAIL_EXPIRY_DURATION,
     YEAR: new Date().getFullYear(),
   };
@@ -112,7 +112,7 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
   const placeholders = {
     APP_NAME: process.env.APP_NAME,
     USERNAME: username,
-    ACTIVATION_LINK: `${process.env.FRONTEND_URL}/activate-account?token=${token}&type=reset_password`,
+    ACTIVATION_LINK: `${process.env.FRONTEND_URL}/activate-account?token=${token}`,
     EXPIRY_DURATION: process.env.EMAIL_EXPIRY_DURATION,
     YEAR: new Date().getFullYear(),
   };
