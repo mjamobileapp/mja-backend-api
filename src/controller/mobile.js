@@ -244,7 +244,58 @@ const activateAccount = async (req, res) => {
     }
 };
 
+const logoutUser = async (req, res) => {
+  const { username } = req.body;
+
+  if (!username) {
+    return res.status(400).json({
+      message: "Bad request, missing required fields",
+      missingFields: ["username"],
+    });
+  }
+
+  try {
+    // Cari user di database untuk memastikan username valid dan ambil datanya
+    const user = await UserMobileModel.getUserByUsername(username);
+
+    if (!user) {
+      return res.status(404).json({
+        error: "Username tidak ditemukan",
+      });
+    }
+
+    // Proses khusus jika role = kasir
+    if (user.role === "kasir") {
+      // a. Input data logout ke tbl_absensi
+      await UserMobileModel.recordAbsensiLogout(user.id, user.cabangId);
+
+      // b. Input data ke tbl_notifikasi untuk owner
+      await UserMobileModel.createNotifikasi(
+        user.idMitra,
+        user.cabangId,
+        "ABSENSI",
+        "Kasir Selesai Shift",
+        `Kasir ${user.namaLengkap} telah logout dan menyelesaikan shift di cabang.`
+      );
+    }
+
+    return res.status(200).json({
+      message: "Logout User Successfully",
+      data: {
+        username: user.username,
+      },
+    });
+  } catch (error) {
+    console.error("Mobile Logout error:", error);
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   loginUser,
   activateAccount,
+  logoutUser,
 };

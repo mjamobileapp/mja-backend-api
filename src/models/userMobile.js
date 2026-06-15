@@ -17,9 +17,23 @@ const updateDeviceId = async (id, deviceId, deviceName) => {
 };
 
 const createAbsensi = async (idUserMobile, cabangId) => {
+  // Tutup shift yang belum logout (Asumsi shift maksimal 10 jam)
+  await dbPool.execute(
+    "UPDATE `tbl_absensi` SET `waktuLogout` = `waktuLogin` + INTERVAL 10 HOUR WHERE `idUserMobile` = ? AND `waktuLogout` IS NULL",
+    [idUserMobile]
+  );
+
   const [result] = await dbPool.execute(
     "INSERT INTO tbl_absensi (idUserMobile, cabangId, waktuLogin) VALUES (?, ?, NOW())",
     [idUserMobile, cabangId]
+  );
+  return result;
+};
+
+const recordAbsensiLogout = async (idUserMobile, cabangId) => {
+  const [result] = await dbPool.execute(
+    "UPDATE `tbl_absensi` SET `waktuLogout` = NOW() WHERE `idUserMobile` = ? AND `waktuLogout` IS NULL",
+    [idUserMobile]
   );
   return result;
 };
@@ -92,4 +106,5 @@ module.exports = {
   updateStatusAktifByUsername,
   updatePasswordByUsername,
   getUserByUsernameWithoutStatusFilter,
+  recordAbsensiLogout,
 };
