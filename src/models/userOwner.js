@@ -6,7 +6,6 @@ const createNewUserOwner = async (body) => {
   try {
     const {
       username,
-      role,
       idMitra,
       namaLengkap,
       noTelp,
@@ -64,7 +63,7 @@ const createNewUserOwner = async (body) => {
     const values = [
       username,
       hashedPassword,
-      role,
+      "owner",
       idMitra,
       namaLengkap,
       noTelp,
@@ -79,7 +78,7 @@ const createNewUserOwner = async (body) => {
     // 6. Return data sesuai spesifikasi response success
     return {
       username,
-      role,
+      role: "owner",
       idMitra,
       namaLengkap,
       noTelp,
@@ -278,7 +277,7 @@ const resetPassword = async (email) => {
 
     if (rows.length === 0) throw new Error("data not found");
 
-    return { username: rows[0].username, email: rows[0].email};
+    return { username: rows[0].username, email: rows[0].email, role: "owner" };
   } catch (error) {
     throw error;
   }

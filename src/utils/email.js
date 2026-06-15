@@ -64,7 +64,7 @@ const sendUserMobileCredentialEmail = async ({ to, username, role }) => {
 
   // Generate Token dengan masa berlaku dari .env
   const token = jwt.sign(
-    { username, type: 'activation', role: role || 'owner' }, 
+    { username, type: 'activation', role }, 
     process.env.JWT_SECRET || 'MJA_SECRET_KEY', 
     { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) }
   );
@@ -104,7 +104,7 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
 
   // Generate Token dengan masa berlaku dari .env
   const token = jwt.sign(
-    { username, type: 'reset_password', role: role || 'owner' }, 
+    { username, type: 'reset_password', role }, 
     process.env.JWT_SECRET || 'MJA_SECRET_KEY', 
     { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) }
   );

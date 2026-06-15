@@ -5,7 +5,7 @@ const createNewUserOwner = async (req, res) => {
   const { body } = req;
 
   // 1. Validasi field yang dibutuhkan di level controller
-  const requiredFields = ['username', 'role', 'idMitra', 'namaLengkap', 'noTelp', 'email', 'createdBy'];
+  const requiredFields = ['username', 'idMitra', 'namaLengkap', 'noTelp', 'email', 'createdBy'];
   const missingFields = requiredFields.filter(field => !body[field]);
 
   if (missingFields.length > 0) {
@@ -24,6 +24,7 @@ const createNewUserOwner = async (req, res) => {
       await sendUserMobileCredentialEmail({
         to: result.email,
         username: result.username,
+        role: result.role,
       });
     } catch (emailError) {
       console.error("Gagal mengirim email create owner:", emailError.message);
@@ -225,6 +226,7 @@ const resetPassword = async (req, res) => {
       await sendResetPasswordEmail({
         to: result.email,
         username: result.username,
+        role: result.role,
         // newPassword: result.newPassword, --- IGNORE ---
       });
     } catch (emailError) {
