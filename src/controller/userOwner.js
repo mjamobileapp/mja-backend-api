@@ -196,6 +196,13 @@ const changePassword = async (req, res) => {
     });
   }
 
+  // 3. Validasi password lama dan baru tidak boleh sama
+  if (body.oldPassword === body.newPassword) {
+    return res.status(400).json({
+      error: "Password baru tidak boleh sama dengan password lama",
+    });
+  }
+
   try {
     const username = await UserOwnerModel.changePassword(id, body, usernameToken);
     res.status(200).json({
