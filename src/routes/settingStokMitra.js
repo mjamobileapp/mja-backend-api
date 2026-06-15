@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const SettingStokController = require("../controller/settingStokMitra");
-const { authenticate } = require("../middleware/auth");
+const { authenticateMobile } = require("../middleware/authMobile");
 
-router.use(authenticate);
+router.use(authenticateMobile);
 router.get("/", SettingStokController.getAllSettings);
 router.get("/mitra/:idMitra", SettingStokController.getSettingByIdMitra);
 router.post("/", SettingStokController.createNewSetting);
