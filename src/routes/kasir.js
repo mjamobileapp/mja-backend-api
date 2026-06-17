@@ -4,7 +4,7 @@ const { authenticateMobile } = require("../middleware/authMobile");
 
 const router = express.Router();
 
-// Endpoint untuk membuat user kasir baru
+router.get("/absensi", authenticateMobile, KasirController.getAbsensiKasir);
 router.post("/", authenticateMobile, KasirController.createNewUserKasir);
 router.get("/", authenticateMobile, KasirController.getAllUserKasir);
 router.get("/:id", authenticateMobile, KasirController.getUserKasirById);
@@ -16,3 +16,4 @@ router.delete("/:id", authenticateMobile, KasirController.deleteUserKasir);
 router.post("/:id/restore", authenticateMobile, KasirController.restoreUserKasir);
 
 module.exports = router;
+
