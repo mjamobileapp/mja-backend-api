@@ -9,13 +9,13 @@ const getCashflow = (cabangId, idMitra) => {
     FROM tbl_order_laundry o
     LEFT JOIN tbl_pengeluaran p 
       ON p.cabangId = o.cabangId 
+      AND p.idMitra = ?
       AND DATE(p.waktuPengeluaran) = CURDATE()
     WHERE o.cabangId = ?
-      AND p.idMitra = ?
       AND DATE(o.waktuOrder) = CURDATE()
     GROUP BY o.cabangId;
   `;
-  return dbPool.execute(SQLQuery, [cabangId, idMitra]);
+  return dbPool.execute(SQLQuery, [idMitra, cabangId]);
 };
 
 module.exports = {

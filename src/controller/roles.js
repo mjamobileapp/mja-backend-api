@@ -91,8 +91,8 @@ const updateRole = async (req, res) => {
   const mapData = {
     namaRole: body.namaRole,
     description: body.description,
-    createdBy: body.createdBy,
-    createdDate: mysqlTimestamp,
+    updatedBy: body.updatedBy,
+    updatedDate: mysqlTimestamp,
   };
     const requiredFields = ['namaRole', 'description', 'updatedBy'];
   const missingFields = requiredFields.filter(field => !body[field]);

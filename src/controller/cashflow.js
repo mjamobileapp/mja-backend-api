@@ -4,6 +4,12 @@ const getCashflow = async (req, res) => {
   const { cabangId } = req.query;
   const { idMitra } = req.user;
 
+  if (!idMitra) {
+    return res.status(401).json({
+      error: "Token tidak valid",
+    });
+  }
+
   if (!cabangId) {
     return res.status(400).json({
       error: "Parameter cabangId diperlukan",
