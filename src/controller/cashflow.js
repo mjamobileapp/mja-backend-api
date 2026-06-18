@@ -17,7 +17,7 @@ const getCashflow = async (req, res) => {
   }
 
   try {
-    const [rows] = await CashflowModel.getCashflow(cabangId, idMitra);
+    const [rows] = await CashflowModel.getCashflow(cabangId, idMitra, cabangId, idMitra);
 
     let data = {
       totalPemasukan: "0",
