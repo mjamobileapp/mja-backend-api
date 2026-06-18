@@ -39,8 +39,8 @@ const createNewUserOwner = async (req, res) => {
     if (
       error.message === "Mitra tidak ditemukan atau tidak aktif" || 
       error.message === "Username sudah terdaftar" ||
-      error.message === "Email sudah terdaftar" ||
-      error.message === "Nomor Telepon sudah terdaftar" ||
+      error.message === "Email sudah terdaftar dan sedang aktif digunakan" ||
+      error.message === "Nomor Telepon sudah terdaftar dan sedang aktif digunakan" ||
       error.message === "Format email tidak valid"
     ) {
       return res.status(400).json({
