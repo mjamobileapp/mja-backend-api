@@ -307,9 +307,9 @@ const getMesinByEspId = async (espId) => {
       throw new Error("Data not found");
     }
 
-    // Map ke format response: washer dan dryer terpisah
-    let washerData = null;
-    let dryerData = null;
+    // Map ke format response: washer dan dryer sebagai 1 (ada) atau 0 (tidak ada)
+    let hasWasher = 0;
+    let hasDryer = 0;
     let idMitra = null;
     let cabangId = null;
 
@@ -317,17 +317,9 @@ const getMesinByEspId = async (espId) => {
       idMitra = item.idMitra;
       cabangId = item.cabangId;
       if (item.tipeMesin === 'WASHER') {
-        washerData = {
-          id: item.id,
-          namaMesin: item.namaMesin,
-          status: item.status,
-        };
+        hasWasher = 1;
       } else if (item.tipeMesin === 'DRYER') {
-        dryerData = {
-          id: item.id,
-          namaMesin: item.namaMesin,
-          status: item.status,
-        };
+        hasDryer = 1;
       }
     }
 
@@ -335,8 +327,8 @@ const getMesinByEspId = async (espId) => {
       idMitra,
       cabangId,
       espId,
-      washer: washerData,
-      dryer: dryerData,
+      washer: hasWasher,
+      dryer: hasDryer,
     };
   } catch (error) {
     throw error;
