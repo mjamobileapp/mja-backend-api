@@ -30,8 +30,8 @@ const updateRole = (body, idRole) => {
     UPDATE tbl_role 
     SET namaRole = ?, 
         description = ?, 
-        createdDate = ?, 
-        createdBy = ?
+        updatedDate = ?, 
+        updatedBy = ?
     WHERE id = ?
   `;
 
@@ -39,10 +39,10 @@ const updateRole = (body, idRole) => {
     body.namaRole,
     body.description,
     dateNow,
-    body.createdBy,
+    body.updatedBy,
     idRole,
   ];
-
+  
   return dbPool.execute(SQLQuery, values);
 };
 
