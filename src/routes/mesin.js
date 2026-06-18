@@ -4,6 +4,7 @@ const { authenticate } = require("../middleware/auth");
 
 const router = express.Router();
 
+router.get("/list/cabang/:cabangId", authenticate, MesinController.getListMesinMobile);
 router.get("/esp/:espId", authenticate, MesinController.getMesinByEspId);
 router.post("/", authenticate, MesinController.createNewMesin);
 router.get("/", authenticate, MesinController.getAllMesin);

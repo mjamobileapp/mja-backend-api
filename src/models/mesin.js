@@ -335,6 +335,59 @@ const getMesinByEspId = async (espId) => {
   }
 };
 
+const getListMesinMobile = async (cabangId, idMitra) => {
+  try {
+    const [rows] = await dbPool.execute(
+      `SELECT id, espId, namaMesin, tipeMesin AS jenisMesin, status, waktuSelesai 
+      FROM tbl_mesin 
+      WHERE cabangId = ? AND idMitra = ? AND statusAktif = 1
+      ORDER BY id ASC`,
+      [cabangId, idMitra]
+    );
+
+    if (rows.length === 0) {
+      throw new Error("Data not found");
+    }
+
+    // Siapkan wadah untuk Grouping
+    const groupedData = {};
+    let nomorUrut = 1;
+
+    // Looping dan Kelompokkan berdasarkan espId
+    rows.forEach((row) => {
+      // Jika espId ini belum ada di wadah, buatkan "Kartu" baru
+      if (!groupedData[row.espId]) {
+        groupedData[row.espId] = {
+          nomorUrut: String(nomorUrut).padStart(2, '0'),
+          namaGroupMesin: row.namaMesin,
+          espId: row.espId,
+          washer: null,
+          dryer: null,
+        };
+        nomorUrut++;
+      }
+
+      // Masukkan data spesifik Washer / Dryer ke dalam "Kartu" tersebut
+      const detailMesin = {
+        idDb: row.id,
+        status: row.status,
+        waktuSelesai: row.status === 'IN_USE' ? row.waktuSelesai : null,
+      };
+
+      if (row.jenisMesin === 'WASHER') {
+        groupedData[row.espId].washer = detailMesin;
+      } else if (row.jenisMesin === 'DRYER') {
+        groupedData[row.espId].dryer = detailMesin;
+      }
+    });
+
+    // Ubah objek (dictionary) kembali menjadi Array
+    return Object.values(groupedData);
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   createNewMesin,
   updateMesin,
@@ -345,4 +398,5 @@ module.exports = {
   getMesinByIdMitra,
   getMesinByIdCabang,
   getMesinByEspId,
+  getListMesinMobile,
 };

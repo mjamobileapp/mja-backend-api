@@ -293,6 +293,37 @@ const getMesinByEspId = async (req, res) => {
   }
 };
 
+const getListMesinMobile = async (req, res) => {
+  const { cabangId } = req.params;
+  const idMitra = req.user ? req.user.idMitra : null;
+
+  console.log("GET LIST MESIN MOBILE REQUEST:", { cabangId, idMitra });
+
+  if (!idMitra) {
+    return res.status(400).json({
+      error: "idMitra tidak ditemukan di token",
+    });
+  }
+
+  try {
+    const data = await MesinModel.getListMesinMobile(cabangId, idMitra);
+    res.status(200).json({
+      success: true,
+      data: data,
+    });
+  } catch (error) {
+    if (error.message === "Data not found") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createNewMesin,
   updateMesin,
@@ -303,4 +334,5 @@ module.exports = {
   getMesinByIdMitra,
   getMesinByIdCabang,
   getMesinByEspId,
+  getListMesinMobile,
 };
