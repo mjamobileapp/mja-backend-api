@@ -106,47 +106,81 @@ const createNewMesin = async (body, createdBy = null) => {
   }
 };
 
-const updateMesin = async (id, body) => {
+const updateMesin = async (espIdParam, body, updatedBy) => {
+  const { idMitra, cabangId, espId, washer, dryer } = body;
+  
+  const connection = await dbPool.getConnection();
+  await connection.beginTransaction();
+  
   try {
-    const { namaMesin, tipeMesin, kapasitas, ipAddressEsp, macAddress, updatedBy } = body;
-
-    // Check if mesin exists
-    const [existingMesin] = await dbPool.execute(
-      "SELECT namaMesin FROM tbl_mesin WHERE id = ?",
-      [id]
+    // 1. Dapatkan namaMesin bawaan dari database (Agar namanya tidak berubah)
+    const [existingData] = await connection.execute(
+      `SELECT namaMesin FROM tbl_mesin WHERE espId = ? AND idMitra = ? LIMIT 1`,
+      [espIdParam, idMitra]
     );
-    if (existingMesin.length === 0) {
-      throw new Error("data not found");
+
+    if (existingData.length === 0) {
+      throw new Error("Modul mesin tidak ditemukan di sistem.");
     }
+    
+    const namaMesinAsli = existingData[0].namaMesin;
 
-    // Get current timestamp
-    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+    // 2. Fungsi Internal untuk Sinkronisasi (Upsert / Delete)
+    const syncMesin = async (jenis, isAktif, channelPin) => {
+      let currentId = null;
 
-    // Update the mesin data - only update available fields
-    const SQLQuery = `UPDATE tbl_mesin SET
-      namaMesin = ?,
-      tipeMesin = ?,
-      kapasitas = ?,
-      ipAddressEsp = ?,
-      macAddress = ?,
-      updatedBy = ?,  
-      updatedDate = ?    
-      WHERE id = ?`;
+      if (isAktif === 1) {
+        // Cek apakah data spesifik (WASHER/DRYER) ini sudah ada di tabel
+        const [cekMesin] = await connection.execute(
+          `SELECT id FROM tbl_mesin WHERE espId = ? AND tipeMesin = ? AND idMitra = ?`,
+          [espId, jenis, idMitra]
+        );
 
-    const values = [namaMesin, tipeMesin, kapasitas, ipAddressEsp, macAddress, updatedBy, updatedDate, id];
+        if (cekMesin.length > 0) {
+          // KONDISI A: Mesin sudah ada -> Lakukan UPDATE (Mungkin Admin pindah cabang)
+          currentId = cekMesin[0].id;
+          await connection.execute(
+            `UPDATE tbl_mesin SET cabangId = ?, updatedBy = ?, updatedDate = CURRENT_TIMESTAMP WHERE id = ?`,
+            [cabangId, updatedBy, currentId]
+          );
+        } else {
+          // KONDISI B: Mesin belum ada -> Lakukan INSERT (Admin baru membeli mesin ini)
+          const [result] = await connection.execute(
+            `INSERT INTO tbl_mesin (idMitra, cabangId, espId, channelRelay, namaMesin, tipeMesin, createdBy) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [idMitra, cabangId, espId, channelPin, namaMesinAsli, jenis, updatedBy]
+          );
+          currentId = result.insertId;
+        }
+      } else {
+        // KONDISI C: Jika payload = 0 -> Lakukan DELETE (Admin membuang/menjual mesin ini)
+        await connection.execute(
+          `DELETE FROM tbl_mesin WHERE espId = ? AND tipeMesin = ? AND idMitra = ?`,
+          [espId, jenis, idMitra]
+        );
+      }
+      return currentId;
+    };
 
-    await dbPool.execute(SQLQuery, values);
+    // 3. Eksekusi Sinkronisasi untuk Washer (Pin 5) dan Dryer (Pin 4)
+    const idWasher = await syncMesin('WASHER', washer, 5);
+    const idDryer = await syncMesin('DRYER', dryer, 4);
 
-    // Fetch and return the updated mesin data
-    const [updatedMesin] = await dbPool.execute(
-      "SELECT m.*, mitra.namaMitra, cabang.namaCabang FROM tbl_mesin m LEFT JOIN tbl_mitra mitra ON m.idMitra = mitra.id LEFT JOIN tbl_cabang cabang ON m.cabangId = cabang.id WHERE m.id = ?",
-      [id]
-    );
+    // Selesai, simpan permanen
+    await connection.commit();
 
-    const result = updatedMesin[0];
-    return result;
+    return {
+      idMitra,
+      cabangId,
+      espId,
+      washer: washer === 1 ? { id: idWasher, namaMesin: namaMesinAsli, status: "Ready" } : null,
+      dryer: dryer === 1 ? { id: idDryer, namaMesin: namaMesinAsli, status: "Ready" } : null,
+    };
   } catch (error) {
+    // Batalkan semua perubahan jika terjadi error
+    await connection.rollback();
     throw error;
+  } finally {
+    connection.release();
   }
 };
 

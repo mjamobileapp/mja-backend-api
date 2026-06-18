@@ -69,13 +69,14 @@ const createNewMesin = async (req, res) => {
 };
 
 const updateMesin = async (req, res) => {
-  const { id } = req.params;
+  const { id: espId } = req.params;
   const { body } = req;
+  const updatedBy = req.user ? req.user.username || req.user.id : null;
 
-  console.log("UPDATE REQUEST:", { id, body });
+  console.log("UPDATE REQUEST:", { espId, body });
 
-    // Validate required fields
-  const requiredFields = ['namaMesin', 'tipeMesin', 'kapasitas', 'ipAddressEsp', 'macAddress', 'updatedBy'];
+  // Validate required fields
+  const requiredFields = ['idMitra', 'cabangId', 'espId'];
   const missingFields = requiredFields.filter(field => !body[field]);
 
   if (missingFields.length > 0) {
@@ -85,13 +86,46 @@ const updateMesin = async (req, res) => {
     });
   }
 
+  // Validasi washer dan dryer sebagai angka 0 atau 1
+  const washer = body.washer;
+  const dryer = body.dryer;
+
+  if (washer === undefined || washer === null) {
+    return res.status(400).json({
+      error: "Field washer harus diisi",
+    });
+  }
+
+  if (dryer === undefined || dryer === null) {
+    return res.status(400).json({
+      error: "Field dryer harus diisi",
+    });
+  }
+
+  if (washer !== 0 && washer !== 1) {
+    return res.status(400).json({
+      error: "Field washer harus bernilai 0 atau 1",
+    });
+  }
+
+  if (dryer !== 0 && dryer !== 1) {
+    return res.status(400).json({
+      error: "Field dryer harus bernilai 0 atau 1",
+    });
+  }
+
   try {
-    const data = await MesinModel.updateMesin(id, body);
+    const data = await MesinModel.updateMesin(espId, body, updatedBy);
     res.status(200).json({
       message: "UPDATE Mesin success",
       data: data,
     });
   } catch (error) {
+    if (error.message === "Modul mesin tidak ditemukan di sistem.") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
     if (error.message === "data not found") {
       return res.status(404).json({
         error: error.message,
