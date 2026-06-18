@@ -14,26 +14,37 @@ const createNewMesin = async (req, res) => {
     });
   }
 
-  if (!body.washer && !body.dryer) {
+    // Validasi washer dan dryer sebagai angka 0 atau 1
+  const washer = body.washer;
+  const dryer = body.dryer;
+
+  if ((washer === undefined || washer === null) && (dryer === undefined || dryer === null)) {
     return res.status(400).json({
-      message: "Bad request, at least one of washer or dryer must be provided",
+      error: "Field washer atau dryer harus diisi",
     });
   }
 
-  if (body.washer && !body.washer.namaMesin) {
+  if (washer !== undefined && washer !== null && washer !== 0 && washer !== 1) {
     return res.status(400).json({
-      error: "Field namaMesin pada washer diperlukan",
+      error: "Field washer harus bernilai 0 atau 1",
     });
   }
 
-  if (body.dryer && !body.dryer.namaMesin) {
+  if (dryer !== undefined && dryer !== null && dryer !== 0 && dryer !== 1) {
     return res.status(400).json({
-      error: "Field namaMesin pada dryer diperlukan",
+      error: "Field dryer harus bernilai 0 atau 1",
     });
   }
 
-  try {
-    const result = await MesinModel.createNewMesin(body);
+  if (washer !== 1 && dryer !== 1) {
+    return res.status(400).json({
+      error: "Minimal salah satu washer atau dryer harus bernilai 1",
+    });
+  }
+
+    try {
+    const createdBy = req.user ? req.user.username || req.user.id : null;
+    const result = await MesinModel.createNewMesin(body, createdBy);
     res.status(201).json({
       message: "CREATE new Mesin success",
       data: result,

@@ -1,6 +1,6 @@
 const dbPool = require("../config/database");
 
-const createNewMesin = async (body) => {
+const createNewMesin = async (body, createdBy = null) => {
   try {
     const { idMitra, cabangId, espId, washer, dryer } = body;
 
@@ -22,11 +22,21 @@ const createNewMesin = async (body) => {
       throw new Error("Cabang tidak ditemukan / tidak aktif / tidak sesuai dengan Mitra");
     }
 
-    // 3. Buat array untuk menampung data
+    // 3. Hitung jumlah grup mesin (espId unik) yang sudah ada di cabang tersebut
+    const [countResult] = await dbPool.query(
+      "SELECT COUNT(DISTINCT espId) AS totalGrupMesin FROM tbl_mesin WHERE idMitra = ? AND cabangId = ?",
+      [idMitra, cabangId]
+    );
+    
+    // 4. Tentukan nomor urut dan nama otomatis
+    const urutanBaru = (countResult[0]?.totalGrupMesin || 0) + 1;
+    const namaMesinOtomatis = `Mesin Laundry ${urutanBaru}`;
+
+    // 5. Siapkan keranjang data (Bulk Insert Array)
     const values = [];
 
-    // 4. Cek Washer
-    if (washer && washer.namaMesin) {
+    // 6. Jika washer = 1 (TRUE)
+    if (washer === 1) {
       // Validasi duplikasi espId + tipeMesin
       const [existingWasher] = await dbPool.execute(
         "SELECT id FROM tbl_mesin WHERE espId = ? AND tipeMesin = 'WASHER'",
@@ -35,11 +45,11 @@ const createNewMesin = async (body) => {
       if (existingWasher.length > 0) {
         throw new Error("Mesin dengan espId dan tipe WASHER yang sama sudah terdaftar");
       }
-      values.push([idMitra, cabangId, espId, 5, washer.namaMesin, 'WASHER']);
+      values.push([idMitra, cabangId, espId, 5, namaMesinOtomatis, 'WASHER', createdBy]);
     }
 
-    // 5. Cek Dryer
-    if (dryer && dryer.namaMesin) {
+    // 7. Jika dryer = 1 (TRUE)
+    if (dryer === 1) {
       // Validasi duplikasi espId + tipeMesin
       const [existingDryer] = await dbPool.execute(
         "SELECT id FROM tbl_mesin WHERE espId = ? AND tipeMesin = 'DRYER'",
@@ -48,38 +58,38 @@ const createNewMesin = async (body) => {
       if (existingDryer.length > 0) {
         throw new Error("Mesin dengan espId dan tipe DRYER yang sama sudah terdaftar");
       }
-      values.push([idMitra, cabangId, espId, 4, dryer.namaMesin, 'DRYER']);
+      values.push([idMitra, cabangId, espId, 4, namaMesinOtomatis, 'DRYER', createdBy]);
     }
 
-    // 6. Validasi minimal satu data
+    // 8. Validasi minimal satu data
     if (values.length === 0) {
       throw new Error("Minimal harus mengisi satu data mesin (Washer atau Dryer)");
     }
 
-    // 7. Insert ke database
+    // 9. Insert ke database
     const query = `INSERT INTO tbl_mesin 
-      (idMitra, cabangId, espId, channelRelay, namaMesin, tipeMesin) 
+      (idMitra, cabangId, espId, channelRelay, namaMesin, tipeMesin, createdBy) 
       VALUES ?`;
     
     const [result] = await dbPool.query(query, [values]);
 
-    // 8. Map hasil insertId untuk response
+    // 10. Map hasil insertId untuk response
     let washerResult = null;
     let dryerResult = null;
     
-    if (washer && washer.namaMesin) {
+    if (washer === 1) {
       washerResult = {
         id: result.insertId,
-        namaMesin: washer.namaMesin,
+        namaMesin: namaMesinOtomatis,
         status: "Ready",
       };
     }
     
-    if (dryer && dryer.namaMesin) {
-      const dryerInsertId = washer && washer.namaMesin ? result.insertId + 1 : result.insertId;
+    if (dryer === 1) {
+      const dryerInsertId = washer === 1 ? result.insertId + 1 : result.insertId;
       dryerResult = {
         id: dryerInsertId,
-        namaMesin: dryer.namaMesin,
+        namaMesin: namaMesinOtomatis,
         status: "Ready",
       };
     }
