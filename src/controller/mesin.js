@@ -4,13 +4,31 @@ const createNewMesin = async (req, res) => {
   const { body } = req;
   console.log("BODY REQUEST:", body);
 
-    const requiredFields = ['idMitra', 'cabangId', 'namaMesin', 'tipeMesin', 'kapasitas', 'ipAddressEsp', 'macAddress', 'status', 'createdBy'];
+  const requiredFields = ['idMitra', 'cabangId', 'espId'];
   const missingFields = requiredFields.filter(field => !body[field]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
       missingFields: missingFields,
+    });
+  }
+
+  if (!body.washer && !body.dryer) {
+    return res.status(400).json({
+      message: "Bad request, at least one of washer or dryer must be provided",
+    });
+  }
+
+  if (body.washer && !body.washer.namaMesin) {
+    return res.status(400).json({
+      error: "Field namaMesin pada washer diperlukan",
+    });
+  }
+
+  if (body.dryer && !body.dryer.namaMesin) {
+    return res.status(400).json({
+      error: "Field namaMesin pada dryer diperlukan",
     });
   }
 
@@ -24,7 +42,9 @@ const createNewMesin = async (req, res) => {
     if (
       error.message === "Mitra tidak ditemukan atau tidak aktif" || 
       error.message === "Cabang tidak ditemukan / tidak aktif / tidak sesuai dengan Mitra" || 
-      error.message === "Mesin dengan IP Address yang sama sudah terdaftar"
+      error.message === "Minimal harus mengisi satu data mesin (Washer atau Dryer)" ||
+      error.message === "Mesin dengan espId dan tipe WASHER yang sama sudah terdaftar" ||
+      error.message === "Mesin dengan espId dan tipe DRYER yang sama sudah terdaftar"
     ) {
       return res.status(400).json({
         error: error.message,

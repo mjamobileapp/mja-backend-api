@@ -2,7 +2,7 @@ const dbPool = require("../config/database");
 
 const createNewMesin = async (body) => {
   try {
-    const { idMitra, cabangId, namaMesin, tipeMesin, kapasitas, ipAddressEsp, macAddress, status, createdBy } = body;
+    const { idMitra, cabangId, espId, washer, dryer } = body;
 
     // 1. Validasi Mitra Exist
     const [existingMitra] = await dbPool.execute(
@@ -22,38 +22,75 @@ const createNewMesin = async (body) => {
       throw new Error("Cabang tidak ditemukan / tidak aktif / tidak sesuai dengan Mitra");
     }
 
-    // Check if mesin already exists
-    const [existingMesin] = await dbPool.execute(
-      "SELECT id FROM tbl_mesin WHERE ipAddressEsp = ? AND statusAktif = TRUE",
-      [ipAddressEsp]
-    );
+    // 3. Buat array untuk menampung data
+    const values = [];
 
-    if (existingMesin.length > 0) {
-      throw new Error("Mesin dengan IP Address yang sama sudah terdaftar");
+    // 4. Cek Washer
+    if (washer && washer.namaMesin) {
+      // Validasi duplikasi espId + tipeMesin
+      const [existingWasher] = await dbPool.execute(
+        "SELECT id FROM tbl_mesin WHERE espId = ? AND tipeMesin = 'WASHER'",
+        [espId]
+      );
+      if (existingWasher.length > 0) {
+        throw new Error("Mesin dengan espId dan tipe WASHER yang sama sudah terdaftar");
+      }
+      values.push([idMitra, cabangId, espId, 5, washer.namaMesin, 'WASHER']);
     }
 
-    const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
+    // 5. Cek Dryer
+    if (dryer && dryer.namaMesin) {
+      // Validasi duplikasi espId + tipeMesin
+      const [existingDryer] = await dbPool.execute(
+        "SELECT id FROM tbl_mesin WHERE espId = ? AND tipeMesin = 'DRYER'",
+        [espId]
+      );
+      if (existingDryer.length > 0) {
+        throw new Error("Mesin dengan espId dan tipe DRYER yang sama sudah terdaftar");
+      }
+      values.push([idMitra, cabangId, espId, 4, dryer.namaMesin, 'DRYER']);
+    }
 
-    const SQLQuery = `INSERT INTO tbl_mesin (
+    // 6. Validasi minimal satu data
+    if (values.length === 0) {
+      throw new Error("Minimal harus mengisi satu data mesin (Washer atau Dryer)");
+    }
+
+    // 7. Insert ke database
+    const query = `INSERT INTO tbl_mesin 
+      (idMitra, cabangId, espId, channelRelay, namaMesin, tipeMesin) 
+      VALUES ?`;
+    
+    const [result] = await dbPool.query(query, [values]);
+
+    // 8. Map hasil insertId untuk response
+    let washerResult = null;
+    let dryerResult = null;
+    
+    if (washer && washer.namaMesin) {
+      washerResult = {
+        id: result.insertId,
+        namaMesin: washer.namaMesin,
+        status: "Ready",
+      };
+    }
+    
+    if (dryer && dryer.namaMesin) {
+      const dryerInsertId = washer && washer.namaMesin ? result.insertId + 1 : result.insertId;
+      dryerResult = {
+        id: dryerInsertId,
+        namaMesin: dryer.namaMesin,
+        status: "Ready",
+      };
+    }
+
+    return {
       idMitra,
       cabangId,
-      namaMesin,
-      tipeMesin,
-      kapasitas,
-      ipAddressEsp,
-      macAddress,
-      status,
-      createdBy,
-      createdDate,
-      statusAktif
-     )
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)`;
-
-    const values = [idMitra, cabangId, namaMesin, tipeMesin, kapasitas, ipAddressEsp, macAddress, status, createdBy, dateNow, true];
-
-    const [result] = await dbPool.execute(SQLQuery, values);
-    
-    return { id: result.insertId, ...body, statusAktif: true };
+      espId,
+      washer: washerResult,
+      dryer: dryerResult,
+    };
   } catch (error) {
     throw error;
   }
