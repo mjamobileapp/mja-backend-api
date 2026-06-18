@@ -131,8 +131,8 @@ const updateMesin = async (espIdParam, body, updatedBy) => {
 
       if (isAktif === 1) {
         // Cek apakah data spesifik (WASHER/DRYER) ini sudah ada di tabel
-        const [cekMesin] = await connection.execute(
-          `SELECT id FROM tbl_mesin WHERE espId = ? AND tipeMesin = ? AND idMitra = ?`,
+                const [cekMesin] = await connection.execute(
+          `SELECT id FROM tbl_mesin WHERE espId = ? AND tipeMesin = ? AND idMitra = ? AND statusAktif = 1`,
           [espId, jenis, idMitra]
         );
 
@@ -151,11 +151,11 @@ const updateMesin = async (espIdParam, body, updatedBy) => {
           );
           currentId = result.insertId;
         }
-      } else {
-        // KONDISI C: Jika payload = 0 -> Lakukan DELETE (Admin membuang/menjual mesin ini)
+            } else {
+        // KONDISI C: Jika payload = 0 -> Lakukan SOFT DELETE (set statusAktif = 0)
         await connection.execute(
-          `DELETE FROM tbl_mesin WHERE espId = ? AND tipeMesin = ? AND idMitra = ?`,
-          [espId, jenis, idMitra]
+          `UPDATE tbl_mesin SET statusAktif = 0, updatedBy = ?, updatedDate = CURRENT_TIMESTAMP WHERE espId = ? AND tipeMesin = ? AND idMitra = ?`,
+          [updatedBy, espId, jenis, idMitra]
         );
       }
       return currentId;
@@ -300,7 +300,7 @@ const restoreMesin = async (id, updatedBy) => {
 const getMesinByEspId = async (espId) => {
   try {
     const [mesins] = await dbPool.execute(
-      "SELECT * FROM tbl_mesin WHERE espId = ?",
+      "SELECT * FROM tbl_mesin WHERE espId = ? AND statusAktif = TRUE",
       [espId]
     );
     if (mesins.length === 0) {
