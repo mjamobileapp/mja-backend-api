@@ -96,10 +96,16 @@ const deleteMenu = (id) => {
   return dbPool.execute(SQLQuery);
 };
 
+const getMenuHeader = () => {
+  const SQLQuery = "SELECT * FROM tbl_menu WHERE tipeMenu = 'Header'";
+  return dbPool.execute(SQLQuery);
+};
+
 module.exports = {
   getAll,
   getById,
   createNewMenu,
   updateMenu,
   deleteMenu,
+  getMenuHeader,
 };

@@ -123,10 +123,47 @@ const deleteMenu = async (req, res) => {
   }
 };
 
+const getMenuHeader = async (req, res) => {
+  try {
+    const [result] = await MasterMenuModel.getMenuHeader();
+
+    if (result.length === 0) {
+      return res.status(404).json({
+        message: "Data tidak ditemukan.",
+      });
+    }
+
+    const mappedData = result.map((item) => ({
+      id: item.id,
+      url: item.url,
+      namaMenu: item.namaMenu,
+      parentId: item.parentId,
+      menuParent: item.menuParent,
+      menuSubParent: item.menuSubParent,
+      icon: item.iconMenu,
+      menuLevel: item.levelMenu,
+      menuType: item.tipeMenu,
+      noUrut: item.noUrut,
+    }));
+
+    res.json({
+      message: "GET Menu Header success",
+      data: mappedData,
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({
+      message: "Terjadi kesalahan saat memanggil data",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
   createNewMenu,
   updateMenu,
   deleteMenu,
+  getMenuHeader,
 };
