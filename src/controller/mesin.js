@@ -269,6 +269,30 @@ const restoreMesin = async (req, res) => {
   }
 };
 
+const getMesinByEspId = async (req, res) => {
+  const { espId } = req.params;
+
+  console.log("GET BY ESPID REQUEST:", { espId });
+
+  try {
+    const data = await MesinModel.getMesinByEspId(espId);
+    res.status(200).json({
+      message: "get Data Mesin success",
+      data: data,
+    });
+  } catch (error) {
+    if (error.message === "Data not found") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   createNewMesin,
   updateMesin,
@@ -278,4 +302,5 @@ module.exports = {
   getAllMesin,
   getMesinByIdMitra,
   getMesinByIdCabang,
+  getMesinByEspId,
 };

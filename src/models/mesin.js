@@ -297,6 +297,52 @@ const restoreMesin = async (id, updatedBy) => {
   }
 };
 
+const getMesinByEspId = async (espId) => {
+  try {
+    const [mesins] = await dbPool.execute(
+      "SELECT * FROM tbl_mesin WHERE espId = ?",
+      [espId]
+    );
+    if (mesins.length === 0) {
+      throw new Error("Data not found");
+    }
+
+    // Map ke format response: washer dan dryer terpisah
+    let washerData = null;
+    let dryerData = null;
+    let idMitra = null;
+    let cabangId = null;
+
+    for (const item of mesins) {
+      idMitra = item.idMitra;
+      cabangId = item.cabangId;
+      if (item.tipeMesin === 'WASHER') {
+        washerData = {
+          id: item.id,
+          namaMesin: item.namaMesin,
+          status: item.status,
+        };
+      } else if (item.tipeMesin === 'DRYER') {
+        dryerData = {
+          id: item.id,
+          namaMesin: item.namaMesin,
+          status: item.status,
+        };
+      }
+    }
+
+    return {
+      idMitra,
+      cabangId,
+      espId,
+      washer: washerData,
+      dryer: dryerData,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   createNewMesin,
   updateMesin,
@@ -306,4 +352,5 @@ module.exports = {
   getAllMesin,
   getMesinByIdMitra,
   getMesinByIdCabang,
+  getMesinByEspId,
 };
