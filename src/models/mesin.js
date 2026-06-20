@@ -22,82 +22,68 @@ const createNewMesin = async (body, createdBy = null) => {
       throw new Error("Cabang tidak ditemukan / tidak aktif / tidak sesuai dengan Mitra");
     }
 
-    // 3. Hitung jumlah grup mesin (espId unik) yang sudah ada di cabang tersebut
+    // 3. Validasi duplikasi espId + cabangId
+    const [existingMaster] = await dbPool.execute(
+      "SELECT id FROM tbl_mesin_master WHERE espId = ? AND cabangId = ?",
+      [espId, cabangId]
+    );
+    if (existingMaster.length > 0) {
+      throw new Error("Modul ESP ini sudah terdaftar di cabang yang sama");
+    }
+
+    // 4. Validasi minimal washer atau dryer
+    if (washer !== 1 && dryer !== 1) {
+      throw new Error("Minimal salah satu washer atau dryer harus bernilai 1");
+    }
+
+    // 5. Hitung jumlah modul (espId unik) yang sudah ada di cabang tersebut
     const [countResult] = await dbPool.query(
-      "SELECT COUNT(DISTINCT espId) AS totalGrupMesin FROM tbl_mesin WHERE idMitra = ? AND cabangId = ?",
+      `SELECT COUNT(DISTINCT espId) AS totalGrupMesin 
+      FROM tbl_mesin_master 
+      WHERE idMitra = ? AND cabangId = ?`,
       [idMitra, cabangId]
     );
-    
-    // 4. Tentukan nomor urut dan nama otomatis
-    const urutanBaru = (countResult[0]?.totalGrupMesin || 0) + 1;
-    const namaMesinOtomatis = `Mesin Laundry ${urutanBaru}`;
 
-    // 5. Siapkan keranjang data (Bulk Insert Array)
-    const values = [];
+    // 6. Tentukan nomor urut dan nama otomatis
+    const urutanBaru = countResult[0].totalGrupMesin + 1;
+    const namaGroupMesinOtomatis = `Mesin Laundry ${urutanBaru}`; 
+    // Output: "Mesin Laundry 1", "Mesin Laundry 2", dst.
 
-    // 6. Jika washer = 1 (TRUE)
-    if (washer === 1) {
-      // Validasi duplikasi espId + tipeMesin
-      const [existingWasher] = await dbPool.execute(
-        "SELECT id FROM tbl_mesin WHERE espId = ? AND tipeMesin = 'WASHER'",
-        [espId]
-      );
-      if (existingWasher.length > 0) {
-        throw new Error("Mesin dengan espId dan tipe WASHER yang sama sudah terdaftar");
-      }
-      values.push([idMitra, cabangId, espId, 5, namaMesinOtomatis, 'WASHER', createdBy]);
-    }
+    // 7. INSERT ke tbl_mesin_master
+    const [masterResult] = await dbPool.execute(
+      `INSERT INTO tbl_mesin_master (idMitra, cabangId, espId, namaGroupMesin, createdBy) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [idMitra, cabangId, espId, namaGroupMesinOtomatis, createdBy]
+    );
+    const idMesinMaster = masterResult.insertId;
 
-    // 7. Jika dryer = 1 (TRUE)
-    if (dryer === 1) {
-      // Validasi duplikasi espId + tipeMesin
-      const [existingDryer] = await dbPool.execute(
-        "SELECT id FROM tbl_mesin WHERE espId = ? AND tipeMesin = 'DRYER'",
-        [espId]
-      );
-      if (existingDryer.length > 0) {
-        throw new Error("Mesin dengan espId dan tipe DRYER yang sama sudah terdaftar");
-      }
-      values.push([idMitra, cabangId, espId, 4, namaMesinOtomatis, 'DRYER', createdBy]);
-    }
-
-    // 8. Validasi minimal satu data
-    if (values.length === 0) {
-      throw new Error("Minimal harus mengisi satu data mesin (Washer atau Dryer)");
-    }
-
-    // 9. Insert ke database
-    const query = `INSERT INTO tbl_mesin 
-      (idMitra, cabangId, espId, channelRelay, namaMesin, tipeMesin, createdBy) 
-      VALUES ?`;
-    
-    const [result] = await dbPool.query(query, [values]);
-
-    // 10. Map hasil insertId untuk response
+    // 8. Insert Washer jika ada
     let washerResult = null;
-    let dryerResult = null;
-    
     if (washer === 1) {
-      washerResult = {
-        id: result.insertId,
-        namaMesin: namaMesinOtomatis,
-        status: "Ready",
-      };
+      const [detailWasher] = await dbPool.execute(
+        `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, channelRelay, status) 
+         VALUES (?, 'WASHER', 5, 'READY')`,
+        [idMesinMaster]
+      );
+      washerResult = { id: detailWasher.insertId, status: "Ready" };
     }
-    
+
+    // 9. Insert Dryer jika ada
+    let dryerResult = null;
     if (dryer === 1) {
-      const dryerInsertId = washer === 1 ? result.insertId + 1 : result.insertId;
-      dryerResult = {
-        id: dryerInsertId,
-        namaMesin: namaMesinOtomatis,
-        status: "Ready",
-      };
+      const [detailDryer] = await dbPool.execute(
+        `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, channelRelay, status) 
+         VALUES (?, 'DRYER', 4, 'READY')`,
+        [idMesinMaster]
+      );
+      dryerResult = { id: detailDryer.insertId, status: "Ready" };
     }
 
     return {
       idMitra,
       cabangId,
       espId,
+      namaGroupMesinOtomatis,
       washer: washerResult,
       dryer: dryerResult,
     };
@@ -106,62 +92,64 @@ const createNewMesin = async (body, createdBy = null) => {
   }
 };
 
-const updateMesin = async (espIdParam, body, updatedBy) => {
+const updateMesin = async (idMesinMaster, body, updatedBy) => {
   const { idMitra, cabangId, espId, washer, dryer } = body;
-  
+
   const connection = await dbPool.getConnection();
   await connection.beginTransaction();
-  
+
   try {
-    // 1. Dapatkan namaMesin bawaan dari database (Agar namanya tidak berubah)
-    const [existingData] = await connection.execute(
-      `SELECT namaMesin FROM tbl_mesin WHERE espId = ? AND idMitra = ? LIMIT 1`,
-      [espIdParam, idMitra]
+    // 1. Dapatkan master ID dan namaGroupMesin bawaan dari database
+    const [masterRecord] = await connection.execute(
+      `SELECT id, namaGroupMesin FROM tbl_mesin_master WHERE id = ? AND idMitra = ? AND statusAktif = 1 LIMIT 1`,
+      [idMesinMaster, idMitra]
     );
 
-    if (existingData.length === 0) {
+    if (masterRecord.length === 0) {
       throw new Error("Modul mesin tidak ditemukan di sistem.");
     }
-    
-    const namaMesinAsli = existingData[0].namaMesin;
 
-    // 2. Fungsi Internal untuk Sinkronisasi (Upsert / Delete)
+    const namaMesinAsli = masterRecord[0].namaGroupMesin;
+    const namaGroupMesin = body.namaGroupMesin || namaMesinAsli;
+
+    // 2. Update cabangId, espId, namaGroupMesin di master
+    await connection.execute(
+      `UPDATE tbl_mesin_master SET cabangId = ?, espId = ?, namaGroupMesin = ?, updatedBy = ?, updatedDate = CURRENT_TIMESTAMP WHERE id = ?`,
+      [cabangId, espId, namaGroupMesin, updatedBy, idMesinMaster]
+    );
+
+    // 3. Fungsi Internal untuk Sinkronisasi (Upsert / Delete)
     const syncMesin = async (jenis, isAktif, channelPin) => {
       let currentId = null;
 
       if (isAktif === 1) {
-        // Cek apakah data spesifik (WASHER/DRYER) ini sudah ada di tabel
-                const [cekMesin] = await connection.execute(
-          `SELECT id FROM tbl_mesin WHERE espId = ? AND tipeMesin = ? AND idMitra = ? AND statusAktif = 1`,
-          [espId, jenis, idMitra]
+        // Cek apakah data spesifik (WASHER/DRYER) ini sudah ada di tabel detail
+        const [cekMesin] = await connection.execute(
+          `SELECT id FROM tbl_mesin_detail WHERE idMesinMaster = ? AND jenisMesin = ?`,
+          [idMesinMaster, jenis]
         );
 
         if (cekMesin.length > 0) {
-          // KONDISI A: Mesin sudah ada -> Lakukan UPDATE (Mungkin Admin pindah cabang)
           currentId = cekMesin[0].id;
-          await connection.execute(
-            `UPDATE tbl_mesin SET cabangId = ?, updatedBy = ?, updatedDate = CURRENT_TIMESTAMP WHERE id = ?`,
-            [cabangId, updatedBy, currentId]
-          );
         } else {
-          // KONDISI B: Mesin belum ada -> Lakukan INSERT (Admin baru membeli mesin ini)
+          // KONDISI B: Detail belum ada -> Lakukan INSERT
           const [result] = await connection.execute(
-            `INSERT INTO tbl_mesin (idMitra, cabangId, espId, channelRelay, namaMesin, tipeMesin, createdBy) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [idMitra, cabangId, espId, channelPin, namaMesinAsli, jenis, updatedBy]
+            `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, channelRelay, status) VALUES (?, ?, ?, 'READY')`,
+            [idMesinMaster, jenis, channelPin]
           );
           currentId = result.insertId;
         }
-            } else {
-        // KONDISI C: Jika payload = 0 -> Lakukan SOFT DELETE (set statusAktif = 0)
+      } else {
+        // KONDISI C: Jika payload = 0 -> Lakukan DELETE dari tabel detail
         await connection.execute(
-          `UPDATE tbl_mesin SET statusAktif = 0, updatedBy = ?, updatedDate = CURRENT_TIMESTAMP WHERE espId = ? AND tipeMesin = ? AND idMitra = ?`,
-          [updatedBy, espId, jenis, idMitra]
+          `DELETE FROM tbl_mesin_detail WHERE idMesinMaster = ? AND jenisMesin = ?`,
+          [idMesinMaster, jenis]
         );
       }
       return currentId;
     };
 
-    // 3. Eksekusi Sinkronisasi untuk Washer (Pin 5) dan Dryer (Pin 4)
+    // 4. Eksekusi Sinkronisasi untuk Washer (Pin 5) dan Dryer (Pin 4)
     const idWasher = await syncMesin('WASHER', washer, 5);
     const idDryer = await syncMesin('DRYER', dryer, 4);
 
@@ -171,9 +159,10 @@ const updateMesin = async (espIdParam, body, updatedBy) => {
     return {
       idMitra,
       cabangId,
+      namaGroupMesin,
       espId,
-      washer: washer === 1 ? { id: idWasher, namaMesin: namaMesinAsli, status: "Ready" } : null,
-      dryer: dryer === 1 ? { id: idDryer, namaMesin: namaMesinAsli, status: "Ready" } : null,
+      washer: washer === 1 ? { id: idWasher, status: "Ready" } : null,
+      dryer: dryer === 1 ? { id: idDryer, status: "Ready" } : null,
     };
   } catch (error) {
     // Batalkan semua perubahan jika terjadi error
@@ -188,24 +177,27 @@ const deleteMesin = async (id, updatedBy) => {
   try {
     // 1. Cek apakah mesin eksis dan aktif
     const [existingMesin] = await dbPool.execute(
-      "SELECT id, status FROM tbl_mesin WHERE id = ? AND statusAktif = 1",
+      `SELECT d.id, d.status, m.id AS masterId 
+       FROM tbl_mesin_detail d
+       JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
+       WHERE d.id = ? AND m.statusAktif = 1`,
       [id]
     );
-    
+
     if (existingMesin.length === 0) {
       throw new Error("data not found");
     }
 
     // 2. Tolak jika mesin sedang menyala (status = in_use)
-    if (existingMesin[0].status === "in_use") {
+    if (existingMesin[0].status === "IN_USE" || existingMesin[0].status === "in_use") {
       throw new Error("Mesin sedang menyala");
     }
 
-    // 3. Soft delete: update statusAktif menjadi 0 dan update updatedBy
+    // 3. Soft delete: update statusAktif menjadi 0 dan update updatedBy pada master
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
-    const SQLQuery = "UPDATE tbl_mesin SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
-    
-    const [result] = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
+    const SQLQuery = "UPDATE tbl_mesin_master SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
+
+    const [result] = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, existingMesin[0].masterId]);
 
     return result;
   } catch (error) {
@@ -215,14 +207,37 @@ const deleteMesin = async (id, updatedBy) => {
 
 const getMesinById = async (id) => {
   try {
-    const [mesin] = await dbPool.execute(
-      "SELECT * FROM tbl_mesin WHERE id = ?",
+    const [rows] = await dbPool.execute(
+      `SELECT 
+        m.idMitra, 
+        m.cabangId, 
+        m.espId, 
+        d.jenisMesin
+       FROM tbl_mesin_master m
+       LEFT JOIN tbl_mesin_detail d ON d.idMesinMaster = m.id
+       WHERE m.id = ? AND m.statusAktif = 1`,
       [id]
     );
-    if (mesin.length === 0) {
+
+    if (rows.length === 0) {
       throw new Error("data not found");
     }
-    return mesin[0];
+
+    let hasWasher = 0;
+    let hasDryer = 0;
+
+    rows.forEach(row => {
+      if (row.jenisMesin === 'WASHER') hasWasher = 1;
+      if (row.jenisMesin === 'DRYER') hasDryer = 1;
+    });
+
+    return {
+      idMitra: rows[0].idMitra,
+      cabangId: rows[0].cabangId,
+      espId: rows[0].espId,
+      washer: hasWasher,
+      dryer: hasDryer
+    };
   } catch (error) {
     throw error;
   }
@@ -230,13 +245,22 @@ const getMesinById = async (id) => {
 
 const getAllMesin = async (status) => {
   try {
-    let SQLQuery = "SELECT m.*, mitra.namaMitra, cabang.namaCabang FROM tbl_mesin m LEFT JOIN tbl_mitra mitra ON m.idMitra = mitra.id LEFT JOIN tbl_cabang cabang ON m.cabangId = cabang.id";
+    let SQLQuery = `
+      SELECT 
+        d.id, d.jenisMesin AS tipeMesin, d.channelRelay, d.status, d.waktuSelesai, d.waktuPingTerakhir,
+        m.id AS masterId, m.idMitra, m.cabangId, m.espId, m.namaGroupMesin AS namaMesin, m.statusAktif,
+        mitra.namaMitra, cabang.namaCabang 
+      FROM tbl_mesin_detail d
+      JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
+      LEFT JOIN tbl_mitra mitra ON m.idMitra = mitra.id 
+      LEFT JOIN tbl_cabang cabang ON m.cabangId = cabang.id
+    `;
 
     if (status === "all") {
       // Ambil semua data tanpa filter
     } else if (status === "inactive") {
       // Ambil hanya yang nonaktif
-       SQLQuery += " WHERE m.statusAktif = 0";
+      SQLQuery += " WHERE m.statusAktif = 0";
     } else {
       // Default: Ambil hanya yang aktif
       SQLQuery += " WHERE m.statusAktif = 1";
@@ -251,11 +275,53 @@ const getAllMesin = async (status) => {
 
 const getMesinByIdMitra = async (idMitra) => {
   try {
-    const [mesins] = await dbPool.execute(
-      "SELECT m.*, mitra.namaMitra, cabang.namaCabang FROM tbl_mesin m LEFT JOIN tbl_mitra mitra ON m.idMitra = mitra.id LEFT JOIN tbl_cabang cabang ON m.cabangId = cabang.id WHERE m.idMitra = ? AND m.statusAktif = 1",
+    const [rows] = await dbPool.execute(
+      `SELECT 
+        m.id AS masterId,
+        m.espId,
+        m.namaGroupMesin,
+        d.id AS detailId,
+        d.jenisMesin,
+        d.status,
+        d.waktuSelesai
+       FROM tbl_mesin_master m
+       LEFT JOIN tbl_mesin_detail d ON d.idMesinMaster = m.id
+       WHERE m.idMitra = ? AND m.statusAktif = 1
+       ORDER BY m.id ASC`,
       [idMitra]
     );
-    return mesins;
+
+    const groupedData = {};
+    let nomorUrut = 1;
+
+    rows.forEach((row) => {
+      if (!groupedData[row.espId]) {
+        groupedData[row.espId] = {
+          nomorUrut: String(nomorUrut).padStart(2, '0'),
+          espId: row.espId,
+          namaGroupMesin: row.namaGroupMesin,
+          washer: null,
+          dryer: null,
+        };
+        nomorUrut++;
+      }
+
+      if (row.detailId) {
+        const detailMesin = {
+          idDb: row.detailId,
+          status: row.status,
+          waktuSelesai: row.status === 'IN_USE' ? row.waktuSelesai : null,
+        };
+
+        if (row.jenisMesin === 'WASHER') {
+          groupedData[row.espId].washer = detailMesin;
+        } else if (row.jenisMesin === 'DRYER') {
+          groupedData[row.espId].dryer = detailMesin;
+        }
+      }
+    });
+
+    return Object.values(groupedData);
   } catch (error) {
     throw error;
   }
@@ -263,11 +329,53 @@ const getMesinByIdMitra = async (idMitra) => {
 
 const getMesinByIdCabang = async (cabangId) => {
   try {
-    const [mesins] = await dbPool.execute(
-      "SELECT m.*, mitra.namaMitra, cabang.namaCabang FROM tbl_mesin m LEFT JOIN tbl_mitra mitra ON m.idMitra = mitra.id LEFT JOIN tbl_cabang cabang ON m.cabangId = cabang.id WHERE m.cabangId = ? AND m.statusAktif = 1",
+    const [rows] = await dbPool.execute(
+      `SELECT 
+        m.id AS masterId,
+        m.espId,
+        m.namaGroupMesin,
+        d.id AS detailId,
+        d.jenisMesin,
+        d.status,
+        d.waktuSelesai
+       FROM tbl_mesin_master m
+       LEFT JOIN tbl_mesin_detail d ON d.idMesinMaster = m.id
+       WHERE m.cabangId = ? AND m.statusAktif = 1
+       ORDER BY m.id ASC`,
       [cabangId]
     );
-    return mesins;
+
+    const groupedData = {};
+    let nomorUrut = 1;
+
+    rows.forEach((row) => {
+      if (!groupedData[row.espId]) {
+        groupedData[row.espId] = {
+          nomorUrut: String(nomorUrut).padStart(2, '0'),
+          espId: row.espId,
+          namaGroupMesin: row.namaGroupMesin,
+          washer: null,
+          dryer: null,
+        };
+        nomorUrut++;
+      }
+
+      if (row.detailId) {
+        const detailMesin = {
+          idDb: row.detailId,
+          status: row.status,
+          waktuSelesai: row.status === 'IN_USE' ? row.waktuSelesai : null,
+        };
+
+        if (row.jenisMesin === 'WASHER') {
+          groupedData[row.espId].washer = detailMesin;
+        } else if (row.jenisMesin === 'DRYER') {
+          groupedData[row.espId].dryer = detailMesin;
+        }
+      }
+    });
+
+    return Object.values(groupedData);
   } catch (error) {
     throw error;
   }
@@ -277,7 +385,10 @@ const restoreMesin = async (id, updatedBy) => {
   try {
     // Check if mesin exists and is currently inactive
     const [existingMesin] = await dbPool.execute(
-      "SELECT id FROM tbl_mesin WHERE id = ? AND statusAktif = 0",
+      `SELECT d.id, m.id AS masterId
+       FROM tbl_mesin_detail d
+       JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
+       WHERE d.id = ? AND m.statusAktif = 0`,
       [id]
     );
     if (existingMesin.length === 0) {
@@ -288,8 +399,8 @@ const restoreMesin = async (id, updatedBy) => {
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
 
     // Execute UPDATE query to set statusAktif back to 1 (true)
-    const SQLQuery = "UPDATE tbl_mesin SET statusAktif = 1, updatedBy = ?, updatedDate = ? WHERE id = ?";
-    const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
+    const SQLQuery = "UPDATE tbl_mesin_master SET statusAktif = 1, updatedBy = ?, updatedDate = ? WHERE id = ?";
+    const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, existingMesin[0].masterId]);
 
     return result;
   } catch (error) {
@@ -300,7 +411,12 @@ const restoreMesin = async (id, updatedBy) => {
 const getMesinByEspId = async (espId) => {
   try {
     const [mesins] = await dbPool.execute(
-      "SELECT * FROM tbl_mesin WHERE espId = ? AND statusAktif = TRUE",
+      `SELECT 
+        d.id, d.jenisMesin AS tipeMesin, d.channelRelay, d.status, d.waktuSelesai, d.waktuPingTerakhir,
+        m.id AS masterId, m.idMitra, m.cabangId, m.espId, m.namaGroupMesin AS namaMesin, m.statusAktif
+       FROM tbl_mesin_detail d
+       JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
+       WHERE m.espId = ? AND m.statusAktif = TRUE`,
       [espId]
     );
     if (mesins.length === 0) {
@@ -338,10 +454,20 @@ const getMesinByEspId = async (espId) => {
 const getListMesinMobile = async (cabangId, idMitra) => {
   try {
     const [rows] = await dbPool.execute(
-      `SELECT id, espId, namaMesin, tipeMesin AS jenisMesin, status, waktuSelesai 
-      FROM tbl_mesin 
-      WHERE cabangId = ? AND idMitra = ? AND statusAktif = 1
-      ORDER BY id ASC`,
+      `SELECT 
+        m.id AS masterId,
+        m.espId,
+        m.namaGroupMesin,
+        d.id AS detailId,
+        d.jenisMesin,
+        d.status,
+        d.waktuSelesai
+      FROM tbl_mesin_master m
+      LEFT JOIN tbl_mesin_detail d ON d.idMesinMaster = m.id
+      WHERE m.cabangId = ? 
+        AND m.idMitra = ?
+        AND m.statusAktif = TRUE
+      ORDER BY m.id ASC`,
       [cabangId, idMitra]
     );
 
@@ -359,8 +485,8 @@ const getListMesinMobile = async (cabangId, idMitra) => {
       if (!groupedData[row.espId]) {
         groupedData[row.espId] = {
           nomorUrut: String(nomorUrut).padStart(2, '0'),
-          namaGroupMesin: row.namaMesin,
           espId: row.espId,
+          namaGroupMesin: row.namaGroupMesin,
           washer: null,
           dryer: null,
         };
@@ -368,20 +494,76 @@ const getListMesinMobile = async (cabangId, idMitra) => {
       }
 
       // Masukkan data spesifik Washer / Dryer ke dalam "Kartu" tersebut
-      const detailMesin = {
-        idDb: row.id,
-        status: row.status,
-        waktuSelesai: row.status === 'IN_USE' ? row.waktuSelesai : null,
-      };
+      if (row.detailId) {
+        const detailMesin = {
+          idDb: row.detailId,
+          status: row.status,
+          waktuSelesai: row.status === 'IN_USE' ? row.waktuSelesai : null,
+        };
 
-      if (row.jenisMesin === 'WASHER') {
-        groupedData[row.espId].washer = detailMesin;
-      } else if (row.jenisMesin === 'DRYER') {
-        groupedData[row.espId].dryer = detailMesin;
+        if (row.jenisMesin === 'WASHER') {
+          groupedData[row.espId].washer = detailMesin;
+        } else if (row.jenisMesin === 'DRYER') {
+          groupedData[row.espId].dryer = detailMesin;
+        }
       }
     });
 
     // Ubah objek (dictionary) kembali menjadi Array
+    return Object.values(groupedData);
+  } catch (error) {
+    throw error;
+  }
+};
+
+const getAllMasterMesin = async () => {
+  try {
+    const [rows] = await dbPool.execute(
+      `SELECT 
+        m.id,
+        m.espId,
+        m.namaGroupMesin,
+        d.id AS detailId,
+        d.jenisMesin,
+        d.status
+       FROM tbl_mesin_master m
+       LEFT JOIN tbl_mesin_detail d ON d.idMesinMaster = m.id
+       WHERE m.statusAktif = 1
+       ORDER BY m.id ASC`
+    );
+
+    if (rows.length === 0) {
+      throw new Error("Data not found");
+    }
+
+    // Grup berdasarkan id master
+    const groupedData = {};
+
+    rows.forEach((row) => {
+      if (!groupedData[row.id]) {
+        groupedData[row.id] = {
+          id: String(row.id),
+          espId: row.espId,
+          namaGroupMesin: row.namaGroupMesin,
+          washer: null,
+          dryer: null,
+        };
+      }
+
+      if (row.detailId) {
+        const detailMesin = {
+          idDb: row.detailId,
+          status: row.status,
+        };
+
+        if (row.jenisMesin === 'WASHER') {
+          groupedData[row.id].washer = detailMesin;
+        } else if (row.jenisMesin === 'DRYER') {
+          groupedData[row.id].dryer = detailMesin;
+        }
+      }
+    });
+
     return Object.values(groupedData);
   } catch (error) {
     throw error;
@@ -395,6 +577,7 @@ module.exports = {
   restoreMesin,
   getMesinById,
   getAllMesin,
+  getAllMasterMesin,
   getMesinByIdMitra,
   getMesinByIdCabang,
   getMesinByEspId,

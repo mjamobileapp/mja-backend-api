@@ -42,7 +42,7 @@ const createNewMesin = async (req, res) => {
     });
   }
 
-    try {
+  try {
     const createdBy = req.user ? req.user.username || req.user.id : null;
     const result = await MesinModel.createNewMesin(body, createdBy);
     res.status(201).json({
@@ -54,6 +54,8 @@ const createNewMesin = async (req, res) => {
       error.message === "Mitra tidak ditemukan atau tidak aktif" || 
       error.message === "Cabang tidak ditemukan / tidak aktif / tidak sesuai dengan Mitra" || 
       error.message === "Minimal harus mengisi satu data mesin (Washer atau Dryer)" ||
+      error.message === "Minimal salah satu washer atau dryer harus bernilai 1" ||
+      error.message === "Modul ESP ini sudah terdaftar di cabang yang sama" ||
       error.message === "Mesin dengan espId dan tipe WASHER yang sama sudah terdaftar" ||
       error.message === "Mesin dengan espId dan tipe DRYER yang sama sudah terdaftar"
     ) {
@@ -69,11 +71,11 @@ const createNewMesin = async (req, res) => {
 };
 
 const updateMesin = async (req, res) => {
-  const { id: espId } = req.params;
+  const { id: idMesinMaster } = req.params;
   const { body } = req;
   const updatedBy = req.user ? req.user.username || req.user.id : null;
 
-  console.log("UPDATE REQUEST:", { espId, body });
+  console.log("UPDATE REQUEST:", { idMesinMaster, body });
 
   // Validate required fields
   const requiredFields = ['idMitra', 'cabangId', 'espId'];
@@ -115,7 +117,7 @@ const updateMesin = async (req, res) => {
   }
 
   try {
-    const data = await MesinModel.updateMesin(espId, body, updatedBy);
+    const data = await MesinModel.updateMesin(idMesinMaster, body, updatedBy);
     res.status(200).json({
       message: "UPDATE Mesin success",
       data: data,
@@ -177,7 +179,7 @@ const getMesinById = async (req, res) => {
   try {
     const data = await MesinModel.getMesinById(id);
     res.status(200).json({
-      message: "Get by Id Mesin success",
+      message: "get Data Mesin success",
       data: data,
     });
   } catch (error) {
@@ -216,7 +218,7 @@ const getMesinByIdMitra = async (req, res) => {
   try {
     const data = await MesinModel.getMesinByIdMitra(idMitra);
     res.status(200).json({
-      message: "Get Mesin by Id Mitra success",
+      success: "Get Mesin by Id Mitra success",
       data: data,
     });
   } catch (error) {
@@ -232,7 +234,7 @@ const getMesinByIdCabang = async (req, res) => {
   try {
     const data = await MesinModel.getMesinByIdCabang(cabangId);
     res.status(200).json({
-      message: "Get Mesin by Id Cabang success",
+      success: "Get Mesin by Id Cabang success",
       data: data,
     });
   } catch (error) {
@@ -324,6 +326,29 @@ const getListMesinMobile = async (req, res) => {
   }
 };
 
+const getAllMasterMesin = async (req, res) => {
+  console.log("GET ALL MASTER MESIN REQUEST");
+
+  try {
+    const data = await MesinModel.getAllMasterMesin();
+    res.status(200).json({
+      success: true,
+      data: data,
+    });
+  } catch (error) {
+    if (error.message === "Data not found") {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createNewMesin,
   updateMesin,
@@ -331,8 +356,10 @@ module.exports = {
   restoreMesin,
   getMesinById,
   getAllMesin,
+  getAllMasterMesin,
   getMesinByIdMitra,
   getMesinByIdCabang,
   getMesinByEspId,
   getListMesinMobile,
 };
+
