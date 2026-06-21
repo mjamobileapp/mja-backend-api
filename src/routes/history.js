@@ -6,5 +6,6 @@ const router = express.Router();
 
 // GET - Get History Transaksi per Cabang
 router.get("/transaksi", authenticateMobile, HistoryController.getHistoryTransaksi);
+router.get("/mesin", authenticateMobile, HistoryController.getHistoryMesin);
 
 module.exports = router;
