@@ -86,7 +86,70 @@ const getPendapatan = async (cabangId, idMitra) => {
   }
 };
 
+const getPengeluaran = async (cabangId, idMitra) => {
+  try {
+    const [rows] = await dbPool.execute(
+      `SELECT 
+        p.id AS idPengeluaran,
+        DATE(p.waktuPengeluaran) AS tanggalGroup,
+        p.waktuPengeluaran AS waktuDetail,
+        CONCAT(i.namaItem, ' (x', p.jumlahBarang, ')') AS deskripsi,
+        p.nominal,
+        u.namaLengkap AS namaKasir
+      FROM tbl_pengeluaran p
+      LEFT JOIN tbl_users_mobile u ON p.idUserMobile = u.id
+      LEFT JOIN tbl_master_item_expense i ON p.itemId = i.id
+      WHERE p.cabangId = ? 
+        AND p.idMitra = ? 
+      ORDER BY p.waktuPengeluaran DESC`,
+      [cabangId, idMitra]
+    );
+
+    if (rows.length === 0) {
+      throw new Error("Data tidak ditemukan");
+    }
+
+    // Grouping per tanggal
+    const groupedData = {};
+
+    rows.forEach((row) => {
+      const tanggal = row.tanggalGroup;
+
+      if (!groupedData[tanggal]) {
+        groupedData[tanggal] = {
+          tanggalTampilan: tanggal,
+          totalPengeluaranHariIni: 0,
+          rincian: [],
+        };
+      }
+
+      groupedData[tanggal].totalPengeluaranHariIni += row.nominal;
+
+      const nominalRupiah = `Rp ${row.nominal.toLocaleString('id-ID')}`;
+
+      groupedData[tanggal].rincian.push({
+        idPengeluaran: row.idPengeluaran,
+        waktuLengkap: row.waktuDetail,
+        deskripsi: row.deskripsi,
+        namaKasir: row.namaKasir,
+        nominalRupiah: nominalRupiah,
+        nominalAngka: row.nominal,
+      });
+    });
+
+    // Urutkan DESC berdasarkan tanggal
+    const result = Object.values(groupedData).sort((a, b) => {
+      return b.tanggalTampilan.localeCompare(a.tanggalTampilan);
+    });
+
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   getCashflow,
   getPendapatan,
+  getPengeluaran,
 };
