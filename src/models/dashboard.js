@@ -30,15 +30,26 @@ const getCabang = async () => {
 
 const getMesin = async () => {
   try {
+    // Query menghitung total master yang aktif, dan menghitung washer/dryer dari detail
     const [rows] = await dbPool.execute(
-      `SELECT m.*, mitra.namaMitra, cabang.namaCabang 
-       FROM tbl_mesin m 
-       LEFT JOIN tbl_mitra mitra ON m.idMitra = mitra.id 
-       LEFT JOIN tbl_cabang cabang ON m.cabangId = cabang.id 
-       WHERE m.statusAktif = 1 
-       ORDER BY m.createdDate DESC`
+      `SELECT 
+        COUNT(DISTINCT d.id) AS total,
+        SUM(CASE WHEN d.jenisMesin = 'WASHER' THEN 1 ELSE 0 END) AS totalWasher,
+        SUM(CASE WHEN d.jenisMesin = 'DRYER' THEN 1 ELSE 0 END) AS totalDryer
+       FROM tbl_mesin_master m
+       LEFT JOIN tbl_mesin_detail d ON d.idMesinMaster = m.id
+       WHERE m.statusAktif = 1`
     );
-    return rows;
+
+    if (rows.length === 0) {
+      return { total: 0, totalWasher: 0, totalDryer: 0 };
+    }
+
+    return {
+      total: Number(rows[0].total),
+      totalWasher: Number(rows[0].totalWasher),
+      totalDryer: Number(rows[0].totalDryer),
+    };
   } catch (error) {
     console.error("Dashboard Model Error (getMesin):", error.message);
     throw error;

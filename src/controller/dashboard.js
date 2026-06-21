@@ -41,9 +41,10 @@ const getMesin = async (req, res) => {
     const data = await DashboardModel.getMesin();
 
     res.status(200).json({
-      success: true,
-      total: data.length,
-      data: data,
+      success: "Get Jumlah Mesin Success",
+      total: data.total,
+      totalWasher: data.totalWasher,
+      totalDryer: data.totalDryer,
     });
   } catch (error) {
     console.error("Dashboard Controller Error (getMesin):", error);
