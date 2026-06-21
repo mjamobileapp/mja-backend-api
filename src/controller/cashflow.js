@@ -83,7 +83,45 @@ const getPendapatan = async (req, res) => {
   }
 };
 
+const getPengeluaran = async (req, res) => {
+  const { cabangId } = req.query;
+  const idMitra = req.user ? req.user.idMitra : null;
+
+  console.log("GET PENGELUARAN REQUEST:", { cabangId, idMitra });
+
+  if (!cabangId) {
+    return res.status(400).json({
+      error: "cabangId tidak ditemukan",
+    });
+  }
+
+  if (!idMitra) {
+    return res.status(400).json({
+      error: "idMitra tidak ditemukan di token",
+    });
+  }
+
+  try {
+    const data = await CashflowModel.getPengeluaran(cabangId, idMitra);
+    res.status(200).json({
+      success: "Get Data Pengeluaran Success",
+      data: data,
+    });
+  } catch (error) {
+    if (error.message === "Data tidak ditemukan") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   getCashflow,
   getPendapatan,
+  getPengeluaran,
 };
