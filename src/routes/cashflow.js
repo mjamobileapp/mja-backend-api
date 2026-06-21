@@ -6,5 +6,6 @@ const router = express.Router();
 
 // GET - Get Cashflow Harian per Cabang
 router.get("/cashflow", authenticateMobile, CashflowController.getCashflow);
+router.get("/cashflow/pendapatan", authenticateMobile, CashflowController.getPendapatan);
 
 module.exports = router;
