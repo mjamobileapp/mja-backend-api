@@ -63,6 +63,57 @@ const getHistoryTransaksi = async (cabangId, idMitra) => {
   }
 };
 
+const getHistoryMesin = async (cabangId, idMitra) => {
+  try {
+    const [rows] = await dbPool.execute(
+      `SELECT 
+        l.id AS idLog,
+        m.namaGroupMesin AS namaMesin,
+        d.jenisMesin,
+        u.namaLengkap AS namaOperator,
+        l.waktuLog AS waktuLengkap
+      FROM tbl_log_mesin l
+      JOIN tbl_mesin_detail d ON l.mesinId = d.id
+      JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
+      LEFT JOIN tbl_users_mobile u ON l.kasirId = u.id
+      WHERE m.cabangId = ? 
+        AND m.idMitra = ?
+        AND l.statusPerintah = 'success'
+      ORDER BY l.waktuLog DESC`,
+      [cabangId, idMitra]
+    );
+
+    if (rows.length === 0) {
+      throw new Error("Data tidak ditemukan");
+    }
+
+    // Format jam ke format "HH:mm WIB"
+    const formatJamWIB = (dateString) => {
+      const date = new Date(dateString);
+      const jam = String(date.getHours()).padStart(2, '0');
+      const menit = String(date.getMinutes()).padStart(2, '0');
+      return `${jam}:${menit} WIB`;
+    };
+
+    // Mapping data mentah dari SQL ke format JSON UI
+    const finalResponse = rows.map(row => {
+      return {
+        idLog: row.idLog,
+        namaMesin: row.namaMesin,
+        namaOperator: row.namaOperator || 'Sistem',
+        jenisMesin: row.jenisMesin,
+        waktuAktifTampilan: formatJamWIB(row.waktuLengkap),
+        waktuLengkap: row.waktuLengkap,
+      };
+    });
+
+    return finalResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   getHistoryTransaksi,
+  getHistoryMesin,
 };
