@@ -24,12 +24,12 @@ const createNewSetting = async (req, res) => {
 
     // 2. Iterasi setiap Item di dalam array item
     for (const [index, itemDetail] of items.entries()) {
-      const { idItem, batasMinimum } = itemDetail;
+      const { itemId, batasMinimum } = itemDetail;
 
       // Validasi level Item
-      if (idItem === undefined || batasMinimum === undefined) {
+      if (itemId === undefined || batasMinimum === undefined) {
         return res.status(400).json({ 
-          message: `Bad request, missing idItem or batasMinimum at index ${index}` 
+          message: `Bad request, missing itemId or batasMinimum at index ${index}` 
         });
       }
     }

@@ -4,7 +4,7 @@ const createNewSetting = async (body) => {
   const connection = await dbPool.getConnection();
   try {
     await connection.beginTransaction();
-    const { idMitra, idItem, batasMinimum, createdBy } = body;
+    const { idMitra, itemId, batasMinimum, createdBy } = body;
 
     // 1. Validasi Mitra Exist dan Aktif
     const [existingMitra] = await connection.execute(
@@ -18,7 +18,7 @@ const createNewSetting = async (body) => {
     // 2. Validasi Master Item Exist dan Aktif
     const [existingItem] = await connection.execute(
       "SELECT id FROM tbl_master_item_expense WHERE id = ? AND statusAktif = TRUE AND tipeItem = 'stok'",
-      [idItem]
+      [itemId]
     );
     if (existingItem.length === 0) {
       throw new Error("Item tidak ditemukan atau tidak aktif");
@@ -33,10 +33,10 @@ const createNewSetting = async (body) => {
     const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
 
     const SQLQuery = `INSERT INTO tbl_treshold_stok_mitra (
-      idMitra, idItem, batasMinimum, createdBy, createdDate
+      idMitra, itemId, batasMinimum, createdBy, createdDate
     ) VALUES (?, ?, ?, ?, ?)`;
 
-    const values = [idMitra, idItem, batasMinimum, createdBy, dateNow];
+    const values = [idMitra, itemId, batasMinimum, createdBy, dateNow];
     const [result] = await connection.execute(SQLQuery, values);
 
     await connection.commit();
@@ -46,7 +46,7 @@ const createNewSetting = async (body) => {
       `SELECT s.*, m.namaMitra, i.namaItem 
        FROM tbl_treshold_stok_mitra s
        JOIN tbl_mitra m ON s.idMitra = m.id
-       JOIN tbl_master_item_expense i ON s.idItem = i.id
+       JOIN tbl_master_item_expense i ON s.itemId = i.id
        WHERE s.id = ?`, [result.insertId]
     );
 
@@ -83,22 +83,22 @@ const createBulkSettings = async (idMitra, items, createdBy) => {
 
     // 3. Insert data baru secara iteratif dalam satu transaksi yang sama
     for (const item of items) {
-      const { idItem, batasMinimum } = item;
+      const { itemId, batasMinimum } = item;
 
       // Validasi Master Item Exist dan Aktif
       const [existingItem] = await connection.execute(
         "SELECT id FROM tbl_master_item_expense WHERE id = ? AND statusAktif = TRUE AND tipeItem = 'stok'",
-        [idItem]
+        [itemId]
       );
       if (existingItem.length === 0) {
         throw new Error("Item tidak ditemukan atau tidak aktif");
       }
 
       const SQLQuery = `INSERT INTO tbl_treshold_stok_mitra (
-        idMitra, idItem, batasMinimum, createdBy, createdDate
+        idMitra, itemId, batasMinimum, createdBy, createdDate
       ) VALUES (?, ?, ?, ?, ?)`;
 
-      const values = [idMitra, idItem, batasMinimum, createdBy, dateNow];
+      const values = [idMitra, itemId, batasMinimum, createdBy, dateNow];
       await connection.execute(SQLQuery, values);
     }
 
@@ -109,7 +109,7 @@ const createBulkSettings = async (idMitra, items, createdBy) => {
       `SELECT s.*, m.namaMitra, i.namaItem 
        FROM tbl_treshold_stok_mitra s
        JOIN tbl_mitra m ON s.idMitra = m.id
-       JOIN tbl_master_item_expense i ON s.idItem = i.id
+       JOIN tbl_master_item_expense i ON s.itemId = i.id
        WHERE s.idMitra = ?`, [idMitra]
     );
 
@@ -143,7 +143,7 @@ const updateSetting = async (id, body) => {
       `SELECT s.*, m.namaMitra, i.namaItem 
        FROM tbl_treshold_stok_mitra s
        JOIN tbl_mitra m ON s.idMitra = m.id
-       JOIN tbl_master_item_expense i ON s.idItem = i.id
+       JOIN tbl_master_item_expense i ON s.itemId = i.id
        WHERE s.id = ?`, [id]
     );
     return result[0];
@@ -175,7 +175,7 @@ const getAllSettings = async (idMitra) => {
       from
         tbl_master_item_expense i
         left join tbl_treshold_stok_mitra s on
-          s.idItem = i.id
+          s.itemId = i.id
           and s.idMitra = ?
         left join tbl_mitra m on
           s.idMitra = m.id
@@ -197,7 +197,7 @@ const getSettingByIdMitra = async (idMitra) => {
       `SELECT s.*, m.namaMitra, i.namaItem 
        FROM tbl_treshold_stok_mitra s
        JOIN tbl_mitra m ON s.idMitra = m.id
-       JOIN tbl_master_item_expense i ON s.idItem = i.id
+       JOIN tbl_master_item_expense i ON s.itemId = i.id
        WHERE s.idMitra = ?`,
       [idMitra]
     );
