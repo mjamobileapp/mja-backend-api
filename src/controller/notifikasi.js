@@ -54,6 +54,31 @@ const getNotifikasi = async (req, res) => {
   }
 };
 
+const markAsRead = async (req, res) => {
+  const { id } = req.params;
+
+  console.log("MARK AS READ REQUEST:", { id });
+
+  try {
+    const data = await NotifikasiModel.markAsRead(id);
+    res.status(200).json({
+      success: "Mark as Read Success",
+      data: data,
+    });
+  } catch (error) {
+    if (error.message === "Id tidak ditemukan") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   getNotifikasi,
+  markAsRead,
 };

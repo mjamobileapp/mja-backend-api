@@ -13,4 +13,7 @@ router.post("/logout", authenticateMobile, MobileController.logoutUser);
 // GET - Get Notifikasi Mobile
 router.get("/notifications", authenticateMobile, NotifikasiController.getNotifikasi);
 
+// PUT - Mark as Read Notifikasi
+router.put("/notifications/:id/read", authenticateMobile, NotifikasiController.markAsRead);
+
 module.exports = router;

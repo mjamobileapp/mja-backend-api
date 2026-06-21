@@ -27,6 +27,34 @@ const getNotifikasi = async (idMitra, cabangId, filterCabangId) => {
   }
 };
 
+const markAsRead = async (id) => {
+  try {
+    // 1. Cek apakah notifikasi dengan id tersebut ada
+    const [existing] = await dbPool.execute(
+      "SELECT id, isRead FROM tbl_notifikasi WHERE id = ?",
+      [id]
+    );
+
+    if (existing.length === 0) {
+      throw new Error("Id tidak ditemukan");
+    }
+
+    // 2. Update isRead menjadi 1 (true)
+    await dbPool.execute(
+      "UPDATE tbl_notifikasi SET isRead = 1 WHERE id = ?",
+      [id]
+    );
+
+    return {
+      id: String(id),
+      isRead: true,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   getNotifikasi,
+  markAsRead,
 };
