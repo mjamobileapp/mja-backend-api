@@ -72,6 +72,52 @@ const createSettingHarga = async (req, res) => {
   }
 };
 
+const getSettingHarga = async (req, res) => {
+  const { cabangId } = req.query;
+  const idMitra = req.user ? req.user.idMitra : null;
+
+  console.log("GET SETTING HARGA REQUEST:", { idMitra, cabangId });
+
+  if (!idMitra) {
+    return res.status(400).json({
+      message: "idMitra tidak ditemukan di token",
+    });
+  }
+
+  if (!cabangId) {
+    return res.status(400).json({
+      message: "cabangId tidak ditemukan di query params",
+    });
+  }
+
+  try {
+    const data = await HargaCabangModel.getSettingHarga(idMitra, cabangId);
+    res.status(200).json({
+      message: "Get Data Setting Harga Layanan successful",
+      data: data,
+    });
+  } catch (error) {
+    if (
+      error.message === "Mitra tidak ditemukan" ||
+      error.message === "Cabang tidak ditemukan"
+    ) {
+      return res.status(404).json({
+        message: error.message,
+      });
+    }
+    if (error.message === "Data setting harga tidak ditemukan untuk cabang ini") {
+      return res.status(404).json({
+        message: error.message,
+      });
+    }
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   createSettingHarga,
+  getSettingHarga,
 };
