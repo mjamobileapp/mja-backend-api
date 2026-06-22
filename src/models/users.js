@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const bcrypt = require("bcrypt");
+const { generateAndHashPassword } = require("../utils/password");
 
 const getAllUser = (status) => {
   let SQLQuery = `Select 
@@ -55,16 +56,16 @@ const createNewUser = async (body) => {
       nama: body.nama,
       roleId: body.roleId,
       username: body.username,
-      password: body.password,
+      // password: body.password,
       createdBy: body.createdBy,
       statusAktif: true,
     };
 
     console.log(dataPegawai);
 
-    if (!body.password) {
-      throw new Error("Password is required");
-    }
+    // if (!body.password) {
+    //   throw new Error("Password is required");
+    // }
 
     const [existingUser] = await dbPool.execute(
       "SELECT id FROM tbl_users WHERE username = ?",
@@ -75,7 +76,10 @@ const createNewUser = async (body) => {
       throw new Error("User sudah terdaftar");
     }
 
+    // 3. Generate Random Password & Hash
+    const { password, hashedPassword } = await generateAndHashPassword(8);
     const hashedPassword = await bcrypt.hash(body.password, 10); // Hash the password
+    
     const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = `INSERT INTO tbl_users (
       nama,
