@@ -66,7 +66,7 @@ const createNewUser = async (req, res) => {
   const { body } = req;
 
     // Validate required fields
-  const requiredFields = ['nama', 'username', 'roleId', 'createdBy'];
+  const requiredFields = ['nama', 'username', 'password', 'roleId', 'createdBy'];
   const missingFields = requiredFields.filter(field => !body[field]);
 
   if (missingFields.length > 0) {
