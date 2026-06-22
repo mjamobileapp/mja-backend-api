@@ -78,7 +78,7 @@ const createNewUser = async (body) => {
 
     // 3. Generate Random Password & Hash
     const { password, hashedPassword } = await generateAndHashPassword(8);
-    const hashedPassword = await bcrypt.hash(body.password, 10); // Hash the password
+    // const hashedPassword = await bcrypt.hash(body.password, 10); // Hash the password
     
     const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = `INSERT INTO tbl_users (
