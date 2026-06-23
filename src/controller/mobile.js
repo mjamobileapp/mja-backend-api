@@ -52,10 +52,11 @@ const loginUser = async (req, res) => {
     }
 
         // 5. Generate Token
-    const token = generateToken({
+        const token = generateToken({
       id: user.id,
       username: user.username,
       idMitra: user.idMitra,
+      cabangId: user.cabangId || null,
       id_role: user.role === "owner" ? 1 : 2, // Mapping role ke id_role
     });
 

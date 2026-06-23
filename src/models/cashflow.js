@@ -181,7 +181,7 @@ const getListPengeluaran = async (cabangId) => {
     };
 
     const formattedData = rows.map(row => ({
-      idPengeluaran: row.idPengeluaran,
+      idPengeluarans: row.idPengeluaran,
       deskripsi: row.deskripsi,
       namaKasir: row.namaKasir || 'Sistem',
       nominalRupiah: `Rp ${Number(row.nominal).toLocaleString('id-ID')}`,

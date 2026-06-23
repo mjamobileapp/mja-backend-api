@@ -128,16 +128,35 @@ const getListPengeluaran = async (req, res) => {
   // Ambil cabangId dari token
   if (!cabangId) {
     cabangId = req.user.cabang_id || req.user.cabangId;
-    console.log("GET LIST PENGELUARAN (KASIR):", { cabangId, idMitra });
-  } else {
-    console.log("GET LIST PENGELUARAN (OWNER):", { cabangId, idMitra });
+    console.log("GET PENGELUARAN (KASIR):", { cabangId, idMitra });
+
+    if (!cabangId) {
+      return res.status(400).json({
+        error: "cabangId tidak ditemukan",
+      });
+    }
+
+    try {
+      const data = await CashflowModel.getListPengeluaran(cabangId);
+      return res.status(200).json({
+        success: "Get Data List Expense Success",
+        data: data,
+      });
+    } catch (error) {
+      if (error.message === "Data tidak ditemukan") {
+        return res.status(404).json({
+          error: error.message,
+        });
+      }
+      return res.status(500).json({
+        message: "Server Error",
+        serverMessage: error.message,
+      });
+    }
   }
 
-  if (!cabangId) {
-    return res.status(400).json({
-      error: "cabangId tidak ditemukan",
-    });
-  }
+  // OWNER: ada cabangId di query params, gunakan grouping per tanggal
+  console.log("GET PENGELUARAN (OWNER):", { cabangId, idMitra });
 
   if (!idMitra) {
     return res.status(400).json({
@@ -146,9 +165,9 @@ const getListPengeluaran = async (req, res) => {
   }
 
   try {
-    const data = await CashflowModel.getListPengeluaran(cabangId);
+    const data = await CashflowModel.getPengeluaran(cabangId, idMitra);
     res.status(200).json({
-      success: "Get Data List Expense Success",
+      success: "Get Data Pengeluaran Success",
       data: data,
     });
   } catch (error) {
