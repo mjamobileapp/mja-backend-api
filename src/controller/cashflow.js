@@ -183,9 +183,87 @@ const getListPengeluaran = async (req, res) => {
   }
 };
 
+const createPengeluaran = async (req, res) => {
+  const { itemId, jumlahBarang, nominal } = req.body;
+
+  // Ambil data dari token
+  const idMitra = req.user ? req.user.idMitra : null;
+  const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
+  const idUserMobile = req.user ? req.user.id : null;
+
+  console.log("CREATE PENGELUARAN REQUEST:", { idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal });
+
+  // Validasi idMitra dari token
+  if (!idMitra) {
+    return res.status(400).json({
+      error: "idMitra tidak ditemukan di token",
+    });
+  }
+
+  // Validasi cabangId dari token
+  if (!cabangId) {
+    return res.status(400).json({
+      error: "cabangId tidak ditemukan di token",
+    });
+  }
+
+  // Validasi idUserMobile dari token
+  if (!idUserMobile) {
+    return res.status(400).json({
+      error: "idUserMobile tidak ditemukan di token",
+    });
+  }
+
+  // Validasi itemId
+  if (!itemId) {
+    return res.status(400).json({
+      error: "itemId wajib diisi",
+    });
+  }
+
+  // Validasi nominal
+  if (!nominal || nominal <= 0) {
+    return res.status(400).json({
+      error: "nominal wajib diisi dan harus lebih dari 0",
+    });
+  }
+
+  try {
+    const data = await CashflowModel.createPengeluaran({
+      idMitra,
+      cabangId,
+      idUserMobile,
+      itemId,
+      jumlahBarang: jumlahBarang || 0,
+      nominal,
+    });
+
+    res.status(201).json({
+      success: "Create Data List Expense Success",
+      data: data,
+    });
+  } catch (error) {
+    if (
+      error.message === "Mitra tidak ditemukan" ||
+      error.message === "Cabang tidak ditemukan" ||
+      error.message === "User tidak ditemukan" ||
+      error.message === "Item tidak ditemukan"
+    ) {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   getCashflow,
   getPendapatan,
   getPengeluaran,
   getListPengeluaran,
+  createPengeluaran,
 };

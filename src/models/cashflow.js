@@ -181,7 +181,7 @@ const getListPengeluaran = async (cabangId) => {
     };
 
     const formattedData = rows.map(row => ({
-      idPengeluarans: row.idPengeluaran,
+      idPengeluaran: row.idPengeluaran,
       deskripsi: row.deskripsi,
       namaKasir: row.namaKasir || 'Sistem',
       nominalRupiah: `Rp ${Number(row.nominal).toLocaleString('id-ID')}`,
@@ -196,9 +196,86 @@ const getListPengeluaran = async (cabangId) => {
   }
 };
 
+const createPengeluaran = async (data) => {
+  const { idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal } = data;
+
+  try {
+    // 1. Validasi idMitra
+    const [mitraCheck] = await dbPool.execute(
+      "SELECT id FROM tbl_mitra WHERE id = ? AND statusAktif = 1",
+      [idMitra]
+    );
+    if (mitraCheck.length === 0) {
+      throw new Error("Mitra tidak ditemukan");
+    }
+
+    // 2. Validasi cabangId (cek juga milik mitra yang sama)
+    const [cabangCheck] = await dbPool.execute(
+      "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ? AND statusAktif = 1",
+      [cabangId, idMitra]
+    );
+    if (cabangCheck.length === 0) {
+      throw new Error("Cabang tidak ditemukan");
+    }
+
+    // 3. Validasi idUserMobile
+    const [userCheck] = await dbPool.execute(
+      "SELECT id FROM tbl_users_mobile WHERE id = ? AND statusAktif = 1",
+      [idUserMobile]
+    );
+    if (userCheck.length === 0) {
+      throw new Error("User tidak ditemukan");
+    }
+
+    // 4. Validasi itemId
+    const [itemCheck] = await dbPool.execute(
+      "SELECT id FROM tbl_master_item_expense WHERE id = ?",
+      [itemId]
+    );
+    if (itemCheck.length === 0) {
+      throw new Error("Item tidak ditemukan");
+    }
+
+    // 5. INSERT pengeluaran
+    const [result] = await dbPool.execute(
+      `INSERT INTO tbl_pengeluaran (idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal, waktuPengeluaran)
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [idMitra, cabangId, idUserMobile, itemId, jumlahBarang || 0, nominal]
+    );
+
+    // 6. Ambil data yang baru diinsert untuk response
+    const [newData] = await dbPool.execute(
+      `SELECT id, idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal, waktuPengeluaran, createdDate
+       FROM tbl_pengeluaran WHERE id = ?`,
+      [result.insertId]
+    );
+
+    if (newData.length === 0) {
+      throw new Error("Gagal mengambil data pengeluaran");
+    }
+
+    const row = newData[0];
+
+    return {
+      id: row.id,
+      idMitra: String(row.idMitra),
+      cabangId: String(row.cabangId),
+      idUserMobile: String(row.idUserMobile),
+      itemId: row.itemId,
+      jumlahBarang: row.jumlahBarang,
+      nominal: row.nominal,
+      waktuPengeluaran: row.waktuPengeluaran ? new Date(row.waktuPengeluaran).toISOString() : "",
+      createdDate: row.createdDate ? new Date(row.createdDate).toISOString() : "",
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   getCashflow,
   getPendapatan,
   getPengeluaran,
   getListPengeluaran,
+  createPengeluaran,
 };

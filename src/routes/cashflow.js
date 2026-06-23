@@ -9,4 +9,7 @@ router.get("/cashflow", authenticateMobile, CashflowController.getCashflow);
 router.get("/cashflow/pendapatan", authenticateMobile, CashflowController.getPendapatan);
 router.get("/cashflow/pengeluaran", authenticateMobile, CashflowController.getListPengeluaran);
 
+// POST - Create Pengeluaran (Kasir)
+router.post("/cashflow/pengeluaran", authenticateMobile, CashflowController.createPengeluaran);
+
 module.exports = router;
