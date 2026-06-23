@@ -148,8 +148,57 @@ const getPengeluaran = async (cabangId, idMitra) => {
   }
 };
 
+const getListPengeluaran = async (cabangId) => {
+  try {
+    const [rows] = await dbPool.execute(
+      `SELECT 
+        p.id AS idPengeluaran,
+        CONCAT(i.namaItem, CASE WHEN p.jumlahBarang > 0 THEN CONCAT(' (x', p.jumlahBarang, ')') ELSE '' END) AS deskripsi,
+        p.nominal,
+        u.namaLengkap AS namaKasir,
+        p.waktuPengeluaran AS waktuLengkap
+      FROM tbl_pengeluaran p
+      LEFT JOIN tbl_users_mobile u ON p.idUserMobile = u.id
+      LEFT JOIN tbl_master_item_expense i ON p.itemId = i.id
+      WHERE p.cabangId = ? 
+      ORDER BY p.waktuPengeluaran DESC`,
+      [cabangId]
+    );
+
+    if (rows.length === 0) {
+      throw new Error("Data tidak ditemukan");
+    }
+
+    // Format data
+    const formatTanggalWIB = (dateString) => {
+      const date = new Date(dateString);
+      const tgl = String(date.getDate()).padStart(2, '0');
+      const bln = String(date.getMonth() + 1).padStart(2, '0');
+      const thn = date.getFullYear();
+      const jam = String(date.getHours()).padStart(2, '0');
+      const menit = String(date.getMinutes()).padStart(2, '0');
+      return `${tgl}/${bln}/${thn} ${jam}:${menit} WIB`;
+    };
+
+    const formattedData = rows.map(row => ({
+      idPengeluaran: row.idPengeluaran,
+      deskripsi: row.deskripsi,
+      namaKasir: row.namaKasir || 'Sistem',
+      nominalRupiah: `Rp ${Number(row.nominal).toLocaleString('id-ID')}`,
+      nominalAngka: Number(row.nominal),
+      waktuTampilan: formatTanggalWIB(row.waktuLengkap),
+      waktuLengkap: row.waktuLengkap,
+    }));
+
+    return formattedData;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   getCashflow,
   getPendapatan,
   getPengeluaran,
+  getListPengeluaran,
 };

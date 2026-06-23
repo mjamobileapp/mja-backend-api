@@ -120,8 +120,53 @@ const getPengeluaran = async (req, res) => {
   }
 };
 
+const getListPengeluaran = async (req, res) => {
+  let { cabangId } = req.query;
+  const idMitra = req.user ? req.user.idMitra : null;
+
+  // Jika tidak ada cabangId di query params, anggap user adalah KASIR
+  // Ambil cabangId dari token
+  if (!cabangId) {
+    cabangId = req.user.cabang_id || req.user.cabangId;
+    console.log("GET LIST PENGELUARAN (KASIR):", { cabangId, idMitra });
+  } else {
+    console.log("GET LIST PENGELUARAN (OWNER):", { cabangId, idMitra });
+  }
+
+  if (!cabangId) {
+    return res.status(400).json({
+      error: "cabangId tidak ditemukan",
+    });
+  }
+
+  if (!idMitra) {
+    return res.status(400).json({
+      error: "idMitra tidak ditemukan di token",
+    });
+  }
+
+  try {
+    const data = await CashflowModel.getListPengeluaran(cabangId);
+    res.status(200).json({
+      success: "Get Data List Expense Success",
+      data: data,
+    });
+  } catch (error) {
+    if (error.message === "Data tidak ditemukan") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   getCashflow,
   getPendapatan,
   getPengeluaran,
+  getListPengeluaran,
 };
