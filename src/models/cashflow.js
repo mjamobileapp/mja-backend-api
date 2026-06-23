@@ -196,6 +196,56 @@ const getListPengeluaran = async (cabangId) => {
   }
 };
 
+const getPengeluaranById = async (id, idMitra) => {
+  try {
+    const [rows] = await dbPool.execute(
+      `SELECT 
+        p.id,
+        p.idMitra,
+        m.namaMitra,
+        p.cabangId,
+        c.namaCabang,
+        p.idUserMobile,
+        u.namaLengkap AS namaKasir,
+        p.itemId,
+        p.jumlahBarang,
+        p.nominal,
+        p.waktuPengeluaran,
+        p.createdDate
+      FROM tbl_pengeluaran p
+      LEFT JOIN tbl_mitra m ON p.idMitra = m.id
+      LEFT JOIN tbl_cabang c ON p.cabangId = c.id
+      LEFT JOIN tbl_users_mobile u ON p.idUserMobile = u.id
+      WHERE p.id = ?
+        AND p.idMitra = ?`,
+      [id, idMitra]
+    );
+
+    if (rows.length === 0) {
+      throw new Error("Data tidak ditemukan");
+    }
+
+    const row = rows[0];
+
+    return {
+      id: row.id,
+      idMitra: String(row.idMitra),
+      namaMitra: row.namaMitra || "",
+      cabangId: String(row.cabangId),
+      namaCabang: row.namaCabang || "",
+      idUserMobile: String(row.idUserMobile),
+      namaKasir: row.namaKasir || "",
+      itemId: row.itemId,
+      jumlahBarang: row.jumlahBarang,
+      nominal: row.nominal,
+      waktuPengeluaran: row.waktuPengeluaran ? new Date(row.waktuPengeluaran).toISOString() : "",
+      createdDate: row.createdDate ? new Date(row.createdDate).toISOString() : "",
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 const createPengeluaran = async (data) => {
   const { idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal } = data;
 
@@ -272,10 +322,65 @@ const createPengeluaran = async (data) => {
   }
 };
 
+const updatePengeluaran = async (body, id, idMitra) => {
+  try {
+    const { itemId, jumlahBarang, nominal } = body;
+
+    const [existingPengeluaran] = await dbPool.execute(
+      "SELECT id FROM tbl_pengeluaran WHERE id = ? AND idMitra = ?",
+      [id, idMitra]
+    );
+
+    if (existingPengeluaran.length === 0) {
+      throw new Error("data not found");
+    }
+
+    const [itemCheck] = await dbPool.execute(
+      "SELECT id FROM tbl_master_item_expense WHERE id = ? AND statusAktif = 1",
+      [itemId]
+    );
+
+    if (itemCheck.length === 0) {
+      throw new Error("Item tidak ditemukan");
+    }
+
+    await dbPool.execute(
+      `UPDATE tbl_pengeluaran
+       SET itemId = ?, jumlahBarang = ?, nominal = ?
+       WHERE id = ? AND idMitra = ?`,
+      [itemId, jumlahBarang, nominal, id, idMitra]
+    );
+
+    const [updatedData] = await dbPool.execute(
+      `SELECT id, idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal, waktuPengeluaran, createdDate
+       FROM tbl_pengeluaran WHERE id = ? AND idMitra = ?`,
+      [id, idMitra]
+    );
+
+    const row = updatedData[0];
+
+    return {
+      id: row.id,
+      idMitra: String(row.idMitra),
+      cabangId: String(row.cabangId),
+      idUserMobile: String(row.idUserMobile),
+      itemId: row.itemId,
+      jumlahBarang: row.jumlahBarang,
+      nominal: row.nominal,
+      waktuPengeluaran: row.waktuPengeluaran ? new Date(row.waktuPengeluaran).toISOString() : "",
+      createdDate: row.createdDate ? new Date(row.createdDate).toISOString() : "",
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   getCashflow,
   getPendapatan,
   getPengeluaran,
   getListPengeluaran,
+  getPengeluaranById,
   createPengeluaran,
+  updatePengeluaran,
 };

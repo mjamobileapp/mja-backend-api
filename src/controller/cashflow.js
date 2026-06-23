@@ -83,43 +83,6 @@ const getPendapatan = async (req, res) => {
   }
 };
 
-const getPengeluaran = async (req, res) => {
-  const { cabangId } = req.query;
-  const idMitra = req.user ? req.user.idMitra : null;
-
-  console.log("GET PENGELUARAN REQUEST:", { cabangId, idMitra });
-
-  if (!cabangId) {
-    return res.status(400).json({
-      error: "cabangId tidak ditemukan",
-    });
-  }
-
-  if (!idMitra) {
-    return res.status(400).json({
-      error: "idMitra tidak ditemukan di token",
-    });
-  }
-
-  try {
-    const data = await CashflowModel.getPengeluaran(cabangId, idMitra);
-    res.status(200).json({
-      success: "Get Data Pengeluaran Success",
-      data: data,
-    });
-  } catch (error) {
-    if (error.message === "Data tidak ditemukan") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
-};
-
 const getListPengeluaran = async (req, res) => {
   let { cabangId } = req.query;
   const idMitra = req.user ? req.user.idMitra : null;
@@ -176,6 +139,37 @@ const getListPengeluaran = async (req, res) => {
         error: error.message,
       });
     }
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
+const getPengeluaranById = async (req, res) => {
+  const { id } = req.params;
+  const idMitra = req.user ? req.user.idMitra : null;
+
+  if (!idMitra) {
+    return res.status(400).json({
+      error: "idMitra tidak ditemukan di token",
+    });
+  }
+
+  try {
+    const data = await CashflowModel.getPengeluaranById(id, idMitra);
+
+    res.json({
+      message: "Get Data Expense success",
+      data: data,
+    });
+  } catch (error) {
+    if (error.message === "Data tidak ditemukan") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+
     res.status(500).json({
       message: "Server Error",
       serverMessage: error.message,
@@ -260,10 +254,62 @@ const createPengeluaran = async (req, res) => {
   }
 };
 
+const updatePengeluaran = async (req, res) => {
+  const { id } = req.params;
+  const { body } = req;
+  const idMitra = req.user ? req.user.idMitra : null;
+
+  const requiredFields = ["itemId", "jumlahBarang", "nominal"];
+  const missingFields = requiredFields.filter((field) => body[field] === undefined || body[field] === null || body[field] === "");
+
+  if (missingFields.length > 0) {
+    return res.status(400).json({
+      message: "Bad request, missing required fields",
+      missingFields: missingFields,
+    });
+  }
+
+  if (!idMitra) {
+    return res.status(400).json({
+      error: "idMitra tidak ditemukan di token",
+    });
+  }
+
+  if (body.nominal <= 0) {
+    return res.status(400).json({
+      error: "nominal wajib diisi dan harus lebih dari 0",
+    });
+  }
+
+  try {
+    const data = await CashflowModel.updatePengeluaran(body, id, idMitra);
+
+    res.json({
+      message: "UPDATE Data Expense success",
+      data: data,
+    });
+  } catch (error) {
+    if (
+      error.message === "data not found" ||
+      error.message === "Item tidak ditemukan"
+    ) {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   getCashflow,
   getPendapatan,
-  getPengeluaran,
   getListPengeluaran,
+  getPengeluaranById,
   createPengeluaran,
+  updatePengeluaran,
 };
