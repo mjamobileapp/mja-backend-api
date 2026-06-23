@@ -10,9 +10,14 @@ const generateToken = (user) => {
     role: user.id_role,
   };
   
-  // Tambahkan idMitra jika ada
+    // Tambahkan idMitra jika ada
   if (user.idMitra) {
     payload.idMitra = user.idMitra;
+  }
+
+  // Tambahkan cabangId jika ada
+  if (user.cabangId) {
+    payload.cabangId = user.cabangId;
   }
   
   return jwt.sign(
