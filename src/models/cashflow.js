@@ -75,9 +75,9 @@ const getPendapatan = async (cabangId, idMitra) => {
       });
     });
 
-    // Urutkan DESC berdasarkan tanggal
+        // Urutkan DESC berdasarkan tanggal
     const result = Object.values(groupedData).sort((a, b) => {
-      return b.tanggalTampilan.localeCompare(a.tanggalTampilan);
+      return String(b.tanggalTampilan).localeCompare(String(a.tanggalTampilan));
     });
 
     return result;
@@ -137,9 +137,9 @@ const getPengeluaran = async (cabangId, idMitra) => {
       });
     });
 
-    // Urutkan DESC berdasarkan tanggal
+        // Urutkan DESC berdasarkan tanggal
     const result = Object.values(groupedData).sort((a, b) => {
-      return b.tanggalTampilan.localeCompare(a.tanggalTampilan);
+      return String(b.tanggalTampilan).localeCompare(String(a.tanggalTampilan));
     });
 
     return result;
@@ -229,7 +229,7 @@ const createPengeluaran = async (data) => {
 
     // 4. Validasi itemId
     const [itemCheck] = await dbPool.execute(
-      "SELECT id FROM tbl_master_item_expense WHERE id = ?",
+      "SELECT id FROM tbl_master_item_expense WHERE id = ? AND statusAktif = 1",
       [itemId]
     );
     if (itemCheck.length === 0) {
