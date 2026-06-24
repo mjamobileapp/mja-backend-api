@@ -24,6 +24,7 @@ const settingStokMitraRoutes = require("./routes/settingStokMitra");
 const dashboardRoutes = require("./routes/dashboard");
 const cashflowRoutes = require("./routes/cashflow");
 const historyRoutes = require("./routes/history");
+const historyKasirRoutes = require("./routes/historyKasir");
 const hargaCabangRoutes = require("./routes/hargaCabang");
 
 const app = express();
@@ -93,6 +94,7 @@ app.use("/api/owner/stokmitra", settingStokMitraRoutes);
 app.use("/api/backoffice/dashboard", dashboardRoutes);
 app.use("/api/owner", cashflowRoutes);
 app.use("/api/owner/history", historyRoutes);
+app.use("/api/kasir/history", historyKasirRoutes);
 app.use("/api/owner/settingharga", hargaCabangRoutes);
 // ================= rencana ==================
 

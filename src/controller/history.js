@@ -37,6 +37,41 @@ const getHistoryTransaksi = async (req, res) => {
   }
 };
 
+const getHistoryTransaksiKasir = async (req, res) => {
+  const { tanggal, namaKasir } = req.query;
+  const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
+
+  if (!cabangId) {
+    return res.status(401).json({
+      error: "Token tidak valid",
+    });
+  }
+
+  try {
+    const data = await HistoryModel.getHistoryTransaksiKasir({
+      cabangId,
+      tanggal,
+      namaKasir,
+    });
+
+    res.status(200).json({
+      success: "Get Data History Transaksi Kasir Success",
+      data: data,
+    });
+  } catch (error) {
+    if (error.message === "Data tidak ditemukan") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 const getHistoryMesin = async (req, res) => {
   const { cabangId } = req.query;
   const idMitra = req.user ? req.user.idMitra : null;
@@ -76,5 +111,6 @@ const getHistoryMesin = async (req, res) => {
 
 module.exports = {
   getHistoryTransaksi,
+  getHistoryTransaksiKasir,
   getHistoryMesin,
 };
