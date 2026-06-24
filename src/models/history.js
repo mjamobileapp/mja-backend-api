@@ -1,4 +1,5 @@
 const dbPool = require("../config/database");
+const { formatTanggalWIB } = require("../utils/date");
 
 const getHistoryTransaksi = async (cabangId, idMitra) => {
   try {
@@ -63,6 +64,52 @@ const getHistoryTransaksi = async (cabangId, idMitra) => {
   }
 };
 
+const getHistoryTransaksiKasir = async ({ cabangId, tanggal, namaKasir }) => {
+  try {
+    let SQLQuery = `
+      SELECT 
+        DATE(o.waktuOrder) AS tanggalGroup,
+        u.namaLengkap AS namaKasir,
+        SUM(CASE WHEN d.jenisLayanan IN ('cuci', 'kering') THEN 1 ELSE 0 END) AS jumlahTransaksi
+      FROM tbl_order_laundry o
+      LEFT JOIN tbl_users_mobile u ON o.idUserMobile = u.id
+      LEFT JOIN tbl_detail_order d ON d.orderId = o.id
+      WHERE o.cabangId = ?
+    `;
+    const values = [cabangId];
+
+    if (tanggal) {
+      SQLQuery += " AND DATE(o.waktuOrder) = ?";
+      values.push(tanggal);
+    }
+
+    if (namaKasir) {
+      SQLQuery += " AND u.namaLengkap LIKE ?";
+      values.push(`%${namaKasir}%`);
+    }
+
+    SQLQuery += `
+      GROUP BY DATE(o.waktuOrder), u.namaLengkap
+      ORDER BY tanggalGroup DESC, u.namaLengkap ASC
+    `;
+
+    const [rows] = await dbPool.execute(SQLQuery, values);
+
+    if (rows.length === 0) {
+      throw new Error("Data tidak ditemukan");
+    }
+
+    return rows.map((row) => ({
+      namaKasir: row.namaKasir || "Sistem",
+      jumlahTransaksi: Number(row.jumlahTransaksi) || 0,
+      tanggalTampilan: formatTanggalWIB(row.tanggalGroup),
+      tanggalLengkap: row.tanggalGroup ? new Date(row.tanggalGroup).toISOString() : "",
+    }));
+  } catch (error) {
+    throw error;
+  }
+};
+
 const getHistoryMesin = async (cabangId, idMitra) => {
   try {
     const [rows] = await dbPool.execute(
@@ -115,5 +162,6 @@ const getHistoryMesin = async (cabangId, idMitra) => {
 
 module.exports = {
   getHistoryTransaksi,
+  getHistoryTransaksiKasir,
   getHistoryMesin,
 };

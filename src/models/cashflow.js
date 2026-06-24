@@ -1,27 +1,5 @@
 const dbPool = require("../config/database");
-
-const getDateFilterCondition = (columnName, filter = "hari_ini") => {
-  const normalizedFilter = String(filter || "hari_ini").toLowerCase();
-
-  switch (normalizedFilter) {
-    case "kemarin":
-    case "yesterday":
-      return `DATE(${columnName}) = CURDATE() - INTERVAL 1 DAY`;
-    case "mingguan":
-    case "minggu":
-    case "weekly":
-      return `YEARWEEK(${columnName}, 1) = YEARWEEK(CURDATE(), 1)`;
-    case "bulanan":
-    case "bulan":
-    case "monthly":
-      return `YEAR(${columnName}) = YEAR(CURDATE()) AND MONTH(${columnName}) = MONTH(CURDATE())`;
-    case "hari_ini":
-    case "hari-ini":
-    case "today":
-    default:
-      return `DATE(${columnName}) = CURDATE()`;
-  }
-};
+const { formatTanggalJamWIB, getDateFilterCondition } = require("../utils/date");
 
 const getCashflow = (cabangId, idMitra, cabangId2, idMitra2, filter) => {
   const pemasukanDateFilter = getDateFilterCondition("waktuOrder", filter);
@@ -203,24 +181,13 @@ const getListPengeluaran = async (cabangId, filter) => {
       throw new Error("Data tidak ditemukan");
     }
 
-    // Format data
-    const formatTanggalWIB = (dateString) => {
-      const date = new Date(dateString);
-      const tgl = String(date.getDate()).padStart(2, '0');
-      const bln = String(date.getMonth() + 1).padStart(2, '0');
-      const thn = date.getFullYear();
-      const jam = String(date.getHours()).padStart(2, '0');
-      const menit = String(date.getMinutes()).padStart(2, '0');
-      return `${tgl}/${bln}/${thn} ${jam}:${menit} WIB`;
-    };
-
     const formattedData = rows.map(row => ({
       idPengeluaran: row.idPengeluaran,
       deskripsi: row.deskripsi,
       namaKasir: row.namaKasir || 'Sistem',
       nominalRupiah: `Rp ${Number(row.nominal).toLocaleString('id-ID')}`,
       nominalAngka: Number(row.nominal),
-      waktuTampilan: formatTanggalWIB(row.waktuLengkap),
+      waktuTampilan: formatTanggalJamWIB(row.waktuLengkap),
       waktuLengkap: row.waktuLengkap,
     }));
 
