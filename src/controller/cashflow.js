@@ -1,7 +1,10 @@
 const CashflowModel = require("../models/cashflow");
 
+const getDateFilter = (req) => req.query.filter || req.query.periode || req.query.tanggal || "hari_ini";
+
 const getCashflow = async (req, res) => {
   const { cabangId } = req.query;
+  const filter = getDateFilter(req);
   const { idMitra } = req.user;
 
   if (!idMitra) {
@@ -17,7 +20,7 @@ const getCashflow = async (req, res) => {
   }
 
   try {
-    const [rows] = await CashflowModel.getCashflow(cabangId, idMitra, cabangId, idMitra);
+    const [rows] = await CashflowModel.getCashflow(cabangId, idMitra, cabangId, idMitra, filter);
 
     let data = {
       totalPemasukan: "0",
@@ -48,9 +51,10 @@ const getCashflow = async (req, res) => {
 
 const getPendapatan = async (req, res) => {
   const { cabangId } = req.query;
+  const filter = getDateFilter(req);
   const idMitra = req.user ? req.user.idMitra : null;
 
-  console.log("GET PENDAPATAN REQUEST:", { cabangId, idMitra });
+  console.log("GET PENDAPATAN REQUEST:", { cabangId, idMitra, filter });
 
   if (!cabangId) {
     return res.status(400).json({
@@ -65,7 +69,7 @@ const getPendapatan = async (req, res) => {
   }
 
   try {
-    const data = await CashflowModel.getPendapatan(cabangId, idMitra);
+    const data = await CashflowModel.getPendapatan(cabangId, idMitra, filter);
     res.status(200).json({
       success: "Get Data Pendapatan Success",
       data: data,
@@ -85,13 +89,14 @@ const getPendapatan = async (req, res) => {
 
 const getListPengeluaran = async (req, res) => {
   let { cabangId } = req.query;
+  const filter = getDateFilter(req);
   const idMitra = req.user ? req.user.idMitra : null;
 
   // Jika tidak ada cabangId di query params, anggap user adalah KASIR
   // Ambil cabangId dari token
   if (!cabangId) {
     cabangId = req.user.cabang_id || req.user.cabangId;
-    console.log("GET PENGELUARAN (KASIR):", { cabangId, idMitra });
+    console.log("GET PENGELUARAN (KASIR):", { cabangId, idMitra, filter });
 
     if (!cabangId) {
       return res.status(400).json({
@@ -100,7 +105,7 @@ const getListPengeluaran = async (req, res) => {
     }
 
     try {
-      const data = await CashflowModel.getListPengeluaran(cabangId);
+      const data = await CashflowModel.getListPengeluaran(cabangId, filter);
       return res.status(200).json({
         success: "Get Data List Expense Success",
         data: data,
@@ -119,7 +124,7 @@ const getListPengeluaran = async (req, res) => {
   }
 
   // OWNER: ada cabangId di query params, gunakan grouping per tanggal
-  console.log("GET PENGELUARAN (OWNER):", { cabangId, idMitra });
+  console.log("GET PENGELUARAN (OWNER):", { cabangId, idMitra, filter });
 
   if (!idMitra) {
     return res.status(400).json({
@@ -128,7 +133,7 @@ const getListPengeluaran = async (req, res) => {
   }
 
   try {
-    const data = await CashflowModel.getPengeluaran(cabangId, idMitra);
+    const data = await CashflowModel.getPengeluaran(cabangId, idMitra, filter);
     res.status(200).json({
       success: "Get Data Pengeluaran Success",
       data: data,
@@ -148,6 +153,7 @@ const getListPengeluaran = async (req, res) => {
 
 const getPengeluaranById = async (req, res) => {
   const { id } = req.params;
+  const filter = getDateFilter(req);
   const idMitra = req.user ? req.user.idMitra : null;
 
   if (!idMitra) {
@@ -157,7 +163,7 @@ const getPengeluaranById = async (req, res) => {
   }
 
   try {
-    const data = await CashflowModel.getPengeluaranById(id, idMitra);
+    const data = await CashflowModel.getPengeluaranById(id, idMitra, filter);
 
     res.json({
       message: "Get Data Expense success",
@@ -305,6 +311,37 @@ const updatePengeluaran = async (req, res) => {
   }
 };
 
+const deletePengeluaran = async (req, res) => {
+  const { id } = req.params;
+  const idMitra = req.user ? req.user.idMitra : null;
+
+  if (!idMitra) {
+    return res.status(400).json({
+      error: "idMitra tidak ditemukan di token",
+    });
+  }
+
+  try {
+    await CashflowModel.deletePengeluaran(id, idMitra);
+
+    res.json({
+      message: "Delete Mitra success",
+      data: null,
+    });
+  } catch (error) {
+    if (error.message === "Data tidak ditemukan") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   getCashflow,
   getPendapatan,
@@ -312,4 +349,5 @@ module.exports = {
   getPengeluaranById,
   createPengeluaran,
   updatePengeluaran,
+  deletePengeluaran,
 };
