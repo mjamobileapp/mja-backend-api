@@ -89,7 +89,7 @@ app.use("/api/backoffice/mesin", mesinRoutes);
 app.use("/api/backoffice/item", masterItemRoutes);
 app.use("/api/backoffice/userowner", userOwnerRoutes);
 app.use("/api/mobile", mobileRoutes);
-app.use("/api/owner/kasir", kasirRoutes);
+app.use("/api/kasir", kasirRoutes);
 app.use("/api/owner/stokmitra", settingStokMitraRoutes);
 app.use("/api/backoffice/dashboard", dashboardRoutes);
 app.use("/api/owner", cashflowRoutes);
