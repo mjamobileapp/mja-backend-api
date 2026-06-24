@@ -1,6 +1,31 @@
 const dbPool = require("../config/database");
 
-const getCashflow = (cabangId, idMitra, cabangId2, idMitra2) => {
+const getDateFilterCondition = (columnName, filter = "hari_ini") => {
+  const normalizedFilter = String(filter || "hari_ini").toLowerCase();
+
+  switch (normalizedFilter) {
+    case "kemarin":
+    case "yesterday":
+      return `DATE(${columnName}) = CURDATE() - INTERVAL 1 DAY`;
+    case "mingguan":
+    case "minggu":
+    case "weekly":
+      return `YEARWEEK(${columnName}, 1) = YEARWEEK(CURDATE(), 1)`;
+    case "bulanan":
+    case "bulan":
+    case "monthly":
+      return `YEAR(${columnName}) = YEAR(CURDATE()) AND MONTH(${columnName}) = MONTH(CURDATE())`;
+    case "hari_ini":
+    case "hari-ini":
+    case "today":
+    default:
+      return `DATE(${columnName}) = CURDATE()`;
+  }
+};
+
+const getCashflow = (cabangId, idMitra, cabangId2, idMitra2, filter) => {
+  const pemasukanDateFilter = getDateFilterCondition("waktuOrder", filter);
+  const pengeluaranDateFilter = getDateFilterCondition("waktuPengeluaran", filter);
   const SQLQuery = `
     SELECT 
   pemasukan.total AS totalPemasukan,
@@ -11,7 +36,7 @@ FROM
   (SELECT IFNULL(SUM(totalBayar), 0) AS total 
    FROM tbl_order_laundry 
    WHERE cabangId = ? AND idMitra = ?
-     AND DATE(waktuOrder) = CURDATE()
+     AND ${pemasukanDateFilter}
   ) AS pemasukan
   
 CROSS JOIN 
@@ -20,14 +45,16 @@ CROSS JOIN
   (SELECT IFNULL(SUM(nominal), 0) AS total 
    FROM tbl_pengeluaran 
    WHERE cabangId = ? AND idMitra = ?
-     AND DATE(waktuPengeluaran) = CURDATE()
+     AND statusAktif = 1
+     AND ${pengeluaranDateFilter}
   ) AS pengeluaran
   `;
   return dbPool.execute(SQLQuery, [cabangId, idMitra, cabangId2, idMitra2]);
 };
 
-const getPendapatan = async (cabangId, idMitra) => {
+const getPendapatan = async (cabangId, idMitra, filter) => {
   try {
+    const dateFilter = getDateFilterCondition("o.waktuOrder", filter);
     const [rows] = await dbPool.execute(
       `SELECT 
         o.id AS idTransaksi,
@@ -39,7 +66,8 @@ const getPendapatan = async (cabangId, idMitra) => {
       LEFT JOIN tbl_users_mobile k ON o.idUserMobile = k.id
       WHERE o.cabangId = ? 
         AND o.idMitra = ?
-        AND o.statusPembayaran = 'LUNAS'
+        AND o.statusPembayaran = 'PAID'
+        AND ${dateFilter}
       ORDER BY o.waktuOrder DESC`,
       [cabangId, idMitra]
     );
@@ -86,8 +114,9 @@ const getPendapatan = async (cabangId, idMitra) => {
   }
 };
 
-const getPengeluaran = async (cabangId, idMitra) => {
+const getPengeluaran = async (cabangId, idMitra, filter) => {
   try {
+    const dateFilter = getDateFilterCondition("p.waktuPengeluaran", filter);
     const [rows] = await dbPool.execute(
       `SELECT 
         p.id AS idPengeluaran,
@@ -101,6 +130,8 @@ const getPengeluaran = async (cabangId, idMitra) => {
       LEFT JOIN tbl_master_item_expense i ON p.itemId = i.id
       WHERE p.cabangId = ? 
         AND p.idMitra = ? 
+        AND p.statusAktif = 1
+        AND ${dateFilter}
       ORDER BY p.waktuPengeluaran DESC`,
       [cabangId, idMitra]
     );
@@ -148,8 +179,9 @@ const getPengeluaran = async (cabangId, idMitra) => {
   }
 };
 
-const getListPengeluaran = async (cabangId) => {
+const getListPengeluaran = async (cabangId, filter) => {
   try {
+    const dateFilter = getDateFilterCondition("p.waktuPengeluaran", filter);
     const [rows] = await dbPool.execute(
       `SELECT 
         p.id AS idPengeluaran,
@@ -161,6 +193,8 @@ const getListPengeluaran = async (cabangId) => {
       LEFT JOIN tbl_users_mobile u ON p.idUserMobile = u.id
       LEFT JOIN tbl_master_item_expense i ON p.itemId = i.id
       WHERE p.cabangId = ? 
+        AND p.statusAktif = 1
+        AND ${dateFilter}
       ORDER BY p.waktuPengeluaran DESC`,
       [cabangId]
     );
@@ -196,8 +230,9 @@ const getListPengeluaran = async (cabangId) => {
   }
 };
 
-const getPengeluaranById = async (id, idMitra) => {
+const getPengeluaranById = async (id, idMitra, filter) => {
   try {
+    const dateFilter = getDateFilterCondition("p.waktuPengeluaran", filter);
     const [rows] = await dbPool.execute(
       `SELECT 
         p.id,
@@ -217,7 +252,9 @@ const getPengeluaranById = async (id, idMitra) => {
       LEFT JOIN tbl_cabang c ON p.cabangId = c.id
       LEFT JOIN tbl_users_mobile u ON p.idUserMobile = u.id
       WHERE p.id = ?
-        AND p.idMitra = ?`,
+        AND p.idMitra = ?
+        AND p.statusAktif = 1
+        AND ${dateFilter}`,
       [id, idMitra]
     );
 
@@ -327,7 +364,7 @@ const updatePengeluaran = async (body, id, idMitra) => {
     const { itemId, jumlahBarang, nominal } = body;
 
     const [existingPengeluaran] = await dbPool.execute(
-      "SELECT id FROM tbl_pengeluaran WHERE id = ? AND idMitra = ?",
+      "SELECT id FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1",
       [id, idMitra]
     );
 
@@ -353,7 +390,7 @@ const updatePengeluaran = async (body, id, idMitra) => {
 
     const [updatedData] = await dbPool.execute(
       `SELECT id, idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal, waktuPengeluaran, createdDate
-       FROM tbl_pengeluaran WHERE id = ? AND idMitra = ?`,
+       FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1`,
       [id, idMitra]
     );
 
@@ -375,6 +412,24 @@ const updatePengeluaran = async (body, id, idMitra) => {
   }
 };
 
+const deletePengeluaran = async (id, idMitra) => {
+  try {
+    const [existingPengeluaran] = await dbPool.execute(
+      "SELECT id FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1",
+      [id, idMitra]
+    );
+
+    if (existingPengeluaran.length === 0) {
+      throw new Error("Data tidak ditemukan");
+    }
+
+    const SQLQuery = "UPDATE tbl_pengeluaran SET statusAktif = 0 WHERE id = ? AND idMitra = ?";
+    return dbPool.execute(SQLQuery, [id, idMitra]);
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   getCashflow,
   getPendapatan,
@@ -383,4 +438,5 @@ module.exports = {
   getPengeluaranById,
   createPengeluaran,
   updatePengeluaran,
+  deletePengeluaran,
 };

@@ -16,4 +16,7 @@ router.post("/cashflow/pengeluaran", authenticateMobile, CashflowController.crea
 // UPDATE - Update Pengeluaran
 router.put("/cashflow/pengeluaran/:id", authenticateMobile, CashflowController.updatePengeluaran);
 
+// DELETE - Delete Pengeluaran
+router.delete("/cashflow/pengeluaran/:id", authenticateMobile, CashflowController.deletePengeluaran);
+
 module.exports = router;
