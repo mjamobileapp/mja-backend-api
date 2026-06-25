@@ -1,5 +1,6 @@
 const KasirModel = require("../models/kasir");
 const { sendUserMobileCredentialEmail, sendResetPasswordEmail } = require("../utils/email");
+const { formatTanggalWIB } = require("../utils/date");
 
 const createNewUserKasir = async (req, res) => {
   const { body } = req;
@@ -259,20 +260,28 @@ const resetPassword = async (req, res) => {
 };
 
 const getAbsensiKasir = async (req, res) => {
-  const { cabangId } = req.query;
+  let { cabangId, tanggal, namaKasir } = req.query;
 
   if (!cabangId) {
-    return res.status(400).json({
-      error: "Parameter cabangId diperlukan",
-    });
+    cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
+
+    if (!cabangId) {
+      return res.status(400).json({
+        error: "Parameter cabangId diperlukan untuk owner",
+      });
+    }
   }
 
   try {
-    const [data] = await KasirModel.getAbsensiKasir(cabangId);
+    const [data] = await KasirModel.getAbsensiKasir({
+      cabangId,
+      tanggal,
+      namaKasir,
+    });
 
     const mappedData = data.map((item) => ({
       id: item.absensiId,
-      tanggalShift: item.tanggalShift,
+      tanggalShift: formatTanggalWIB(item.tanggalShift),
       namaKasir: item.namaKasir,
       jamMasuk: item.jamMasuk,
       jamPulang: item.jamPulang,

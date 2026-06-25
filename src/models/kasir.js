@@ -323,8 +323,8 @@ const resetPassword = async (email) => {
   }
 };
 
-const getAbsensiKasir = (cabangId) => {
-  const SQLQuery = `
+const getAbsensiKasir = ({ cabangId, tanggal, namaKasir }) => {
+  let SQLQuery = `
     SELECT
       a.id AS absensiId,
       u.namaLengkap AS namaKasir,
@@ -334,9 +334,22 @@ const getAbsensiKasir = (cabangId) => {
     FROM tbl_absensi a
     JOIN tbl_users_mobile u ON a.idUserMobile = u.id
     WHERE a.cabangId = ?
-    ORDER BY a.waktuLogin DESC
   `;
-  return dbPool.execute(SQLQuery, [cabangId]);
+  const values = [cabangId];
+
+  if (tanggal) {
+    SQLQuery += " AND DATE(a.waktuLogin) = ?";
+    values.push(tanggal);
+  }
+
+  if (namaKasir) {
+    SQLQuery += " AND u.namaLengkap LIKE ?";
+    values.push(`%${namaKasir}%`);
+  }
+
+  SQLQuery += " ORDER BY a.waktuLogin DESC";
+
+  return dbPool.execute(SQLQuery, values);
 };
 
 module.exports = {
