@@ -252,10 +252,13 @@ const getPengeluaranById = async (id, idMitra, filter) => {
 
 const createPengeluaran = async (data) => {
   const { idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal } = data;
+  const connection = await dbPool.getConnection();
 
   try {
+    await connection.beginTransaction();
+
     // 1. Validasi idMitra
-    const [mitraCheck] = await dbPool.execute(
+    const [mitraCheck] = await connection.execute(
       "SELECT id FROM tbl_mitra WHERE id = ? AND statusAktif = 1",
       [idMitra]
     );
@@ -264,7 +267,7 @@ const createPengeluaran = async (data) => {
     }
 
     // 2. Validasi cabangId (cek juga milik mitra yang sama)
-    const [cabangCheck] = await dbPool.execute(
+    const [cabangCheck] = await connection.execute(
       "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ? AND statusAktif = 1",
       [cabangId, idMitra]
     );
@@ -273,8 +276,8 @@ const createPengeluaran = async (data) => {
     }
 
     // 3. Validasi idUserMobile
-    const [userCheck] = await dbPool.execute(
-      "SELECT id FROM tbl_users_mobile WHERE id = ? AND statusAktif = 1",
+    const [userCheck] = await connection.execute(
+      "SELECT id, namaLengkap FROM tbl_users_mobile WHERE id = ? AND statusAktif = 1",
       [idUserMobile]
     );
     if (userCheck.length === 0) {
@@ -282,8 +285,8 @@ const createPengeluaran = async (data) => {
     }
 
     // 4. Validasi itemId
-    const [itemCheck] = await dbPool.execute(
-      "SELECT id FROM tbl_master_item_expense WHERE id = ? AND statusAktif = 1",
+    const [itemCheck] = await connection.execute(
+      "SELECT id, tipeItem FROM tbl_master_item_expense WHERE id = ? AND statusAktif = 1",
       [itemId]
     );
     if (itemCheck.length === 0) {
@@ -291,14 +294,30 @@ const createPengeluaran = async (data) => {
     }
 
     // 5. INSERT pengeluaran
-    const [result] = await dbPool.execute(
+    const jumlahBarangValue = jumlahBarang || 0;
+    const [result] = await connection.execute(
       `INSERT INTO tbl_pengeluaran (idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal, waktuPengeluaran)
        VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [idMitra, cabangId, idUserMobile, itemId, jumlahBarang || 0, nominal]
+      [idMitra, cabangId, idUserMobile, itemId, jumlahBarangValue, nominal]
     );
 
-    // 6. Ambil data yang baru diinsert untuk response
-    const [newData] = await dbPool.execute(
+    // 6. Tambahkan stok cabang jika item bertipe stok
+    if (itemCheck[0].tipeItem === "stok" && jumlahBarangValue > 0) {
+      const createdBy = userCheck[0].namaLengkap || String(idUserMobile);
+
+      await connection.execute(
+        `INSERT INTO tbl_stok_cabang (idMitra, cabangId, itemId, stokSekarang, createdBy, updatedBy)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           stokSekarang = stokSekarang + VALUES(stokSekarang),
+           updatedBy = VALUES(updatedBy),
+           updatedDate = CURRENT_TIMESTAMP`,
+        [idMitra, cabangId, itemId, jumlahBarangValue, createdBy, createdBy]
+      );
+    }
+
+    // 7. Ambil data yang baru diinsert untuk response
+    const [newData] = await connection.execute(
       `SELECT id, idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal, waktuPengeluaran, createdDate
        FROM tbl_pengeluaran WHERE id = ?`,
       [result.insertId]
@@ -309,6 +328,8 @@ const createPengeluaran = async (data) => {
     }
 
     const row = newData[0];
+
+    await connection.commit();
 
     return {
       id: row.id,
@@ -322,7 +343,10 @@ const createPengeluaran = async (data) => {
       createdDate: row.createdDate ? new Date(row.createdDate).toISOString() : "",
     };
   } catch (error) {
+    await connection.rollback();
     throw error;
+  } finally {
+    connection.release();
   }
 };
 
