@@ -26,6 +26,7 @@ const cashflowRoutes = require("./routes/cashflow");
 const historyRoutes = require("./routes/history");
 const historyKasirRoutes = require("./routes/historyKasir");
 const hargaCabangRoutes = require("./routes/hargaCabang");
+const transaksiRoutes = require("./routes/transaksi");
 
 const app = express();
 const PORT = process.env.PORT || 9090;
@@ -89,6 +90,7 @@ app.use("/api/backoffice/mesin", mesinRoutes);
 app.use("/api/backoffice/item", masterItemRoutes);
 app.use("/api/backoffice/userowner", userOwnerRoutes);
 app.use("/api/mobile", mobileRoutes);
+app.use("/api/kasir/transaksi", transaksiRoutes);
 app.use("/api/kasir", kasirRoutes);
 app.use("/api/owner/stokmitra", settingStokMitraRoutes);
 app.use("/api/backoffice/dashboard", dashboardRoutes);
