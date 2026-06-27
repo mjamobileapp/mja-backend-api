@@ -1,10 +1,10 @@
 const CashflowModel = require("../models/cashflow");
 
-const getDateFilter = (req) => req.query.filter || req.query.periode || req.query.tanggal || "hari_ini";
+const getRequestDateFilter = (req) => req.query.filter || req.query.periode || req.query.tanggal || "hari_ini";
 
 const getCashflow = async (req, res) => {
   const { cabangId } = req.query;
-  const filter = getDateFilter(req);
+  const filter = getRequestDateFilter(req);
   const { idMitra } = req.user;
 
   if (!idMitra) {
@@ -51,7 +51,7 @@ const getCashflow = async (req, res) => {
 
 const getPendapatan = async (req, res) => {
   const { cabangId } = req.query;
-  const filter = getDateFilter(req);
+  const filter = getRequestDateFilter(req);
   const idMitra = req.user ? req.user.idMitra : null;
 
   console.log("GET PENDAPATAN REQUEST:", { cabangId, idMitra, filter });
@@ -89,7 +89,7 @@ const getPendapatan = async (req, res) => {
 
 const getListPengeluaran = async (req, res) => {
   let { cabangId } = req.query;
-  const filter = getDateFilter(req);
+  const filter = getRequestDateFilter(req);
   const idMitra = req.user ? req.user.idMitra : null;
 
   // Jika tidak ada cabangId di query params, anggap user adalah KASIR
@@ -153,7 +153,7 @@ const getListPengeluaran = async (req, res) => {
 
 const getPengeluaranById = async (req, res) => {
   const { id } = req.params;
-  const filter = getDateFilter(req);
+  const filter = getRequestDateFilter(req);
   const idMitra = req.user ? req.user.idMitra : null;
 
   if (!idMitra) {
