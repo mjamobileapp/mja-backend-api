@@ -61,8 +61,8 @@ const createNewMesin = async (body, createdBy = null) => {
     let washerResult = null;
     if (washer === 1) {
       const [detailWasher] = await dbPool.execute(
-        `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, channelRelay, status) 
-         VALUES (?, 'WASHER', 5, 'READY')`,
+        `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, status) 
+         VALUES (?, 'WASHER', 'READY')`,
         [idMesinMaster]
       );
       washerResult = { id: detailWasher.insertId, status: "Ready" };
@@ -72,8 +72,8 @@ const createNewMesin = async (body, createdBy = null) => {
     let dryerResult = null;
     if (dryer === 1) {
       const [detailDryer] = await dbPool.execute(
-        `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, channelRelay, status) 
-         VALUES (?, 'DRYER', 4, 'READY')`,
+        `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, status) 
+         VALUES (?, 'DRYER', 'READY')`,
         [idMesinMaster]
       );
       dryerResult = { id: detailDryer.insertId, status: "Ready" };
@@ -119,7 +119,7 @@ const updateMesin = async (idMesinMaster, body, updatedBy) => {
     );
 
     // 3. Fungsi Internal untuk Sinkronisasi (Upsert / Delete)
-    const syncMesin = async (jenis, isAktif, channelPin) => {
+    const syncMesin = async (jenis, isAktif) => {
       let currentId = null;
 
       if (isAktif === 1) {
@@ -134,8 +134,8 @@ const updateMesin = async (idMesinMaster, body, updatedBy) => {
         } else {
           // KONDISI B: Detail belum ada -> Lakukan INSERT
           const [result] = await connection.execute(
-            `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, channelRelay, status) VALUES (?, ?, ?, 'READY')`,
-            [idMesinMaster, jenis, channelPin]
+            `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, status) VALUES (?, ?, 'READY')`,
+            [idMesinMaster, jenis]
           );
           currentId = result.insertId;
         }
@@ -149,9 +149,9 @@ const updateMesin = async (idMesinMaster, body, updatedBy) => {
       return currentId;
     };
 
-    // 4. Eksekusi Sinkronisasi untuk Washer (Pin 5) dan Dryer (Pin 4)
-    const idWasher = await syncMesin('WASHER', washer, 5);
-    const idDryer = await syncMesin('DRYER', dryer, 4);
+    // 4. Eksekusi Sinkronisasi untuk Washer dan Dryer
+    const idWasher = await syncMesin('WASHER', washer);
+    const idDryer = await syncMesin('DRYER', dryer);
 
     // Selesai, simpan permanen
     await connection.commit();
@@ -247,7 +247,7 @@ const getAllMesin = async (status) => {
   try {
     let SQLQuery = `
       SELECT 
-        d.id, d.jenisMesin AS tipeMesin, d.channelRelay, d.status, d.waktuSelesai, d.waktuPingTerakhir,
+        d.id, d.jenisMesin AS tipeMesin, d.status, d.waktuSelesai, d.waktuPingTerakhir,
         m.id AS masterId, m.idMitra, m.cabangId, m.espId, m.namaGroupMesin AS namaMesin, m.statusAktif,
         mitra.namaMitra, cabang.namaCabang 
       FROM tbl_mesin_detail d
@@ -412,7 +412,7 @@ const getMesinByEspId = async (espId) => {
   try {
     const [mesins] = await dbPool.execute(
       `SELECT 
-        d.id, d.jenisMesin AS tipeMesin, d.channelRelay, d.status, d.waktuSelesai, d.waktuPingTerakhir,
+        d.id, d.jenisMesin AS tipeMesin, d.status, d.waktuSelesai, d.waktuPingTerakhir,
         m.id AS masterId, m.idMitra, m.cabangId, m.espId, m.namaGroupMesin AS namaMesin, m.statusAktif
        FROM tbl_mesin_detail d
        JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
