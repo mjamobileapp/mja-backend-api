@@ -12,6 +12,8 @@ const isNonNegativeNumber = (value) => {
   return Number.isFinite(numberValue) && numberValue >= 0;
 };
 
+const isPositiveInteger = (value) => Number.isInteger(Number(value)) && Number(value) > 0;
+
 const getRequestDateFilter = (req) => req.query.filter || req.query.periode || req.query.tanggal || "hari_ini";
 
 const getJumlahTransaksi = async (req, res) => {
@@ -209,8 +211,114 @@ const createTransaksi = async (req, res) => {
   }
 };
 
+const startMesin = async (req, res) => {
+  const { mesinId, invoiceNumber } = req.body;
+  const idMitra = req.user ? req.user.idMitra : null;
+  const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
+  const kasirId = req.user ? req.user.id : null;
+
+  if (!idMitra || !cabangId || !kasirId) {
+    return res.status(401).json({
+      error: "Token tidak valid",
+    });
+  }
+
+  if (!isPositiveInteger(mesinId)) {
+    return res.status(400).json({
+      error: "mesinId wajib diisi dan harus integer lebih dari 0",
+    });
+  }
+
+  if (!invoiceNumber || typeof invoiceNumber !== "string" || invoiceNumber.trim() === "") {
+    return res.status(400).json({
+      error: "invoiceNumber wajib diisi",
+    });
+  }
+
+  try {
+    await TransaksiModel.startMesin({
+      idMitra,
+      cabangId,
+      kasirId,
+      mesinId: Number(mesinId),
+      invoiceNumber: invoiceNumber.trim(),
+    });
+
+    return res.status(200).json({
+      success: "Start Mesin Success",
+      data: null,
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        error: error.message,
+      });
+    }
+
+    console.error("Error Start Mesin:", error);
+    return res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
+const stopMesin = async (req, res) => {
+  const { mesinId, invoiceNumber } = req.body;
+  const idMitra = req.user ? req.user.idMitra : null;
+  const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
+  const kasirId = req.user ? req.user.id : null;
+
+  if (!idMitra || !cabangId || !kasirId) {
+    return res.status(401).json({
+      error: "Token tidak valid",
+    });
+  }
+
+  if (!isPositiveInteger(mesinId)) {
+    return res.status(400).json({
+      error: "mesinId wajib diisi dan harus integer lebih dari 0",
+    });
+  }
+
+  if (invoiceNumber && (typeof invoiceNumber !== "string" || invoiceNumber.trim() === "")) {
+    return res.status(400).json({
+      error: "invoiceNumber tidak valid",
+    });
+  }
+
+  try {
+    await TransaksiModel.stopMesin({
+      idMitra,
+      cabangId,
+      kasirId,
+      mesinId: Number(mesinId),
+      invoiceNumber: invoiceNumber ? invoiceNumber.trim() : null,
+    });
+
+    return res.status(200).json({
+      success: "Stop Mesin Success",
+      data: null,
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        error: error.message,
+      });
+    }
+
+    console.error("Error Stop Mesin:", error);
+    return res.status(500).json({
+      message: "Server Error",
+      serverMessage: error.message,
+    });
+  }
+};
+
 module.exports = {
   getJumlahTransaksi,
   getPendingTransaksi,
   createTransaksi,
+  startMesin,
+  stopMesin,
 };

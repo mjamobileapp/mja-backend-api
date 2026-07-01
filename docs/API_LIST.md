@@ -55,3 +55,10 @@ Endpoint `POST /login` tidak memakai token. Endpoint upload memakai `multipart/f
 | GET | `/akses/role/:idRole` | - |
 | POST | `/akses/role/:idRole` | `[{"id":1,"name":"Dashboard","checked":true,"children":[{"id":2,"name":"Project","checked":true}]}]` |
 | GET | `/akses/user/:email` | - |
+
+## Transaksi
+
+| Method | URL | Body request |
+| --- | --- | --- |
+| POST | `/api/transaksi/startmesin` | `{"mesinId":105,"invoiceNumber":"INV-3-20260625-0002"}` |
+| POST | `/api/transaksi/stopmesin` | `{"mesinId":105,"invoiceNumber":"INV-3-20260625-0002"}` |
