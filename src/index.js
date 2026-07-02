@@ -29,6 +29,7 @@ const historyKasirRoutes = require("./routes/historyKasir");
 const hargaCabangRoutes = require("./routes/hargaCabang");
 const transaksiRoutes = require("./routes/transaksi");
 const transaksiStartMesinRoutes = require("./routes/transaksiStartMesin");
+const { startMqttStatusListener } = require("./utils/mqttStatusListener");
 
 const app = express();
 const PORT = process.env.PORT || 9090;
@@ -126,4 +127,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Server berhasil di running di port ${PORT}`);
+  startMqttStatusListener();
 });
