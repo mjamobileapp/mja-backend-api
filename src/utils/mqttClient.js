@@ -1,5 +1,7 @@
 const mqtt = require("mqtt");
 
+const isMqttDebugEnabled = () => String(process.env.MQTT_DEBUG || "").toLowerCase() === "true";
+
 const getMqttUrl = () => {
   const protocol = process.env.MQTT_PROTOCOL || "mqtt";
   const host = process.env.MQTT_HOST;
@@ -65,6 +67,10 @@ const connectClient = () => {
 const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) => {
   const client = connectClient();
   const ackTimeoutMs = Number(timeoutMs || process.env.MQTT_ACK_TIMEOUT_MS) || 10000;
+  const mqttDebug = isMqttDebugEnabled();
+  const subscribeTopics = mqttDebug
+    ? [ackTopic, ackTopic.split("/").slice(0, 2).join("/") + "/#"]
+    : ackTopic;
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -90,18 +96,49 @@ const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) =
     };
 
     const timer = setTimeout(() => {
+      console.error("[MQTT] ACK timeout", {
+        topic,
+        ackTopic,
+        requestId,
+        timeoutMs: ackTimeoutMs,
+      });
       fail(new Error("ACK mesin tidak diterima"));
     }, ackTimeoutMs);
 
     client.on("connect", () => {
-      client.subscribe(ackTopic, { qos: 1 }, (subscribeError) => {
+      if (mqttDebug) {
+        console.log("[MQTT] Connected", {
+          mqttUrl: getMqttUrl(),
+          ackTopic,
+          subscribeTopics,
+          requestId,
+        });
+      }
+
+      client.subscribe(subscribeTopics, { qos: 1 }, (subscribeError) => {
         if (subscribeError) {
+          console.error("[MQTT] Subscribe ACK topic failed", {
+            ackTopic,
+            subscribeTopics,
+            requestId,
+            error: subscribeError.message,
+          });
           fail(subscribeError);
           return;
         }
 
+        if (mqttDebug) {
+          console.log("[MQTT] Subscribed ACK topic", { ackTopic, requestId });
+          console.log("[MQTT] Publish command", { topic, payload });
+        }
+
         client.publish(topic, JSON.stringify(payload), { qos: 1, retain: false }, (publishError) => {
           if (publishError) {
+            console.error("[MQTT] Publish command failed", {
+              topic,
+              requestId,
+              error: publishError.message,
+            });
             fail(publishError);
           }
         });
@@ -109,27 +146,55 @@ const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) =
     });
 
     client.on("message", (receivedTopic, message) => {
+      const ackPayload = parseAckMessage(message);
       if (receivedTopic !== ackTopic) {
+        if (mqttDebug) {
+          console.log("[MQTT] Ignored message from non-ACK topic", {
+            receivedTopic,
+            expectedAckTopic: ackTopic,
+            ackPayload,
+          });
+        }
         return;
       }
 
-      const ackPayload = parseAckMessage(message);
       const ackSuccess = isAckSuccess(ackPayload, requestId);
       if (ackSuccess === null) {
+        if (mqttDebug) {
+          console.log("[MQTT] Ignored ACK with different requestId", {
+            ackTopic,
+            expectedRequestId: requestId,
+            ackPayload,
+          });
+        }
         return;
       }
 
       if (!ackSuccess) {
+        console.error("[MQTT] ACK failed", { ackTopic, requestId, ackPayload });
         fail(new Error("ACK mesin gagal"));
         return;
       }
 
+      if (mqttDebug) {
+        console.log("[MQTT] ACK received", { ackTopic, requestId, ackPayload });
+      }
       succeed(ackPayload);
     });
 
-    client.on("error", fail);
+    client.on("error", (error) => {
+      console.error("[MQTT] Client error", {
+        topic,
+        ackTopic,
+        requestId,
+        error: error.message,
+      });
+      fail(error);
+    });
+
     client.on("close", () => {
       if (!settled) {
+        console.error("[MQTT] Connection closed before ACK", { topic, ackTopic, requestId });
         fail(new Error("Koneksi MQTT terputus"));
       }
     });

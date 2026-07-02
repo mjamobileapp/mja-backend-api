@@ -7,6 +7,9 @@ const jenisMesinToLayanan = {
   DRYER: "kering",
 };
 
+const normalizeEspId = (espId) => String(espId || "").trim().toUpperCase();
+const isMqttDebugEnabled = () => String(process.env.MQTT_DEBUG || "").toLowerCase() === "true";
+
 const createHttpError = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -406,17 +409,27 @@ const startMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber }
     }
 
     const requestId = `${invoiceNumber}-${mesinId}-${Date.now()}`;
-    const topic = `modul/${mesin.espId}/${mesin.jenisMesin}/on`;
-    const ackTopic = `modul/${mesin.espId}/${mesin.jenisMesin}/ack`;
+    const espId = normalizeEspId(mesin.espId);
+    const topic = `modul/${espId}/${mesin.jenisMesin}/on`;
+    const ackTopic = `modul/${espId}/${mesin.jenisMesin}/ack`;
     const mqttPayload = {
       command: "ON",
-      mesinId: Number(mesinId),
-      invoiceNumber,
-      // channelRelay: mesin.channelRelay,
       requestId,
     };
 
     try {
+      if (isMqttDebugEnabled()) {
+        console.log("[TRANSAKSI] Start mesin MQTT command", {
+          mesinId: Number(mesinId),
+          jenisMesin: mesin.jenisMesin,
+          espId,
+          rawEspId: mesin.espId,
+          topic,
+          ackTopic,
+          requestId,
+        });
+      }
+
       await publishAndWaitAck({
         topic,
         ackTopic,
@@ -490,17 +503,27 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber = 
 
     const mesin = await getMesinForStop(connection, { mesinId, idMitra, cabangId });
     const requestId = `${invoiceNumber || "NO-INVOICE"}-${mesinId}-OFF-${Date.now()}`;
-    const topic = `modul/${mesin.espId}/${mesin.jenisMesin}/off`;
-    const ackTopic = `modul/${mesin.espId}/${mesin.jenisMesin}/ack`;
+    const espId = normalizeEspId(mesin.espId);
+    const topic = `modul/${espId}/${mesin.jenisMesin}/off`;
+    const ackTopic = `modul/${espId}/${mesin.jenisMesin}/ack`;
     const mqttPayload = {
       command: "OFF",
-      mesinId: Number(mesinId),
-      invoiceNumber,
-      // channelRelay: mesin.channelRelay,
       requestId,
     };
 
     try {
+      if (isMqttDebugEnabled()) {
+        console.log("[TRANSAKSI] Stop mesin MQTT command", {
+          mesinId: Number(mesinId),
+          jenisMesin: mesin.jenisMesin,
+          espId,
+          rawEspId: mesin.espId,
+          topic,
+          ackTopic,
+          requestId,
+        });
+      }
+
       await publishAndWaitAck({
         topic,
         ackTopic,
