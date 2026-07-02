@@ -45,12 +45,12 @@ const isAckSuccess = (ackPayload, requestId) => {
   return ["success", "ok", "on", "ack"].includes(String(ackPayload).toLowerCase());
 };
 
-const connectClient = () => {
+const connectClient = (clientOptions = {}) => {
   const options = {
-    clientId: `mja-api-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    clean: true,
+    clientId: `${clientOptions.clientIdPrefix || "mja-api"}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    clean: clientOptions.clean ?? true,
     connectTimeout: Number(process.env.MQTT_CONNECT_TIMEOUT_MS) || 5000,
-    reconnectPeriod: 0,
+    reconnectPeriod: clientOptions.reconnectPeriod ?? 0,
   };
 
   if (process.env.MQTT_USERNAME) {
@@ -202,5 +202,8 @@ const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) =
 };
 
 module.exports = {
+  connectClient,
+  getMqttUrl,
+  isMqttDebugEnabled,
   publishAndWaitAck,
 };
