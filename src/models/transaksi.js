@@ -272,7 +272,6 @@ const getMesinForStart = async (connection, { mesinId, idMitra, cabangId }) => {
     `SELECT
       d.id AS mesinId,
       d.jenisMesin,
-      d.channelRelay,
       d.status,
       m.espId,
       m.idMitra,
@@ -308,7 +307,6 @@ const getMesinForStop = async (connection, { mesinId, idMitra, cabangId }) => {
     `SELECT
       d.id AS mesinId,
       d.jenisMesin,
-      d.channelRelay,
       d.status,
       m.espId,
       m.idMitra,
@@ -414,7 +412,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber }
       command: "ON",
       mesinId: Number(mesinId),
       invoiceNumber,
-      channelRelay: mesin.channelRelay,
+      // channelRelay: mesin.channelRelay,
       requestId,
     };
 
@@ -498,7 +496,7 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber = 
       command: "OFF",
       mesinId: Number(mesinId),
       invoiceNumber,
-      channelRelay: mesin.channelRelay,
+      // channelRelay: mesin.channelRelay,
       requestId,
     };
 

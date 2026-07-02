@@ -40,16 +40,34 @@ const createNewUserKasir = async (body) => {
       }
     }
 
-    // 2. Validasi Duplikasi: username, email, atau noTelp
+    // 2. Validasi Duplikasi: username (global), email (aktif), atau noTelp (aktif)
     const [duplicates] = await dbPool.execute(
-      "SELECT username, email, noTelp FROM tbl_users_mobile WHERE username = ? OR email = ? OR noTelp = ?",
+      `SELECT username, email, noTelp, statusAktif 
+      FROM tbl_users_mobile 
+      WHERE username = ? 
+          OR ((email = ? OR noTelp = ?) AND statusAktif = 1)`,
       [username, email, noTelp]
     );
 
     if (duplicates.length > 0) {
-      if (duplicates.some((u) => u.username === username)) throw new Error("Username sudah terdaftar");
-      if (duplicates.some((u) => u.email === email)) throw new Error("Email sudah terdaftar");
-      if (duplicates.some((u) => u.noTelp === noTelp)) throw new Error("Nomor Telepon sudah terdaftar");
+      // if (duplicates.some((u) => u.username === username)) throw new Error("Username sudah terdaftar");
+      // if (duplicates.some((u) => u.email === email)) throw new Error("Email sudah terdaftar");
+      // if (duplicates.some((u) => u.noTelp === noTelp)) throw new Error("Nomor Telepon sudah terdaftar");
+
+      // Cek duplikasi username (tidak peduli status aktif/nonaktif)
+      if (duplicates.some((u) => u.username === username)) {
+        throw new Error("Username sudah terdaftar");
+      }
+      
+      // Cek duplikasi email HANYA JIKA statusnya aktif
+      if (duplicates.some((u) => u.email === email && u.statusAktif === 1)) {
+        throw new Error("Email sudah terdaftar dan sedang aktif digunakan");
+      }
+      
+      // Cek duplikasi nomor telepon HANYA JIKA statusnya aktif
+      if (duplicates.some((u) => u.noTelp === noTelp && u.statusAktif === 1)) {
+        throw new Error("Nomor Telepon sudah terdaftar dan sedang aktif digunakan");
+      }
     }
 
     // 3. Generate Random Password & Hash
