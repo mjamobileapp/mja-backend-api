@@ -197,7 +197,7 @@ const deleteMesin = async (id, updatedBy) => {
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = "UPDATE tbl_mesin_master SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
 
-    const [result] = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, existingMesin[0].masterId]);
+    const [result] = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 
     return result;
   } catch (error) {
