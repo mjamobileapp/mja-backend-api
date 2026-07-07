@@ -310,7 +310,7 @@ const getListMesinMobile = async (req, res) => {
 
   if (filter && filter !== "washer" && filter !== "dryer") {
     return res.status(400).json({
-      error: "Filter harus bernilai washer atau dryer",
+      error: "Filter harus berisi washer atau dryer",
     });
   }
 
