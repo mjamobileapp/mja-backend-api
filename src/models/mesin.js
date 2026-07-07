@@ -426,10 +426,12 @@ const getMesinByEspId = async (espId) => {
     // Map ke format response: washer dan dryer sebagai 1 (ada) atau 0 (tidak ada)
     let hasWasher = 0;
     let hasDryer = 0;
+    let masterId = null;
     let idMitra = null;
     let cabangId = null;
 
     for (const item of mesins) {
+      masterId = item.masterId;
       idMitra = item.idMitra;
       cabangId = item.cabangId;
       if (item.tipeMesin === 'WASHER') {
@@ -440,6 +442,7 @@ const getMesinByEspId = async (espId) => {
     }
 
     return {
+      masterId,
       idMitra,
       cabangId,
       espId,
@@ -525,9 +528,12 @@ const getAllMasterMesin = async () => {
         m.namaGroupMesin,
         d.id AS detailId,
         d.jenisMesin,
-        d.status
+        d.status,
+        mitra.namaMitra, cabang.namaCabang
        FROM tbl_mesin_master m
        LEFT JOIN tbl_mesin_detail d ON d.idMesinMaster = m.id
+       LEFT JOIN tbl_mitra mitra ON m.idMitra = mitra.id 
+      LEFT JOIN tbl_cabang cabang ON m.cabangId = cabang.id
        WHERE m.statusAktif = 1
        ORDER BY m.id ASC`
     );
@@ -543,6 +549,8 @@ const getAllMasterMesin = async () => {
       if (!groupedData[row.id]) {
         groupedData[row.id] = {
           id: String(row.id),
+          namaMitra: row.namaMitra,
+          namaCabang: row.namaCabang,
           espId: row.espId,
           namaGroupMesin: row.namaGroupMesin,
           washer: null,
