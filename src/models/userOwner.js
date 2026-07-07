@@ -6,7 +6,6 @@ const createNewUserOwner = async (body) => {
   try {
     const {
       username,
-      role,
       idMitra,
       namaLengkap,
       noTelp,
@@ -29,14 +28,30 @@ const createNewUserOwner = async (body) => {
       throw new Error("Mitra tidak ditemukan atau tidak aktif");
     }
 
-    // 2. Validasi Duplikasi: username, email, atau noTelp
-    const [existingUser] = await dbPool.execute(
-      "SELECT id FROM tbl_users_mobile WHERE username = ? OR email = ? OR noTelp = ?",
+    // 2. Validasi Duplikasi: username (global), email (aktif), atau noTelp (aktif)
+    const [duplicates] = await dbPool.execute(
+      `SELECT username, email, noTelp, statusAktif 
+      FROM tbl_users_mobile 
+      WHERE username = ? 
+          OR ((email = ? OR noTelp = ?) AND statusAktif = 1)`,
       [username, email, noTelp]
     );
 
-    if (existingUser.length > 0) {
-      throw new Error("User Owner sudah terdaftar");
+    if (duplicates.length > 0) {
+      // Cek duplikasi username (tidak peduli status aktif/nonaktif)
+      if (duplicates.some((u) => u.username === username)) {
+        throw new Error("Username sudah terdaftar");
+      }
+      
+      // Cek duplikasi email HANYA JIKA statusnya aktif
+      if (duplicates.some((u) => u.email === email && u.statusAktif === 1)) {
+        throw new Error("Email sudah terdaftar dan sedang aktif digunakan");
+      }
+      
+      // Cek duplikasi nomor telepon HANYA JIKA statusnya aktif
+      if (duplicates.some((u) => u.noTelp === noTelp && u.statusAktif === 1)) {
+        throw new Error("Nomor Telepon sudah terdaftar dan sedang aktif digunakan");
+      }
     }
 
     // 3. Generate Random Password & Hash
@@ -62,7 +77,7 @@ const createNewUserOwner = async (body) => {
     const values = [
       username,
       hashedPassword,
-      role,
+      "owner",
       idMitra,
       namaLengkap,
       noTelp,
@@ -74,10 +89,10 @@ const createNewUserOwner = async (body) => {
 
     await dbPool.execute(SQLQuery, values);
 
-    // 5. Return data sesuai spesifikasi response success
+    // 6. Return data sesuai spesifikasi response success
     return {
       username,
-      role,
+      role: "owner",
       idMitra,
       namaLengkap,
       noTelp,
@@ -153,11 +168,14 @@ const updateUserOwner = async (id, body) => {
     if (existing.length === 0) throw new Error("data not found");
 
     // 2. Validasi duplikasi jika data unik diubah
-    const [duplicate] = await dbPool.execute(
-      "SELECT id FROM tbl_users_mobile WHERE (email = ? OR noTelp = ?) AND id != ?",
+    const [duplicates] = await dbPool.execute(
+      "SELECT email, noTelp FROM tbl_users_mobile WHERE (email = ? OR noTelp = ?) AND id != ? AND statusAktif = TRUE",
       [email, noTelp, id]
     );
-    if (duplicate.length > 0) throw new Error("User Owner sudah terdaftar");
+    if (duplicates.length > 0) {
+      if (duplicates.some((u) => u.email === email)) throw new Error("Email sudah terdaftar");
+      if (duplicates.some((u) => u.noTelp === noTelp)) throw new Error("Nomor Telepon sudah terdaftar");
+    }
 
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = `UPDATE tbl_users_mobile SET 
@@ -263,26 +281,17 @@ const changePassword = async (id, body, updatedBy) => {
   }
 };
 
-const resetPassword = async (id, body, updatedBy) => {
+const resetPassword = async (email) => {
   try {
-    const { username } = body;
-
-    // 1. Validasi eksistensi dan kecocokan username
+    // 1. Validasi eksistensi email
     const [rows] = await dbPool.execute(
-      "SELECT username FROM tbl_users_mobile WHERE username = ? AND statusAktif = 1",
-      [id, username]
+      "SELECT username, email FROM tbl_users_mobile WHERE email = ? AND role = 'owner' AND statusAktif = 1",
+      [email]
     );
 
     if (rows.length === 0) throw new Error("data not found");
 
-    // 2. Generate Password baru
-    const { password, hashedPassword } = await generateAndHashPassword(8);
-    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
-
-    const SQLQuery = "UPDATE tbl_users_mobile SET password = ?, updatedBy = ?, updatedDate = ? WHERE id = ?";
-    await dbPool.execute(SQLQuery, [hashedPassword, updatedBy, updatedDate, id]);
-
-    return { username: rows[0].username, newPassword: password };
+    return { username: rows[0].username, email: rows[0].email, role: "owner" };
   } catch (error) {
     throw error;
   }

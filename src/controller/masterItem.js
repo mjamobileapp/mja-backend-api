@@ -3,10 +3,14 @@ const MasterItemModel = require("../models/masterItem");
 const createNewMasterItem = async (req, res) => {
   const { body } = req;
 
-  // 1. Validasi Request Body
-  if (!body.namaItem || !body.tipeItem || !body.createdBy) {
+    // 1. Validasi Request Body
+  const requiredFields = ['namaItem', 'tipeItem', 'createdBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 
@@ -60,13 +64,40 @@ const getMasterItemById = async (req, res) => {
   }
 };
 
+const getMasterItemByTipe = async (req, res) => {
+  const { tipeItem } = req.params;
+
+  // Validasi sederhana tipeItem
+  const validTypes = ["stok", "non_stok"];
+  if (!validTypes.includes(tipeItem)) {
+    return res.status(400).json({
+      error: "Tipe item tidak valid. Gunakan 'stok' atau 'non_stok'.",
+    });
+  }
+
+  try {
+    const data = await MasterItemModel.getMasterItemByTipe(tipeItem);
+    res.status(200).json({
+      message: "Get by Tipe Item Success",
+      data: data,
+    });
+  } catch (error) {
+    if (error.message === "data not found") return res.status(404).json({ error: error.message });
+    res.status(500).json({ message: "Server Error", serverMessage: error.message });
+  }
+};
+
 const updateMasterItem = async (req, res) => {
   const { id } = req.params;
   const { body } = req;
 
-  if (!body.namaItem || !body.tipeItem || !body.updatedBy) {
+    const requiredFields = ['namaItem', 'tipeItem', 'updatedBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 
@@ -123,6 +154,7 @@ module.exports = {
   createNewMasterItem,
   getAllMasterItem,
   getMasterItemById,
+  getMasterItemByTipe,
   updateMasterItem,
   deleteMasterItem,
   restoreMasterItem,

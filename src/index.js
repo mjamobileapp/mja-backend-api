@@ -11,12 +11,25 @@ const usersRoutes = require("./routes/users");
 const loginRoutes = require("./routes/login");
 const roleRoutes = require("./routes/roles");
 const menuRoutes = require("./routes/menus");
+const { getMenuHeader, getAll } = require("./controller/menus");
 const aksesRoutes = require("./routes/akses");
 const mitraRoutes = require("./routes/mitra");
 const cabangRoutes = require("./routes/cabang");
 const mesinRoutes = require("./routes/mesin");
 const masterItemRoutes = require("./routes/masterItem");
 const userOwnerRoutes = require("./routes/userOwner");
+const mobileRoutes = require("./routes/mobile");
+const kasirRoutes = require("./routes/kasir");
+const absensiKasirRoutes = require("./routes/absensiKasir");
+const settingStokMitraRoutes = require("./routes/settingStokMitra");
+const dashboardRoutes = require("./routes/dashboard");
+const cashflowRoutes = require("./routes/cashflow");
+const historyRoutes = require("./routes/history");
+const historyKasirRoutes = require("./routes/historyKasir");
+const hargaCabangRoutes = require("./routes/hargaCabang");
+const transaksiRoutes = require("./routes/transaksi");
+const transaksiStartMesinRoutes = require("./routes/transaksiStartMesin");
+const { startMqttStatusListener } = require("./utils/mqttStatusListener");
 
 const app = express();
 const PORT = process.env.PORT || 9090;
@@ -35,6 +48,7 @@ const allowedOrigins = [
   "http://dev.appadentis.cloud",
   "http://appadentis.cloud",
   "https://appadentis.cloud",
+  "http://148.230.102.45:3100",
 ];
 
 // CORS
@@ -71,12 +85,24 @@ app.use("/api/backoffice/users", usersRoutes);
 app.use("/api/backoffice/login", loginRoutes);
 app.use("/api/backoffice/roles", roleRoutes);
 app.use("/api/backoffice/menus", menuRoutes);
+app.use("/api/backoffice/getMenuHeader", authenticate, getMenuHeader);
 app.use("/api/backoffice/akses", aksesRoutes);
 app.use("/api/backoffice/mitra", mitraRoutes);
 app.use("/api/backoffice/cabang", cabangRoutes);
 app.use("/api/backoffice/mesin", mesinRoutes);
 app.use("/api/backoffice/item", masterItemRoutes);
 app.use("/api/backoffice/userowner", userOwnerRoutes);
+app.use("/api/mobile", mobileRoutes);
+app.use("/api/transaksi", transaksiStartMesinRoutes);
+app.use("/api/kasir/transaksi", transaksiRoutes);
+app.use("/api/owner/kasir", kasirRoutes);
+app.use("/api/kasir/absensi", absensiKasirRoutes);
+app.use("/api/owner/stokmitra", settingStokMitraRoutes);
+app.use("/api/backoffice/dashboard", dashboardRoutes);
+app.use("/api/owner", cashflowRoutes);
+app.use("/api/owner/history", historyRoutes);
+app.use("/api/kasir/history", historyKasirRoutes);
+app.use("/api/owner/settingharga", hargaCabangRoutes);
 // ================= rencana ==================
 
 app.get("/", (req, res) => {
@@ -101,4 +127,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Server berhasil di running di port ${PORT}`);
+  startMqttStatusListener();
 });

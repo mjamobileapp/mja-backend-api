@@ -19,4 +19,13 @@ router.put("/:id", authenticate, UserController.updateUser);
 // DELETE - DELETE
 router.delete("/:id", authenticate, UserController.deleteUser);
 
+// RESTORE - POST
+router.post("/:id/restore", authenticate, UserController.restoreUser);
+
+// CHANGE PASSWORD - POST
+router.post("/:id/changepassword", authenticate, UserController.changePassword);
+
+// RESET PASSWORD - POST (Public/Tanpa Token)
+router.post("/:email/resetpassword", UserController.resetPassword);
+
 module.exports = router;

@@ -1,0 +1,25 @@
+name: Deploy to Dev Environment
+
+# Workflow ini akan berjalan otomatis setiap kali ada PUSH atau MERGE ke branch 'dev'
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Menjalankan Script Deployment via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            echo "Memulai eksekusi dari GitHub Actions..."
+            cd /var/www/mjaproject/backend/
+            ./deploy-dev.sh

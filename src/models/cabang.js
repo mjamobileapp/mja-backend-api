@@ -7,7 +7,7 @@ const createNewCabang = async (body) => {
 
     // 1. Validasi Mitra Exist
     const { idMitra, namaCabang, alamatCabang, createdBy } = body;
-    const [mitra] = await connection.execute("SELECT id FROM tbl_mitra WHERE id = ? AND statusAktif = TRUE", [idMitra]);
+    const [mitra] = await connection.execute("SELECT id, namaMitra FROM tbl_mitra WHERE id = ? AND statusAktif = TRUE", [idMitra]);
     if (mitra.length === 0) throw new Error("Mitra tidak ditemukan atau tidak aktif");
 
     // 2. Generate Kode Otomatis
@@ -54,7 +54,7 @@ const createNewCabang = async (body) => {
     await connection.execute(SQLQuery, values);
     await connection.commit();
 
-    return { kodeCabang, ...body, statusAktif: true };
+    return { kodeCabang, ...body, namaMitra: mitra[0].namaMitra, statusAktif: true };
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -93,7 +93,10 @@ const updateCabang = async (id, body) => {
 
     // Fetch and return the updated cabang data
     const [updatedCabang] = await dbPool.execute(
-      "SELECT * FROM tbl_cabang WHERE id = ?",
+      `SELECT c.*, m.namaMitra 
+       FROM tbl_cabang c
+       JOIN tbl_mitra m ON c.idMitra = m.id
+       WHERE c.id = ?`,
       [id]
     );
 
@@ -135,7 +138,10 @@ const deleteCabang = async (id, updatedBy) => {
 const getCabangById = async (id) => {
   try {
     const [cabang] = await dbPool.execute(
-      "SELECT * FROM tbl_cabang WHERE id = ?",
+      `SELECT c.*, m.namaMitra 
+       FROM tbl_cabang c
+       JOIN tbl_mitra m ON c.idMitra = m.id
+       WHERE c.id = ?`,
       [id]
     );
     if (cabang.length === 0) {
@@ -149,16 +155,19 @@ const getCabangById = async (id) => {
 
 const getAllCabang = async (status) => {
   try {
-    let SQLQuery = "SELECT * FROM tbl_cabang";
+    let SQLQuery = `
+      SELECT c.*, m.namaMitra 
+      FROM tbl_cabang c
+      JOIN tbl_mitra m ON c.idMitra = m.id`;
 
     if (status === "all") {
       // Ambil semua data tanpa filter
     } else if (status === "inactive") {
       // Ambil hanya yang nonaktif
-      SQLQuery += " WHERE statusAktif = 0";
+      SQLQuery += " WHERE c.statusAktif = 0";
     } else {
       // Default: Ambil hanya yang aktif
-      SQLQuery += " WHERE statusAktif = 1";
+      SQLQuery += " WHERE c.statusAktif = 1";
     }
 
     const [cabangs] = await dbPool.execute(SQLQuery);
@@ -171,7 +180,10 @@ const getAllCabang = async (status) => {
 const getCabangByIdMitra = async (idMitra) => {
   try {
     const [cabangs] = await dbPool.execute(
-      "SELECT * FROM tbl_cabang WHERE idMitra = ? AND statusAktif = 1",
+      `SELECT c.*, m.namaMitra 
+       FROM tbl_cabang c
+       JOIN tbl_mitra m ON c.idMitra = m.id
+       WHERE c.idMitra = ? AND c.statusAktif = 1`,
       [idMitra]
     );
     return cabangs;

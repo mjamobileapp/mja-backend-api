@@ -4,9 +4,13 @@ const createNewMitra = async (req, res) => {
   const { body } = req;
   console.log("BODY REQUEST:", body);
 
-  if (!body.namaMitra || !body.alamatMitra || !body.createdBy) {
+    const requiredFields = ['namaMitra', 'alamatMitra', 'createdBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 
@@ -36,10 +40,14 @@ const updateMitra = async (req, res) => {
 
   console.log("UPDATE REQUEST:", { id, body });
 
-  // Validate required fields
-  if (!body.namaMitra || !body.alamatMitra || !body.updatedBy) {
+    // Validate required fields
+  const requiredFields = ['namaMitra', 'alamatMitra', 'updatedBy'];
+  const missingFields = requiredFields.filter(field => !body[field]);
+
+  if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
+      missingFields: missingFields,
     });
   }
 
