@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
+const dbPool = require("../config/database");
 
-const verifyMobileToken = (req) => {
+const verifyMobileToken = async (req) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -19,12 +20,23 @@ const verifyMobileToken = (req) => {
     throw error;
   }
 
+  const [mitra] = await dbPool.execute(
+    "SELECT id FROM tbl_mitra WHERE id = ? AND statusAktif = 1",
+    [decoded.idMitra]
+  );
+
+  if (mitra.length === 0) {
+    const error = new Error("Token Tidak Valid: Mitra tidak ditemukan atau tidak aktif");
+    error.statusCode = 401;
+    throw error;
+  }
+
   return decoded;
 };
 
-const authenticateMobile = (req, res, next) => {
+const authenticateMobile = async (req, res, next) => {
   try {
-    req.user = verifyMobileToken(req);
+    req.user = await verifyMobileToken(req);
     next();
   } catch (err) {
     if (err.message === "Akses ditolak, token tidak ditemukan") {
@@ -39,13 +51,19 @@ const authenticateMobile = (req, res, next) => {
       });
     }
 
+    if (err.message === "Token Tidak Valid: Mitra tidak ditemukan atau tidak aktif") {
+      return res.status(401).json({
+        message: "Token Tidak Valid: Mitra tidak ditemukan atau tidak aktif",
+      });
+    }
+
     return res.status(401).json({ message: "Token tidak valid" });
   }
 };
 
-const authenticateMobileWithErrorResponse = (req, res, next) => {
+const authenticateMobileWithErrorResponse = async (req, res, next) => {
   try {
-    req.user = verifyMobileToken(req);
+    req.user = await verifyMobileToken(req);
     next();
   } catch (err) {
     return res.status(401).json({ error: "Token tidak valid" });
