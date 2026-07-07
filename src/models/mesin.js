@@ -454,8 +454,10 @@ const getMesinByEspId = async (espId) => {
   }
 };
 
-const getListMesinMobile = async (cabangId, idMitra) => {
+const getListMesinMobile = async (cabangId, idMitra, filter) => {
   try {
+    const normalizedFilter = filter ? String(filter).toLowerCase() : null;
+
     const [rows] = await dbPool.execute(
       `SELECT 
         m.id AS masterId,
@@ -498,10 +500,12 @@ const getListMesinMobile = async (cabangId, idMitra) => {
 
       // Masukkan data spesifik Washer / Dryer ke dalam "Kartu" tersebut
       if (row.detailId) {
+        const jenisMesin = row.jenisMesin ? row.jenisMesin.toLowerCase() : null;
         const detailMesin = {
           idDb: row.detailId,
           status: row.status,
           waktuSelesai: row.status === 'IN_USE' ? row.waktuSelesai : null,
+          enable: !normalizedFilter || normalizedFilter === jenisMesin ? 1 : 0,
         };
 
         if (row.jenisMesin === 'WASHER') {

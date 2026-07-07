@@ -297,9 +297,10 @@ const getMesinByEspId = async (req, res) => {
 
 const getListMesinMobile = async (req, res) => {
   const { cabangId } = req.params;
+  const filter = req.query.filter ? String(req.query.filter).toLowerCase() : null;
   const idMitra = req.user ? req.user.idMitra : null;
 
-  console.log("GET LIST MESIN MOBILE REQUEST:", { cabangId, idMitra });
+  console.log("GET LIST MESIN MOBILE REQUEST:", { cabangId, idMitra, filter });
 
   if (!idMitra) {
     return res.status(400).json({
@@ -307,8 +308,14 @@ const getListMesinMobile = async (req, res) => {
     });
   }
 
+  if (filter && filter !== "washer" && filter !== "dryer") {
+    return res.status(400).json({
+      error: "Filter harus bernilai washer atau dryer",
+    });
+  }
+
   try {
-    const data = await MesinModel.getListMesinMobile(cabangId, idMitra);
+    const data = await MesinModel.getListMesinMobile(cabangId, idMitra, filter);
     res.status(200).json({
       success: true,
       data: data,
