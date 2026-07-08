@@ -3,9 +3,11 @@ const jwt = require("jsonwebtoken");
 const generateToken = (user) => {
   console.log(user);
   
+  const userId = user.id ?? user.id_user;
+
   // Bangun payload JWT
   const payload = {
-    id: user.id,
+    id: userId,
     username: user.username,
     role: user.id_role,
   };
@@ -23,7 +25,7 @@ const generateToken = (user) => {
   return jwt.sign(
     payload,
     process.env.JWT_SECRET,
-    { expiresIn: "1d" }
+    { expiresIn: "8h" }
   );
 };
 
