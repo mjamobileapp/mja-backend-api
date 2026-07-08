@@ -8,6 +8,7 @@ router.get("/list/cabang/:cabangId", authenticate, MesinController.getListMesinM
 router.get("/master", authenticate, MesinController.getAllMasterMesin);
 router.get("/esp/:espId", authenticate, MesinController.getMesinByEspId);
 router.put("/maintenance/:idMesinDetail", authenticate, MesinController.setMaintenance);
+router.put("/ready/:idMesinDetail", authenticate, MesinController.setReady);
 router.post("/", authenticate, MesinController.createNewMesin);
 router.get("/", authenticate, MesinController.getAllMesin);
 router.get("/:id", authenticate, MesinController.getMesinById);

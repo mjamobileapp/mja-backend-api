@@ -586,8 +586,7 @@ const setMaintenance = async (idMesinDetail, updatedBy) => {
   try {
     // Cek apakah mesin detail eksis dan aktif (via master)
     const [existingDetail] = await dbPool.execute(
-      `SELECT d.id, d.jenisMesin, d.status 
-       FROM tbl_mesin_detail d
+      `SELECT d.id, d.jenisMesin, d.status FROM tbl_mesin_detail d
        JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
        WHERE d.id = ? AND m.statusAktif = 1`,
       [idMesinDetail]
@@ -614,6 +613,37 @@ const setMaintenance = async (idMesinDetail, updatedBy) => {
   }
 };
 
+const setReady = async (idMesinDetail, updatedBy) => {
+  try {
+    // Cek apakah mesin detail eksis dan aktif (via master)
+    const [existingDetail] = await dbPool.execute(
+      `SELECT d.id, d.jenisMesin, d.status FROM tbl_mesin_detail d
+       JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
+       WHERE d.id = ? AND m.statusAktif = 1`,
+      [idMesinDetail]
+    );
+
+    if (existingDetail.length === 0) {
+      throw new Error("data not found");
+    }
+
+    // Update status menjadi READY
+    await dbPool.execute(
+      `UPDATE tbl_mesin_detail SET status = 'READY', waktuSelesai = NULL WHERE id = ?`,
+      [idMesinDetail]
+    );
+
+    return {
+      id: String(idMesinDetail),
+      jenisMesin: existingDetail[0].jenisMesin,
+      status: "READY",
+      waktuSelesai: null,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   createNewMesin,
   updateMesin,
@@ -627,4 +657,5 @@ module.exports = {
   getMesinByEspId,
   getListMesinMobile,
   setMaintenance,
+  setReady,
 };
