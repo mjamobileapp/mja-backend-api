@@ -216,11 +216,52 @@ const restoreCabang = async (id, updatedBy) => {
   }
 };
 
+const resetCabang = async (id) => {
+  const connection = await dbPool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [existingCabang] = await connection.execute(
+      "SELECT id FROM tbl_cabang WHERE id = ? AND statusAktif = 1",
+      [id]
+    );
+
+    if (existingCabang.length === 0) {
+      throw new Error("data not found");
+    }
+
+    await connection.execute(
+      `DELETE d FROM tbl_detail_order d
+       JOIN tbl_order_laundry o ON d.orderId = o.id
+       WHERE o.cabangId = ?`,
+      [id]
+    );
+
+    await connection.execute("DELETE FROM tbl_stok_cabang WHERE cabangId = ?", [id]);
+    await connection.execute("DELETE FROM tbl_log_mesin WHERE cabangId = ?", [id]);
+    await connection.execute("DELETE FROM tbl_order_laundry WHERE cabangId = ?", [id]);
+    await connection.execute("DELETE FROM tbl_pengeluaran WHERE cabangId = ?", [id]);
+    await connection.execute("DELETE FROM tbl_absensi WHERE cabangId = ?", [id]);
+    await connection.execute("DELETE FROM tbl_notifikasi WHERE cabangId = ?", [id]);
+
+    await connection.commit();
+
+    return true;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+};
+
 module.exports = {
   createNewCabang,
   updateCabang,
   deleteCabang,
   restoreCabang,
+  resetCabang,
   getCabangById,
   getAllCabang,
   getCabangByIdMitra
