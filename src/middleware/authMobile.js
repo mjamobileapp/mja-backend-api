@@ -47,6 +47,7 @@ const verifyMobileToken = async (req) => {
   const [users] = await dbPool.execute(
     `SELECT 
         u.id, 
+        u.username,
         u.idMitra, 
         u.cabangId, 
         u.role, 

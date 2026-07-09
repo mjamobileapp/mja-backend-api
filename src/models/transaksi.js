@@ -373,16 +373,16 @@ const getPendingDetailForStart = async (
 
 const validateDryerCanStart = async (connection, orderId) => {
   const [rows] = await connection.execute(
-    `SELECT id
+    `SELECT id, statusEksekusi
      FROM tbl_detail_order
      WHERE orderId = ?
-       AND jenisLayanan = 'cuci'
-       AND statusEksekusi = 'selesai'
-     LIMIT 1`,
+       AND jenisLayanan = 'cuci'`,
     [orderId]
   );
 
-  if (rows.length === 0) {
+  const hasUnfinishedWash = rows.some((row) => row.statusEksekusi !== "selesai");
+
+  if (hasUnfinishedWash) {
     throw createHttpError("Layanan cuci belum selesai", 409);
   }
 };

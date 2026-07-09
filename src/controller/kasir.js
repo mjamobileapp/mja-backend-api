@@ -8,13 +8,19 @@ const createNewUserKasir = async (req, res) => {
   const usernameToken = req.user.username;
 
   // 1. Validasi field yang dibutuhkan di level controller
-  const requiredFields = ['username', 'idMitra', 'cabangId',  'namaLengkap', 'noTelp', 'email', 'createdBy'];
+  const requiredFields = ['username', 'cabangId', 'namaLengkap', 'noTelp', 'email'];
   const missingFields = requiredFields.filter(field => !body[field]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
       message: "Bad request, missing required fields",
       missingFields: missingFields,
+    });
+  }
+
+  if (!idMitra || !usernameToken) {
+    return res.status(400).json({
+      error: "idMitra atau username tidak ditemukan di token",
     });
   }
 
