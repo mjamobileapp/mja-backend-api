@@ -1,10 +1,11 @@
 const express = require("express");
 const MesinController = require("../controller/mesin");
 const { authenticate } = require("../middleware/auth");
+const { authenticateBackofficeOrOwnerKasirCabang } = require("../middleware/authCombined");
 
 const router = express.Router();
 
-router.get("/list/cabang/:cabangId", authenticate, MesinController.getListMesinMobile);
+router.get("/list/cabang/:cabangId", authenticateBackofficeOrOwnerKasirCabang(), MesinController.getListMesinMobile);
 router.get("/master", authenticate, MesinController.getAllMasterMesin);
 router.get("/esp/:espId", authenticate, MesinController.getMesinByEspId);
 router.put("/maintenance/:idMesinDetail", authenticate, MesinController.setMaintenance);
