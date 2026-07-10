@@ -1,12 +1,12 @@
 const SettingStokModel = require("../models/settingStokMitra");
 
+const isOwner = (user) => String(user?.role || "").toLowerCase() === "owner";
+
 const createNewSetting = async (req, res) => {
   const { body } = req;
   const user = req.user;
 
-  // Validasi Role: Token harus milik Owner (ID Role: 1). 
-  // Token Kasir (ID Role: 2) dilarang mengakses fitur pengaturan stok ini.
-  if (user.role !== 1) {
+  if (!isOwner(user)) {
     return res.status(403).json({ 
       message: "Akses ditolak: Hanya akun Owner yang diizinkan untuk mengatur stok minimum" 
     });
@@ -51,7 +51,7 @@ const updateSetting = async (req, res) => {
   const user = req.user;
 
   // 1. Validasi Role: Harus Owner
-  if (user.role !== 1) {
+  if (!isOwner(user)) {
     return res.status(403).json({ message: "Akses ditolak: Hanya akun Owner yang diizinkan" });
   }
 
@@ -65,7 +65,7 @@ const updateSetting = async (req, res) => {
     const existingSetting = await SettingStokModel.getSettingById(id);
     if (!existingSetting) return res.status(404).json({ error: "data not found" });
 
-    if (existingSetting.idMitra !== user.idMitra) {
+    if (Number(existingSetting.idMitra) !== Number(user.idMitra)) {
       return res.status(403).json({ 
         message: "Akses ditolak: Anda tidak memiliki izin untuk mengubah data mitra lain" 
       });
@@ -83,7 +83,7 @@ const getAllSettings = async (req, res) => {
   const user = req.user;
 
   // Validasi Role: Harus Owner
-  if (user.role !== 1) {
+  if (!isOwner(user)) {
     return res.status(403).json({ message: "Akses ditolak: Hanya akun Owner yang diizinkan" });
   }
 
@@ -101,12 +101,12 @@ const getSettingByIdMitra = async (req, res) => {
   const user = req.user;
 
   // 1. Validasi Role: Harus Owner
-  if (user.role !== 1) {
+  if (!isOwner(user)) {
     return res.status(403).json({ message: "Akses ditolak: Hanya akun Owner yang diizinkan" });
   }
 
   // 2. Validasi Ownership: idMitra di URL harus sama dengan idMitra di token
-  if (parseInt(idMitra) !== user.idMitra) {
+  if (Number(idMitra) !== Number(user.idMitra)) {
     return res.status(403).json({ 
       message: "Akses ditolak: Anda tidak memiliki izin untuk melihat data mitra lain" 
     });
