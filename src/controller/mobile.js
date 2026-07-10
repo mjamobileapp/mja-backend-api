@@ -86,6 +86,7 @@ const loginUser = async (req, res) => {
         username: user.username,
         role: user.role,
         idMitra: String(user.idMitra),
+        cabangId: String(user.cabangId) || null,
         namaLengkap: user.namaLengkap,
         noTelp: user.noTelp,
         email: user.email,
