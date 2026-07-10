@@ -88,7 +88,36 @@ const authenticateBackofficeOrOwnerKasirCabang = (options = {}) => {
   };
 };
 
+const authenticateBackofficeOrOwnerKasir = () => {
+  return async (req, res, next) => {
+    try {
+      req.user = await verifyBackofficeToken(req);
+      return next();
+    } catch (backofficeError) {
+      try {
+        const user = await verifyMobileToken(req);
+        const role = user.role ? String(user.role).toLowerCase() : null;
+
+        if (role !== "owner" && role !== "kasir") {
+          return res.status(403).json({
+            success: false,
+            code: "FORBIDDEN",
+            message: "Akses hanya diizinkan untuk owner atau kasir",
+          });
+        }
+
+        req.user = user;
+        return next();
+      } catch (mobileError) {
+        const error = mobileError.statusCode ? mobileError : backofficeError;
+        return sendAuthError(res, error);
+      }
+    }
+  };
+};
+
 module.exports = {
   authenticateBackofficeOrOwner,
   authenticateBackofficeOrOwnerKasirCabang,
+  authenticateBackofficeOrOwnerKasir,
 };

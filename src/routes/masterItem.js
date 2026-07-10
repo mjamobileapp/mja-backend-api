@@ -1,7 +1,7 @@
 const express = require("express");
 const MasterItemController = require("../controller/masterItem");
 const { authenticate } = require("../middleware/auth");
-const { authenticateBackofficeOrOwnerKasirCabang } = require("../middleware/authCombined");
+const { authenticateBackofficeOrOwnerKasir } = require("../middleware/authCombined");
 
 const router = express.Router();
 
@@ -9,7 +9,7 @@ const router = express.Router();
 router.post("/", authenticate, MasterItemController.createNewMasterItem);
 router.get("/", authenticate, MasterItemController.getAllMasterItem);
 router.get("/:id", authenticate, MasterItemController.getMasterItemById);
-router.get("/tipe/:tipeItem", authenticateBackofficeOrOwnerKasirCabang(), MasterItemController.getMasterItemByTipe);
+router.get("/tipe/:tipeItem", authenticateBackofficeOrOwnerKasir(), MasterItemController.getMasterItemByTipe);
 router.put("/:id", authenticate, MasterItemController.updateMasterItem);
 router.delete("/:id", authenticate, MasterItemController.deleteMasterItem);
 router.post("/:id/restore", authenticate, MasterItemController.restoreMasterItem);
