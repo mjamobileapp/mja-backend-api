@@ -14,7 +14,7 @@ const isNonNegativeNumber = (value) => {
 
 const isPositiveInteger = (value) => Number.isInteger(Number(value)) && Number(value) > 0;
 
-const getRequestDateFilter = (req) => req.query.filter || req.query.periode || req.query.tanggal || "hari_ini";
+const getRequestDateFilter = (req) => req.query.filter ?? req.query.periode ?? req.query.tanggal ?? "";
 
 const getJumlahTransaksi = async (req, res) => {
   const idMitra = req.user ? req.user.idMitra : null;

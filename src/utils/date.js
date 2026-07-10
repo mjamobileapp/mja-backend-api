@@ -41,8 +41,12 @@ const formatTanggalJamWIB = (dateString) => {
   return `${tanggal}/${bulan}/${tahun} ${jam}:${menit} WIB`;
 };
 
-const getDateFilterCondition = (columnName, filter = "hari_ini") => {
-  const normalizedFilter = String(filter || "hari_ini").toLowerCase();
+const getDateFilterCondition = (columnName, filter = "") => {
+  const normalizedFilter = String(filter || "").trim().toLowerCase();
+
+  if (!normalizedFilter) {
+    return "1=1";
+  }
 
   switch (normalizedFilter) {
     case "kemarin":

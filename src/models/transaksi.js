@@ -606,7 +606,7 @@ const getPendingTransaksi = async (cabangId, idMitra) => {
   return rows;
 };
 
-const getJumlahTransaksi = async (cabangId, idMitra, filter = "hari_ini") => {
+const getJumlahTransaksi = async (cabangId, idMitra, filter = "") => {
   const dateFilter = getDateFilterCondition("o.waktuOrder", filter);
 
   const [rows] = await dbPool.execute(

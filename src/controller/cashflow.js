@@ -1,6 +1,6 @@
 const CashflowModel = require("../models/cashflow");
 
-const getRequestDateFilter = (req) => req.query.filter || req.query.periode || req.query.tanggal || "hari_ini";
+const getRequestDateFilter = (req) => req.query.filter ?? req.query.periode ?? req.query.tanggal ?? "";
 
 const getCashflow = async (req, res) => {
   const { cabangId } = req.query;
