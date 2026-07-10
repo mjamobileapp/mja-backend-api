@@ -84,7 +84,7 @@ const getSettingHarga = async (idMitra, cabangId) => {
     UNION ALL
     SELECT 'addon_barang' AS jenisLayanan, id AS itemId
     FROM tbl_master_item_expense
-    WHERE tipeItem = 'stok'
+    WHERE tipeItem = 'stok' and statusAktif = 1
 )
 SELECT 
     t.jenisLayanan, 
