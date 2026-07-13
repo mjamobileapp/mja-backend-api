@@ -28,6 +28,14 @@ Nilai wajib saat server dijalankan:
 
 Konfigurasi runtime dibaca dari `.env`. Jangan commit `.env`, token, atau credential.
 
+Konfigurasi opsional untuk endpoint autentikasi publik:
+
+- `PUBLIC_AUTH_RATE_LIMIT_MAX` — maksimum percobaan per alamat IP dan jenis flow (default `5`).
+- `PUBLIC_AUTH_RATE_LIMIT_WINDOW_MS` — durasi window limiter dalam milidetik (default `900000` atau 15 menit).
+- `TRUST_PROXY=true` — aktifkan hanya bila aplikasi berada di balik reverse proxy tepercaya.
+
+Saat `TRUST_PROXY=true`, Express menggunakan alamat klien yang diteruskan oleh reverse proxy untuk limiter. Endpoint login, aktivasi akun, dan reset password akan mengembalikan HTTP `429` saat batas ini terlampaui. Reset password selalu mengembalikan HTTP `202` dengan respons generik agar email yang terdaftar tidak dapat dienumerasi.
+
 ## Quality check
 
 ```bash

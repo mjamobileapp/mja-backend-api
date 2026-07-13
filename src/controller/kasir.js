@@ -1,5 +1,6 @@
 const KasirModel = require("../models/kasir");
-const { sendUserMobileCredentialEmail, sendResetPasswordEmail } = require("../utils/email");
+const EmailService = require("../utils/email");
+const { sendResetPasswordAccepted } = require("../utils/publicAuth");
 const { formatTanggalWIB } = require("../utils/date");
 const { getMissingRequiredFields } = require("../utils/validation");
 
@@ -34,7 +35,7 @@ const createNewUserKasir = async (req, res) => {
 
     // 3. Kirim email kredensial ke user
     try {
-      await sendUserMobileCredentialEmail({
+      await EmailService.sendUserMobileCredentialEmail({
         to: result.email,
         username: result.username,
         role: "kasir",
@@ -240,7 +241,7 @@ const resetPassword = async (req, res) => {
 
     // 2. Kirim email password baru ke user
     try {
-      await sendResetPasswordEmail({
+      await EmailService.sendResetPasswordEmail({
         to: result.email,
         username: result.username,
         role: "kasir",
@@ -248,38 +249,55 @@ const resetPassword = async (req, res) => {
     } catch (emailError) {
       console.error("Gagal mengirim email reset password:", emailError.message);
     }
-
-    res.status(200).json({
-      message: "Send Link Reset Password Successfully",
-      data: result,
-    });
   } catch (error) {
-    // 3. Handle error spesifik
-    if (error.message === "data not found") {
-      return res.status(404).json({
-        error: "Data Not Found",
-      });
-    }
-    res.status(500).json({ message: "Server Error", serverMessage: error.message });
+    console.error("Gagal memproses permintaan reset password kasir:", error.message);
   }
+
+  return sendResetPasswordAccepted(res);
 };
 
 const getAbsensiKasir = async (req, res) => {
-  let { cabangId, tanggal, namaKasir } = req.query;
+  const { tanggal, namaKasir } = req.query;
+  const requestedCabangId = req.query.cabangId;
+  const idMitra = req.user?.idMitra;
+  const role = String(req.user?.role || "").toLowerCase();
+  const tokenCabangId = req.user?.cabang_id || req.user?.cabangId;
 
-  if (!cabangId) {
-    cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
-
-    if (!cabangId) {
-      return res.status(400).json({
-        error: "Parameter cabangId diperlukan untuk owner",
-      });
-    }
+  if (!idMitra) {
+    return res.status(403).json({ error: "idMitra tidak ditemukan di token" });
   }
 
   try {
+    let cabangId;
+
+    if (role === "kasir") {
+      if (!tokenCabangId) {
+        return res.status(403).json({ error: "Cabang kasir tidak ditemukan di token" });
+      }
+
+      if (requestedCabangId && Number(requestedCabangId) !== Number(tokenCabangId)) {
+        return res.status(403).json({ error: "Kasir hanya dapat mengakses absensi cabangnya sendiri" });
+      }
+
+      cabangId = tokenCabangId;
+    } else if (role === "owner") {
+      if (!requestedCabangId) {
+        return res.status(400).json({ error: "Parameter cabangId diperlukan untuk owner" });
+      }
+
+      const isOwnedCabang = await KasirModel.isCabangOwnedByMitra(requestedCabangId, idMitra);
+      if (!isOwnedCabang) {
+        return res.status(403).json({ error: "Cabang tidak dapat diakses oleh user owner mitra ini" });
+      }
+
+      cabangId = requestedCabangId;
+    } else {
+      return res.status(403).json({ error: "Role tidak diizinkan mengakses absensi kasir" });
+    }
+
     const [data] = await KasirModel.getAbsensiKasir({
       cabangId,
+      idMitra,
       tanggal,
       namaKasir,
     });

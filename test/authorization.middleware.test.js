@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { requireMobileOwner } = require("../src/middleware/authorization");
+const { requireMobileOwner, requireMobileKasir } = require("../src/middleware/authorization");
 
 const createResponse = () => ({
   statusCode: null,
@@ -31,4 +31,25 @@ test("owner authorization rejects kasir and permits owner", () => {
   });
   assert.equal(nextCalled, true);
   assert.equal(ownerResponse.statusCode, null);
+});
+
+test("cashier authorization rejects owner and permits kasir", () => {
+  const ownerResponse = createResponse();
+  let ownerNextCalled = false;
+  requireMobileKasir({ user: { role: "owner" } }, ownerResponse, () => {
+    ownerNextCalled = true;
+  });
+
+  assert.equal(ownerResponse.statusCode, 403);
+  assert.equal(ownerResponse.body.code, "FORBIDDEN");
+  assert.equal(ownerNextCalled, false);
+
+  const kasirResponse = createResponse();
+  let kasirNextCalled = false;
+  requireMobileKasir({ user: { role: "kasir" } }, kasirResponse, () => {
+    kasirNextCalled = true;
+  });
+
+  assert.equal(kasirNextCalled, true);
+  assert.equal(kasirResponse.statusCode, null);
 });

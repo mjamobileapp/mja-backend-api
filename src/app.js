@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const middlewareLogRequest = require("./middleware/logs");
 const { authenticate } = require("./middleware/auth");
-const { getAllowedOrigins } = require("./config/environment");
+const { getAllowedOrigins, getTrustProxy } = require("./config/environment");
 const { errorHandler, notFoundHandler, createHttpError } = require("./middleware/errorHandler");
 const { sanitizeServerErrorResponse } = require("./middleware/responseSanitizer");
 
@@ -34,6 +34,7 @@ const createApp = ({ environment = process.env } = {}) => {
   const app = express();
   const uploadsPath = path.join(__dirname, "..", "uploads");
   const allowedOrigins = getAllowedOrigins(environment);
+  app.set("trust proxy", getTrustProxy(environment));
 
   app.use(middlewareLogRequest);
   app.use(sanitizeServerErrorResponse);

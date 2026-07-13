@@ -3,6 +3,33 @@ const { getMissingRequiredFields } = require("../utils/validation");
 
 const getRequestDateFilter = (req) => req.query.filter ?? req.query.periode ?? req.query.tanggal ?? "";
 
+const getExpenseScope = (req, res) => {
+  const idMitra = req.user?.idMitra;
+  const role = String(req.user?.role || "").toLowerCase();
+
+  if (!idMitra) {
+    res.status(401).json({ error: "Token tidak valid" });
+    return null;
+  }
+
+  if (role === "owner") {
+    return { idMitra, cabangId: null, role };
+  }
+
+  if (role === "kasir") {
+    const cabangId = req.user?.cabang_id || req.user?.cabangId;
+    if (!cabangId) {
+      res.status(403).json({ error: "Cabang kasir tidak ditemukan di token" });
+      return null;
+    }
+
+    return { idMitra, cabangId, role };
+  }
+
+  res.status(403).json({ error: "Role tidak diizinkan mengakses pengeluaran" });
+  return null;
+};
+
 const getCashflow = async (req, res) => {
   const { cabangId } = req.query;
   const filter = getRequestDateFilter(req);
@@ -87,22 +114,22 @@ const getPendapatan = async (req, res) => {
 };
 
 const getListPengeluaran = async (req, res) => {
-  let { cabangId } = req.query;
+  const requestedCabangId = req.query.cabangId;
   const filter = getRequestDateFilter(req);
-  const idMitra = req.user ? req.user.idMitra : null;
+  const scope = getExpenseScope(req, res);
 
-  // Jika tidak ada cabangId di query params, anggap user adalah KASIR
-  // Ambil cabangId dari token
-  if (!cabangId) {
-    cabangId = req.user.cabang_id || req.user.cabangId;
-    if (!cabangId) {
-      return res.status(400).json({
-        error: "cabangId tidak ditemukan",
-      });
+  if (!scope) return;
+
+  const { idMitra, role } = scope;
+  let cabangId = requestedCabangId;
+
+  if (role === "kasir") {
+    if (requestedCabangId && Number(requestedCabangId) !== Number(scope.cabangId)) {
+      return res.status(403).json({ error: "Kasir hanya dapat mengakses pengeluaran cabangnya sendiri" });
     }
 
     try {
-      const data = await CashflowModel.getListPengeluaran(cabangId, idMitra, filter);
+      const data = await CashflowModel.getListPengeluaran(scope.cabangId, idMitra, filter);
       return res.status(200).json({
         success: "Get Data List Expense Success",
         data: data,
@@ -120,14 +147,18 @@ const getListPengeluaran = async (req, res) => {
     }
   }
 
-  // OWNER: ada cabangId di query params, gunakan grouping per tanggal
-  if (!idMitra) {
+  if (!cabangId) {
     return res.status(400).json({
-      error: "idMitra tidak ditemukan di token",
+      error: "cabangId tidak ditemukan",
     });
   }
 
   try {
+    const isOwnedCabang = await CashflowModel.isCabangOwnedByMitra(cabangId, idMitra);
+    if (!isOwnedCabang) {
+      return res.status(403).json({ error: "Cabang tidak dapat diakses oleh mitra ini" });
+    }
+
     const data = await CashflowModel.getPengeluaran(cabangId, idMitra, filter);
     res.status(200).json({
       success: "Get Data Pengeluaran Success",
@@ -149,16 +180,12 @@ const getListPengeluaran = async (req, res) => {
 const getPengeluaranById = async (req, res) => {
   const { id } = req.params;
   const filter = getRequestDateFilter(req);
-  const idMitra = req.user ? req.user.idMitra : null;
+  const scope = getExpenseScope(req, res);
 
-  if (!idMitra) {
-    return res.status(400).json({
-      error: "idMitra tidak ditemukan di token",
-    });
-  }
+  if (!scope) return;
 
   try {
-    const data = await CashflowModel.getPengeluaranById(id, idMitra, filter);
+    const data = await CashflowModel.getPengeluaranById(id, scope.idMitra, filter, scope.cabangId);
 
     res.json({
       message: "Get Data Expense success",
@@ -256,7 +283,9 @@ const createPengeluaran = async (req, res) => {
 const updatePengeluaran = async (req, res) => {
   const { id } = req.params;
   const { body } = req;
-  const idMitra = req.user ? req.user.idMitra : null;
+  const scope = getExpenseScope(req, res);
+
+  if (!scope) return;
 
   const missingFields = getMissingRequiredFields(body, ["itemId", "jumlahBarang", "nominal"]);
 
@@ -267,11 +296,7 @@ const updatePengeluaran = async (req, res) => {
     });
   }
 
-  if (!idMitra) {
-    return res.status(400).json({
-      error: "idMitra tidak ditemukan di token",
-    });
-  }
+  if (!scope) return;
 
   if (body.nominal <= 0) {
     return res.status(400).json({
@@ -280,7 +305,7 @@ const updatePengeluaran = async (req, res) => {
   }
 
   try {
-    const data = await CashflowModel.updatePengeluaran(body, id, idMitra);
+    const data = await CashflowModel.updatePengeluaran(body, id, scope.idMitra, scope.cabangId);
 
     res.json({
       message: "UPDATE Data Expense success",
@@ -305,16 +330,10 @@ const updatePengeluaran = async (req, res) => {
 
 const deletePengeluaran = async (req, res) => {
   const { id } = req.params;
-  const idMitra = req.user ? req.user.idMitra : null;
-
-  if (!idMitra) {
-    return res.status(400).json({
-      error: "idMitra tidak ditemukan di token",
-    });
-  }
+  const scope = getExpenseScope(req, res);
 
   try {
-    await CashflowModel.deletePengeluaran(id, idMitra);
+    await CashflowModel.deletePengeluaran(id, scope.idMitra, scope.cabangId);
 
     res.json({
       message: "Delete Mitra success",

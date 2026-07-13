@@ -4,6 +4,7 @@ const UserMobileModel = require("../models/userMobile");
 const UsersModel = require("../models/users");
 const { generateToken } = require("../utils/jwt");
 const { getMissingRequiredFields } = require("../utils/validation");
+const { getRequiredJwtSecret } = require("../config/environment");
 
 const loginUser = async (req, res) => {
   const { body } = req;
@@ -135,7 +136,7 @@ const activateAccount = async (req, res) => {
 
     try {
       // 4. Verifikasi token JWT
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || "MJA_SECRET_KEY");
+      const decoded = jwt.verify(token, getRequiredJwtSecret());
 
       const { username, role } = decoded;
       const isBackoffice = role === "backoffice";

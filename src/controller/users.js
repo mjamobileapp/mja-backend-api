@@ -1,7 +1,8 @@
 const UsersModel = require("../models/users");
 const bcrypt = require("bcrypt"); // Ensure bcrypt is installed
 const { generateToken } = require("../utils/jwt");
-const { sendResetPasswordEmail } = require("../utils/email");
+const EmailService = require("../utils/email");
+const { sendResetPasswordAccepted } = require("../utils/publicAuth");
 const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
 
 const getAllUsers = async (req, res) => {
@@ -281,7 +282,7 @@ const resetPassword = async (req, res) => {
 
     // Kirim email link reset password ke user
     try {
-      await sendResetPasswordEmail({
+      await EmailService.sendResetPasswordEmail({
         to: result.email,
         username: result.username,
         role: "backoffice",
@@ -289,22 +290,11 @@ const resetPassword = async (req, res) => {
     } catch (emailError) {
       console.error("Gagal mengirim email reset password backoffice:", emailError.message);
     }
-
-    // Hapus email dari result sebelum dikirim dalam response data
-    delete result.email;
-
-    res.status(200).json({
-      message: "Send Link Reset Password Successfully",
-      data: result,
-    });
   } catch (error) {
-    if (error.message === "Email tidak ditemukan") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-    res.status(500).json({ message: "Server Error", serverMessage: error.message });
+    console.error("Gagal memproses permintaan reset password backoffice:", error.message);
   }
+
+  return sendResetPasswordAccepted(res);
 };
 
 module.exports = {

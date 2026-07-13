@@ -1,6 +1,7 @@
 const express = require("express");
 
 const UserController = require("../controller/users.js");
+const { publicPasswordResetRateLimiter } = require("../middleware/publicAuthRateLimit");
 
 const router = express.Router();
 
@@ -26,6 +27,6 @@ router.post("/:id/restore", authenticate, UserController.restoreUser);
 router.post("/:id/changepassword", authenticate, UserController.changePassword);
 
 // RESET PASSWORD - POST (Public/Tanpa Token)
-router.post("/:email/resetpassword", UserController.resetPassword);
+router.post("/:email/resetpassword", publicPasswordResetRateLimiter, UserController.resetPassword);
 
 module.exports = router;

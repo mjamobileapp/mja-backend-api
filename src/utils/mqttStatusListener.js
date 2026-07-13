@@ -45,29 +45,32 @@ const updateMesinReadyByEspId = async ({ espId, machineType = null }) => {
   return result.affectedRows || 0;
 };
 
-const handleStatusMessage = async (topic, message) => {
-  const topicData = parseStatusTopic(topic);
-  if (!topicData) return;
+const createStatusMessageHandler = ({ updateReady = updateMesinReadyByEspId, logger = console } = {}) =>
+  async (topic, message) => {
+    const topicData = parseStatusTopic(topic);
+    if (!topicData) return;
 
-  const payload = parseStatusPayload(message);
-  if (!payload || String(payload.status || "").toUpperCase() !== "READY") {
-    return;
-  }
+    const payload = parseStatusPayload(message);
+    if (!payload || String(payload.status || "").toUpperCase() !== "READY") {
+      return;
+    }
 
-  const machineType = payload.machineType ? String(payload.machineType).toUpperCase() : null;
-  const affectedRows = await updateMesinReadyByEspId({
-    espId: topicData.espId,
-    machineType,
-  });
+    const machineType = payload.machineType ? String(payload.machineType).toUpperCase() : null;
+    const affectedRows = await updateReady({
+      espId: topicData.espId,
+      machineType,
+    });
 
-  console.log("[MQTT STATUS] Mesin READY diterima", {
-    espId: topicData.espId,
-    machineType: machineType || "ALL",
-    affectedRows,
-  });
-};
+    logger.log("[MQTT STATUS] Mesin READY diterima", {
+      espId: topicData.espId,
+      machineType: machineType || "ALL",
+      affectedRows,
+    });
+  };
 
-const startMqttStatusListener = ({ clientFactory = connectClient } = {}) => {
+const handleStatusMessage = createStatusMessageHandler();
+
+const startMqttStatusListener = ({ clientFactory = connectClient, messageHandler = handleStatusMessage, logger = console } = {}) => {
   if (statusListenerClient) {
     return statusListenerClient;
   }
@@ -78,24 +81,24 @@ const startMqttStatusListener = ({ clientFactory = connectClient } = {}) => {
       reconnectPeriod: Number(process.env.MQTT_RECONNECT_PERIOD_MS) || 5000,
     });
   } catch (error) {
-    console.error("[MQTT STATUS] Listener tidak bisa dimulai:", error.message);
+    logger.error("[MQTT STATUS] Listener tidak bisa dimulai:", error.message);
     return null;
   }
 
   statusListenerClient.on("connect", () => {
     statusListenerClient.subscribe(STATUS_TOPIC, { qos: 1 }, (error) => {
       if (error) {
-        console.error("[MQTT STATUS] Gagal subscribe topic status:", error.message);
+        logger.error("[MQTT STATUS] Gagal subscribe topic status:", error.message);
         return;
       }
 
-      console.log("[MQTT STATUS] Subscribed:", STATUS_TOPIC);
+      logger.log("[MQTT STATUS] Subscribed:", STATUS_TOPIC);
     });
   });
 
   statusListenerClient.on("message", (topic, message) => {
-    handleStatusMessage(topic, message).catch((error) => {
-      console.error("[MQTT STATUS] Gagal memproses status mesin:", {
+    Promise.resolve(messageHandler(topic, message)).catch((error) => {
+      logger.error("[MQTT STATUS] Gagal memproses status mesin:", {
         topic,
         error: error.message,
       });
@@ -103,18 +106,18 @@ const startMqttStatusListener = ({ clientFactory = connectClient } = {}) => {
   });
 
   statusListenerClient.on("error", (error) => {
-    console.error("[MQTT STATUS] Client error:", error.message);
+    logger.error("[MQTT STATUS] Client error:", error.message);
   });
 
   statusListenerClient.on("reconnect", () => {
     if (isMqttDebugEnabled()) {
-      console.log("[MQTT STATUS] Reconnecting...");
+      logger.log("[MQTT STATUS] Reconnecting...");
     }
   });
 
   statusListenerClient.on("close", () => {
     if (isMqttDebugEnabled()) {
-      console.log("[MQTT STATUS] Connection closed");
+      logger.log("[MQTT STATUS] Connection closed");
     }
   });
 
@@ -147,4 +150,5 @@ const stopMqttStatusListener = async () => {
 module.exports = {
   startMqttStatusListener,
   stopMqttStatusListener,
+  createStatusMessageHandler,
 };

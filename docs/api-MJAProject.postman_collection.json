@@ -6737,7 +6737,7 @@
     },
     {
       "name": "Verified core API contract",
-      "description": "Request di folder ini diverifikasi oleh test/coreDomains.integration.test.js. Gunakan token sesuai domain dan ganti placeholder ID sebelum mengirim request.",
+      "description": "Request di folder ini diverifikasi oleh integration atau controller test. Gunakan token sesuai domain dan ganti placeholder ID sebelum mengirim request.",
       "item": [
         {
           "name": "Backoffice - List mesin",
@@ -6836,6 +6836,81 @@
             "url": "{{baseUrl}}/api/kasir/history/transaksi"
           },
           "response": []
+        },
+        {
+          "name": "Public - Reset password backoffice",
+          "description": "Rate limited. Selalu mengembalikan HTTP 202 dan respons generik, baik email terdaftar maupun tidak.",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/backoffice/users/{{resetEmail}}/resetpassword"
+          },
+          "response": [
+            {
+              "name": "Accepted response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/users/{{resetEmail}}/resetpassword"
+              },
+              "status": "Accepted",
+              "code": 202,
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Jika akun terdaftar, tautan reset password akan dikirim ke email terdaftar.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Public - Reset password user owner",
+          "description": "Rate limited. Selalu mengembalikan HTTP 202 dan respons generik, baik email terdaftar maupun tidak.",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/backoffice/userowner/{{resetEmail}}/resetpassword"
+          },
+          "response": [
+            {
+              "name": "Accepted response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/userowner/{{resetEmail}}/resetpassword"
+              },
+              "status": "Accepted",
+              "code": 202,
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Jika akun terdaftar, tautan reset password akan dikirim ke email terdaftar.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Public - Reset password kasir",
+          "description": "Rate limited. Selalu mengembalikan HTTP 202 dan respons generik, baik email terdaftar maupun tidak.",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/owner/kasir/{{resetEmail}}/resetpassword"
+          },
+          "response": [
+            {
+              "name": "Accepted response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/owner/kasir/{{resetEmail}}/resetpassword"
+              },
+              "status": "Accepted",
+              "code": 202,
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Jika akun terdaftar, tautan reset password akan dikirim ke email terdaftar.\"\n}"
+            }
+          ]
         }
       ]
     },
@@ -6878,6 +6953,10 @@
     {
       "key": "itemId",
       "value": ""
+    },
+    {
+      "key": "resetEmail",
+      "value": "user@example.test"
     }
   ]
 }

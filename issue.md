@@ -232,7 +232,7 @@ Minimal test baseline:
 - [x] CRUD sukses, validation error, duplicate, not found, soft delete, dan restore pada satu modul pilot.
 - [x] SQL error menghasilkan 500 yang aman dan tidak membocorkan detail internal.
 - [x] Transaction melakukan rollback jika langkah tengah gagal.
-- [ ] MQTT success ACK, wrong request ID, negative ACK, timeout, connection close, dan READY update.
+- [x] MQTT success ACK, wrong request ID, negative ACK, timeout, connection close, dan READY update.
 
 ### Tahap 3 - Review Mendalam per Lapisan
 
@@ -296,7 +296,7 @@ Minimal test baseline:
 - [ ] Pisahkan security update dari refactor behavior bila risikonya besar.
 - [x] Perbaiki encoding README.
 - [x] Dokumentasikan prerequisites, setup, environment variable, start, test, lint, struktur proyek, dan troubleshooting.
-- [ ] Refresh seluruh contoh legacy pada Postman collection setelah route stabil; folder `Verified core API contract` sudah tersinkron dan teruji.
+- [ ] Deferred: refresh seluruh contoh legacy pada Postman collection setelah route stabil. Folder `Verified core API contract`, termasuk tiga reset-password publik generic HTTP 202, sudah tersinkron dan teruji.
 
 ### Tahap 4 - Susun Roadmap Refactor
 
@@ -368,7 +368,7 @@ masterItem / roles / dashboard
 - [ ] Scope mitra/cabang tidak bocor antar-user.
 - [x] Soft delete dan restore tetap konsisten.
 - [x] Transaction rollback telah diuji dengan failure injection.
-- [ ] MQTT diuji menggunakan mock/fake broker sebelum test perangkat nyata.
+- [x] MQTT diuji menggunakan mock/fake broker sebelum test perangkat nyata.
 - [ ] Tidak ada secret atau data sensitif pada git diff dan log test.
 - [x] Dokumentasi route sesuai dengan code aktual.
 - [ ] Perbandingan baseline menyatakan perubahan kontrak yang disengaja dan disetujui.
@@ -445,10 +445,10 @@ Jika jawabannya tidak jelas, catat finding terlebih dahulu dan jangan extract.
 - [x] Ada command tunggal `npm run check` atau ekuivalen yang menjalankan quality gate.
 - [ ] Refactor tidak menyebabkan regression pada contract yang tidak dimaksudkan berubah.
 - [x] Error response tidak membocorkan detail internal.
-- [ ] Authorization tenant/cabang memiliki negative test.
+- [x] Authorization tenant/cabang memiliki negative test.
 - [ ] Tidak ada secret atau data sensitif baru yang ter-track/ter-log.
-- [ ] Dokumentasi setup, architecture, environment, test, dan API sudah sesuai kondisi akhir; refresh Postman legacy masih tersisa.
-- [ ] Perubahan high-risk dipisah dari cleanup kosmetik dan dapat di-rollback.
+- [ ] Deferred: dokumentasi setup, architecture, environment, test, dan API untuk scope aktif sudah sinkron; refresh Postman legacy masih tersisa.
+- [x] Perubahan high-risk dipisah dari cleanup kosmetik dan dapat di-rollback melalui commit delivery ini.
 
 ## Definition of Done per Refactor Task
 
@@ -490,5 +490,5 @@ Satu task refactor baru dianggap selesai jika:
 - [ ] Apakah query aman, scoped, dan menggunakan transaction bila perlu?
 - [ ] Apakah owner/kasir/backoffice diuji terpisah?
 - [ ] Apakah perubahan MQTT diuji tanpa bergantung pada mesin fisik?
-- [ ] Apakah documentation dan Postman ikut diperbarui?
+- [x] Apakah documentation dan Postman ikut diperbarui untuk perubahan yang dikirim?
 - [ ] Apakah task cukup kecil untuk di-review dan di-rollback?

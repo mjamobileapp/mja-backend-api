@@ -64,8 +64,16 @@ const connectClient = (clientOptions = {}) => {
   return mqtt.connect(getMqttUrl(), options);
 };
 
-const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) => {
-  const client = connectClient();
+const publishAndWaitAck = ({
+  topic,
+  ackTopic,
+  payload,
+  requestId,
+  timeoutMs,
+  clientFactory = connectClient,
+  logger = console,
+}) => {
+  const client = clientFactory();
   const ackTimeoutMs = Number(timeoutMs || process.env.MQTT_ACK_TIMEOUT_MS) || 10000;
   const mqttDebug = isMqttDebugEnabled();
   const subscribeTopics = mqttDebug
@@ -96,7 +104,7 @@ const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) =
     };
 
     const timer = setTimeout(() => {
-      console.error("[MQTT] ACK timeout", {
+      logger.error("[MQTT] ACK timeout", {
         topic,
         ackTopic,
         requestId,
@@ -107,7 +115,7 @@ const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) =
 
     client.on("connect", () => {
       if (mqttDebug) {
-        console.log("[MQTT] Connected", {
+        logger.log("[MQTT] Connected", {
           mqttUrl: getMqttUrl(),
           ackTopic,
           subscribeTopics,
@@ -117,7 +125,7 @@ const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) =
 
       client.subscribe(subscribeTopics, { qos: 1 }, (subscribeError) => {
         if (subscribeError) {
-          console.error("[MQTT] Subscribe ACK topic failed", {
+          logger.error("[MQTT] Subscribe ACK topic failed", {
             ackTopic,
             subscribeTopics,
             requestId,
@@ -128,13 +136,13 @@ const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) =
         }
 
         if (mqttDebug) {
-          console.log("[MQTT] Subscribed ACK topic", { ackTopic, requestId });
-          console.log("[MQTT] Publish command", { topic, payload });
+          logger.log("[MQTT] Subscribed ACK topic", { ackTopic, requestId });
+          logger.log("[MQTT] Publish command", { topic, payload });
         }
 
         client.publish(topic, JSON.stringify(payload), { qos: 1, retain: false }, (publishError) => {
           if (publishError) {
-            console.error("[MQTT] Publish command failed", {
+            logger.error("[MQTT] Publish command failed", {
               topic,
               requestId,
               error: publishError.message,
@@ -149,7 +157,7 @@ const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) =
       const ackPayload = parseAckMessage(message);
       if (receivedTopic !== ackTopic) {
         if (mqttDebug) {
-          console.log("[MQTT] Ignored message from non-ACK topic", {
+          logger.log("[MQTT] Ignored message from non-ACK topic", {
             receivedTopic,
             expectedAckTopic: ackTopic,
             ackPayload,
@@ -161,7 +169,7 @@ const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) =
       const ackSuccess = isAckSuccess(ackPayload, requestId);
       if (ackSuccess === null) {
         if (mqttDebug) {
-          console.log("[MQTT] Ignored ACK with different requestId", {
+          logger.log("[MQTT] Ignored ACK with different requestId", {
             ackTopic,
             expectedRequestId: requestId,
             ackPayload,
@@ -171,19 +179,19 @@ const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) =
       }
 
       if (!ackSuccess) {
-        console.error("[MQTT] ACK failed", { ackTopic, requestId, ackPayload });
+        logger.error("[MQTT] ACK failed", { ackTopic, requestId, ackPayload });
         fail(new Error("ACK mesin gagal"));
         return;
       }
 
       if (mqttDebug) {
-        console.log("[MQTT] ACK received", { ackTopic, requestId, ackPayload });
+        logger.log("[MQTT] ACK received", { ackTopic, requestId, ackPayload });
       }
       succeed(ackPayload);
     });
 
     client.on("error", (error) => {
-      console.error("[MQTT] Client error", {
+      logger.error("[MQTT] Client error", {
         topic,
         ackTopic,
         requestId,
@@ -194,7 +202,7 @@ const publishAndWaitAck = ({ topic, ackTopic, payload, requestId, timeoutMs }) =
 
     client.on("close", () => {
       if (!settled) {
-        console.error("[MQTT] Connection closed before ACK", { topic, ackTopic, requestId });
+        logger.error("[MQTT] Connection closed before ACK", { topic, ackTopic, requestId });
         fail(new Error("Koneksi MQTT terputus"));
       }
     });

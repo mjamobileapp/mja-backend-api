@@ -339,7 +339,16 @@ const resetPassword = async (email) => {
   }
 };
 
-const getAbsensiKasir = ({ cabangId, tanggal, namaKasir }) => {
+const isCabangOwnedByMitra = async (cabangId, idMitra) => {
+  const [rows] = await dbPool.execute(
+    "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ?",
+    [cabangId, idMitra]
+  );
+
+  return rows.length > 0;
+};
+
+const getAbsensiKasir = ({ cabangId, idMitra, tanggal, namaKasir }) => {
   let SQLQuery = `
     SELECT
       a.id AS absensiId,
@@ -348,10 +357,11 @@ const getAbsensiKasir = ({ cabangId, tanggal, namaKasir }) => {
       DATE_FORMAT(a.waktuLogin, '%H:%i') AS jamMasuk,
       IF(a.waktuLogout IS NOT NULL, DATE_FORMAT(a.waktuLogout, '%H:%i'), 'Belum') AS jamPulang
     FROM tbl_absensi a
-    JOIN tbl_users_mobile u ON a.idUserMobile = u.id
-    WHERE a.cabangId = ?
+    JOIN tbl_cabang c ON a.cabangId = c.id
+    JOIN tbl_users_mobile u ON a.idUserMobile = u.id AND u.idMitra = c.idMitra
+    WHERE a.cabangId = ? AND c.idMitra = ?
   `;
-  const values = [cabangId];
+  const values = [cabangId, idMitra];
 
   if (tanggal) {
     SQLQuery += " AND DATE(a.waktuLogin) = ?";
@@ -378,6 +388,7 @@ module.exports = {
   resetDeviceId,
   changePassword,
   resetPassword,
+  isCabangOwnedByMitra,
   getAbsensiKasir,
 };
 

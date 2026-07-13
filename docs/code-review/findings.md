@@ -148,8 +148,8 @@
 - Status: Fixed
 - Prioritas: P2
 - Kategori: Test, MQTT
-- Evidence: isolated test schema rollback was verified. `test/mqttAck.integration.test.js` runs a simulated device client against the approved broker on a unique `refactor-test/...` topic.
-- Verification: `publishAndWaitAck` resolves only after a matching ACK request ID; no production device topic is used. The remote broker test remains opt-in.
+- Evidence: isolated test schema rollback was verified. `test/mqttFakeBroker.test.js` uses an in-process fake MQTT client for success ACK, wrong request ID, negative ACK, timeout, connection close, and READY updates. `test/mqttAck.integration.test.js` remains an opt-in simulated device test against the approved broker on a unique `refactor-test/...` topic.
+- Verification: `publishAndWaitAck` resolves only after a matching ACK request ID; no production device topic is used. The fake test runs by default while the remote broker test remains opt-in.
 
 ## REV-016 - Mobile authentication and tenant boundary lacked database-backed regression coverage
 
@@ -187,6 +187,37 @@
 - Perbaikan: status listener has idempotent stop cleanup; `SIGTERM` and `SIGINT` close HTTP, MQTT, and database resources.
 - Test: shutdown unit tests cover stop/restart, resource order, and signal registration.
 
+## REV-020 - Absensi kasir accepted an arbitrary branch query without tenant scope
+
+- Status: Fixed
+- Prioritas: P1
+- Kategori: Authorization, Data Isolation
+- Lokasi: `src/routes/absensiKasir.js`, `src/routes/kasir.js`, `src/controller/kasir.js`, `src/models/kasir.js`.
+- Bukti: seluruh mobile role dapat mengirim `cabangId` melalui query, sementara query absensi sebelumnya hanya memfilter `a.cabangId`.
+- Dampak: kasir dapat meminta absensi cabang lain, termasuk cabang milik mitra berbeda.
+- Perbaikan: kasir selalu dibatasi ke `cabangId` pada token; owner wajib memilih cabang yang diverifikasi terhadap `idMitra` token; query kini memfilter cabang dan tenant serta memastikan pengguna absensi berada pada tenant cabang yang sama.
+- Test: `test/coreDomains.integration.test.js` membuktikan akses cabang sendiri berhasil, kasir lintas cabang ditolak, dan owner lintas mitra ditolak dengan HTTP 403.
+
+## REV-021 - Owner/kasir route families lacked an explicit authorization matrix
+
+- Status: Fixed for current owner/kasir route families; legacy machine-control alias remains a separate contract follow-up.
+- Prioritas: P1
+- Kategori: Authorization, Data Isolation
+- Lokasi: `src/routes/{kasir,absensiKasir,history,historyKasir,hargaCabang,transaksi,cashflow}.js`, `src/middleware/authorization.js`, `src/controller/cashflow.js`, `src/models/cashflow.js`.
+- Bukti: beberapa route berprefix owner/kasir hanya menjalankan autentikasi mobile. Kasir dapat meminta daftar pengeluaran cabang lain dalam mitra yang sama, dan owner/kasir belum secara konsisten ditolak pada route keluarga lawan.
+- Perbaikan: tambahkan guard reusable `requireMobileKasir`; owner-only route memakai `requireMobileOwner`; kasir hanya dapat mengakses pengeluaran cabangnya sendiri sampai level list, detail, update, dan delete. Owner tetap dapat mengakses cabang lain dalam tenantnya.
+- Test: `test/coreDomains.integration.test.js` memverifikasi 12 penolakan role/scope dan isolasi pengeluaran lintas cabang; `test/authorization.middleware.test.js` memverifikasi kedua guard role.
+
+## REV-022 - Public authentication and password reset flow lacked abuse controls
+
+- Status: Fixed
+- Prioritas: P1
+- Kategori: Authentication, Secret Management
+- Lokasi: `src/config/environment.js`, `src/middleware/publicAuthRateLimit.js`, `src/utils/{email,publicAuth}.js`, `src/controller/{mobile,users,userOwner,kasir}.js`, dan route publik terkait.
+- Bukti: login, activation, dan reset password publik tidak memiliki pembatas percobaan; reset mengembalikan 404 untuk akun yang tidak ada; pembuatan/verifikasi token email memakai fallback secret yang dapat diprediksi.
+- Perbaikan: JWT secret kini wajib tersedia saat email token dibuat atau diverifikasi. Limiter in-memory per alamat IP membatasi login, activation, dan seluruh reset password bersama-sama. Reset password selalu menjawab HTTP 202 dengan pesan generik, baik akun tidak ada maupun email gagal terkirim.
+- Test: `test/environment.config.test.js`, `test/publicAuthRateLimit.middleware.test.js`, dan `test/resetPassword.controller.test.js` membuktikan kegagalan secret eksplisit, window limiter, dan respons reset yang identik.
+
 ## PRE verification matrix
 
 | PRE | Final status | Evidence |
@@ -215,3 +246,11 @@
 - Status: Rejected as current bug
 - Evidence: `src/routes/settingStokMitra.js` applies `router.use(authenticateMobile)` and controller checks owner role plus `idMitra` ownership.
 - Decision: do not change this route without a separate contract review.
+
+## Formal batch disposition
+
+- Status: Accepted/Deferred register recorded
+- Lokasi: `docs/code-review/refactor-roadmap.md`.
+- Keputusan: Batch C, G, dan H diterima untuk checkout ini karena mitigasi yang menjadi tujuan scope telah dibuktikan oleh REV-002, REV-020, REV-021, serta fake MQTT coverage pada REV-015. Batch D, F, dan I didefer secara eksplisit karena memerlukan keputusan business/operasional atau contract capture sebelum perubahan aman dilakukan.
+- Batasan: status `Accepted` bukan `Completed`; ia tidak menghapus technical debt yang dipisahkan ke task berikutnya. Status `Deferred` memiliki trigger pembukaan dan bukti penutupan yang wajib dipenuhi.
+- Bukti: formal disposition register memuat alasan, trigger pembukaan, dan required closure evidence untuk seluruh batch terkait.

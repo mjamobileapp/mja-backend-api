@@ -1,5 +1,6 @@
 const UserOwnerModel = require("../models/userOwner");
-const { sendUserMobileCredentialEmail, sendResetPasswordEmail } = require("../utils/email");
+const EmailService = require("../utils/email");
+const { sendResetPasswordAccepted } = require("../utils/publicAuth");
 const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
 
 const createNewUserOwner = async (req, res) => {
@@ -21,7 +22,7 @@ const createNewUserOwner = async (req, res) => {
 
     // 3. Kirim email kredensial ke user
     try {
-      await sendUserMobileCredentialEmail({
+      await EmailService.sendUserMobileCredentialEmail({
         to: result.email,
         username: result.username,
         role: result.role,
@@ -229,7 +230,7 @@ const resetPassword = async (req, res) => {
 
     // 3. Kirim email password baru ke user
     try {
-      await sendResetPasswordEmail({
+      await EmailService.sendResetPasswordEmail({
         to: result.email,
         username: result.username,
         role: result.role,
@@ -238,20 +239,11 @@ const resetPassword = async (req, res) => {
     } catch (emailError) {
       console.error("Gagal mengirim email reset password:", emailError.message);
     }
-
-    res.status(200).json({
-      message: "Send Link Reset Password Successfully",
-      data: result,
-    });
   } catch (error) {
-    // 2. Handle error spesifik
-    if (error.message === "data not found") {
-      return res.status(404).json({
-        error: "Data Not Found",
-      });
-    }
-    res.status(500).json({ message: "Server Error", serverMessage: error.message });
+    console.error("Gagal memproses permintaan reset password owner:", error.message);
   }
+
+  return sendResetPasswordAccepted(res);
 };
 
 module.exports = {

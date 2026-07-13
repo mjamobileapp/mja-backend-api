@@ -1,12 +1,13 @@
 const express = require("express");
 const CashflowController = require("../controller/cashflow");
 const { authenticateMobile } = require("../middleware/authMobile");
+const { requireMobileOwner } = require("../middleware/authorization");
 
 const router = express.Router();
 
 // GET - Get Cashflow Harian per Cabang
-router.get("/cashflow", authenticateMobile, CashflowController.getCashflow);
-router.get("/cashflow/pendapatan", authenticateMobile, CashflowController.getPendapatan);
+router.get("/cashflow", authenticateMobile, requireMobileOwner, CashflowController.getCashflow);
+router.get("/cashflow/pendapatan", authenticateMobile, requireMobileOwner, CashflowController.getPendapatan);
 router.get("/cashflow/pengeluaran", authenticateMobile, CashflowController.getListPengeluaran);
 router.get("/cashflow/pengeluaran/:id", authenticateMobile, CashflowController.getPengeluaranById);
 

@@ -198,9 +198,21 @@ const getListPengeluaran = async (cabangId, idMitra, filter) => {
   }
 };
 
-const getPengeluaranById = async (id, idMitra, filter) => {
+const isCabangOwnedByMitra = async (cabangId, idMitra) => {
+  const [rows] = await dbPool.execute(
+    "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ?",
+    [cabangId, idMitra]
+  );
+
+  return rows.length > 0;
+};
+
+const getPengeluaranById = async (id, idMitra, filter, cabangId = null) => {
   try {
     const dateFilter = getDateFilterCondition("p.waktuPengeluaran", filter);
+    const cabangFilter = cabangId ? " AND p.cabangId = ?" : "";
+    const values = [id, idMitra];
+    if (cabangId) values.push(cabangId);
     const [rows] = await dbPool.execute(
       `SELECT 
         p.id,
@@ -222,8 +234,9 @@ const getPengeluaranById = async (id, idMitra, filter) => {
       WHERE p.id = ?
         AND p.idMitra = ?
         AND p.statusAktif = 1
+        ${cabangFilter}
         AND ${dateFilter}`,
-      [id, idMitra]
+      values
     );
 
     if (rows.length === 0) {
@@ -351,13 +364,16 @@ const createPengeluaran = async (data) => {
   }
 };
 
-const updatePengeluaran = async (body, id, idMitra) => {
+const updatePengeluaran = async (body, id, idMitra, cabangId = null) => {
   try {
     const { itemId, jumlahBarang, nominal } = body;
+    const cabangFilter = cabangId ? " AND cabangId = ?" : "";
+    const scopedValues = [id, idMitra];
+    if (cabangId) scopedValues.push(cabangId);
 
     const [existingPengeluaran] = await dbPool.execute(
-      "SELECT id FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1",
-      [id, idMitra]
+      `SELECT id FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1${cabangFilter}`,
+      scopedValues
     );
 
     if (existingPengeluaran.length === 0) {
@@ -375,15 +391,15 @@ const updatePengeluaran = async (body, id, idMitra) => {
 
     await dbPool.execute(
       `UPDATE tbl_pengeluaran
-       SET itemId = ?, jumlahBarang = ?, nominal = ?
-       WHERE id = ? AND idMitra = ?`,
-      [itemId, jumlahBarang, nominal, id, idMitra]
+        SET itemId = ?, jumlahBarang = ?, nominal = ?
+       WHERE id = ? AND idMitra = ?${cabangFilter}`,
+      [itemId, jumlahBarang, nominal, ...scopedValues]
     );
 
     const [updatedData] = await dbPool.execute(
       `SELECT id, idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal, waktuPengeluaran, createdDate
-       FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1`,
-      [id, idMitra]
+       FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1${cabangFilter}`,
+      scopedValues
     );
 
     const row = updatedData[0];
@@ -404,19 +420,22 @@ const updatePengeluaran = async (body, id, idMitra) => {
   }
 };
 
-const deletePengeluaran = async (id, idMitra) => {
+const deletePengeluaran = async (id, idMitra, cabangId = null) => {
   try {
+    const cabangFilter = cabangId ? " AND cabangId = ?" : "";
+    const scopedValues = [id, idMitra];
+    if (cabangId) scopedValues.push(cabangId);
     const [existingPengeluaran] = await dbPool.execute(
-      "SELECT id FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1",
-      [id, idMitra]
+      `SELECT id FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1${cabangFilter}`,
+      scopedValues
     );
 
     if (existingPengeluaran.length === 0) {
       throw new Error("Data tidak ditemukan");
     }
 
-    const SQLQuery = "UPDATE tbl_pengeluaran SET statusAktif = 0 WHERE id = ? AND idMitra = ?";
-    return dbPool.execute(SQLQuery, [id, idMitra]);
+    const SQLQuery = `UPDATE tbl_pengeluaran SET statusAktif = 0 WHERE id = ? AND idMitra = ?${cabangFilter}`;
+    return dbPool.execute(SQLQuery, scopedValues);
   } catch (error) {
     throw error;
   }
@@ -427,6 +446,7 @@ module.exports = {
   getPendapatan,
   getPengeluaran,
   getListPengeluaran,
+  isCabangOwnedByMitra,
   getPengeluaranById,
   createPengeluaran,
   updatePengeluaran,

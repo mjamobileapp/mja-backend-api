@@ -249,6 +249,115 @@ test("core domains complete their HTTP flows on the isolated integration schema"
     assert.equal(machineHistory.statusCode, 200);
   });
 
+  await t.test("absensi only permits the authenticated tenant and cashier branch", async () => {
+    const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const [foreignMitra] = await db.execute(
+      "INSERT INTO tbl_mitra (kodeMitra, namaMitra, alamatMitra, createdBy, statusAktif) VALUES (?, ?, ?, ?, 1)",
+      [`FOREIGN-${suffix}`, `Foreign Mitra ${suffix}`, "Integration test", "integration-test"]
+    );
+    const [foreignCabang] = await db.execute(
+      "INSERT INTO tbl_cabang (idMitra, kodeCabang, namaCabang, alamatCabang, createdBy, statusAktif) VALUES (?, ?, ?, ?, ?, 1)",
+      [foreignMitra.insertId, `FOREIGN-CAB-${suffix}`, `Foreign Cabang ${suffix}`, "Integration test", "integration-test"]
+    );
+
+    try {
+      const kasirOwnCabang = await request(server, {
+        path: `/api/kasir/absensi?cabangId=${fixture.cabangId}`,
+        token: mobileToken(),
+      });
+      const kasirForeignCabang = await request(server, {
+        path: `/api/kasir/absensi?cabangId=${foreignCabang.insertId}`,
+        token: mobileToken(),
+      });
+      const ownerForeignMitra = await request(server, {
+        path: `/api/owner/kasir/absensi?cabangId=${foreignCabang.insertId}`,
+        token: ownerToken(),
+      });
+
+      assert.equal(kasirOwnCabang.statusCode, 200);
+      assert.equal(kasirForeignCabang.statusCode, 403);
+      assert.equal(ownerForeignMitra.statusCode, 403);
+    } finally {
+      await db.execute("DELETE FROM tbl_cabang WHERE id = ?", [foreignCabang.insertId]);
+      await db.execute("DELETE FROM tbl_mitra WHERE id = ?", [foreignMitra.insertId]);
+    }
+  });
+
+  await t.test("owner and cashier route families reject the wrong mobile role", async () => {
+    const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const [otherCabang] = await db.execute(
+      "INSERT INTO tbl_cabang (idMitra, kodeCabang, namaCabang, alamatCabang, createdBy, statusAktif) VALUES (?, ?, ?, ?, ?, 1)",
+      [fixture.idMitra, `OTHER-CAB-${suffix}`, `Other Cabang ${suffix}`, "Integration test", "integration-test"]
+    );
+    const [otherKasir] = await db.execute(
+      `INSERT INTO tbl_users_mobile
+        (username, password, role, idMitra, cabangId, namaLengkap, noTelp, email, createdBy, statusAktif)
+       VALUES (?, ?, 'kasir', ?, ?, ?, ?, ?, ?, 1)`,
+      [`other-kasir-${suffix}`, "not-used", fixture.idMitra, otherCabang.insertId, "Other Kasir", `07${Date.now()}`, `other-kasir-${suffix}@test.local`, "integration-test"]
+    );
+    const [otherExpense] = await db.execute(
+      `INSERT INTO tbl_pengeluaran (idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal, waktuPengeluaran)
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [fixture.idMitra, otherCabang.insertId, otherKasir.insertId, fixture.itemId, 1, 5000]
+    );
+
+    try {
+      const kasirOwnerManagement = await request(server, { path: "/api/owner/kasir", token: mobileToken() });
+      const kasirOwnerAbsensi = await request(server, { path: `/api/owner/kasir/absensi?cabangId=${fixture.cabangId}`, token: mobileToken() });
+      const kasirStok = await request(server, { path: "/api/owner/stokmitra", token: mobileToken() });
+      const kasirHarga = await request(server, { path: `/api/owner/settingharga?cabangId=${fixture.cabangId}`, token: mobileToken() });
+      const kasirOwnerHistory = await request(server, { path: `/api/owner/history/transaksi?cabangId=${fixture.cabangId}`, token: mobileToken() });
+      const kasirOwnerMachineHistory = await request(server, { path: `/api/owner/history/mesin?cabangId=${fixture.cabangId}`, token: mobileToken() });
+      const kasirCashflow = await request(server, { path: `/api/owner/cashflow?cabangId=${fixture.cabangId}`, token: mobileToken() });
+      const kasirIncome = await request(server, { path: `/api/owner/cashflow/pendapatan?cabangId=${fixture.cabangId}`, token: mobileToken() });
+      const kasirOtherBranchExpense = await request(server, { path: `/api/owner/cashflow/pengeluaran?cabangId=${otherCabang.insertId}`, token: mobileToken() });
+      const kasirOtherExpenseDetail = await request(server, { path: `/api/owner/cashflow/pengeluaran/${otherExpense.insertId}`, token: mobileToken() });
+      const kasirOtherExpenseUpdate = await request(server, {
+        method: "PUT",
+        path: `/api/owner/cashflow/pengeluaran/${otherExpense.insertId}`,
+        token: mobileToken(),
+        body: { itemId: fixture.itemId, jumlahBarang: 2, nominal: 7000 },
+      });
+      const kasirOtherExpenseDelete = await request(server, {
+        method: "DELETE",
+        path: `/api/owner/cashflow/pengeluaran/${otherExpense.insertId}`,
+        token: mobileToken(),
+      });
+      const ownerOtherBranchExpense = await request(server, {
+        path: `/api/owner/cashflow/pengeluaran?cabangId=${otherCabang.insertId}`,
+        token: ownerToken(),
+      });
+      const ownerKasirAbsensi = await request(server, { path: "/api/kasir/absensi", token: ownerToken() });
+      const ownerKasirHistory = await request(server, { path: "/api/kasir/history/transaksi", token: ownerToken() });
+      const ownerKasirTransaction = await request(server, { path: "/api/kasir/transaksi", token: ownerToken() });
+
+      for (const response of [
+        kasirOwnerManagement,
+        kasirOwnerAbsensi,
+        kasirStok,
+        kasirHarga,
+        kasirOwnerHistory,
+        kasirOwnerMachineHistory,
+        kasirCashflow,
+        kasirIncome,
+        kasirOtherBranchExpense,
+        ownerKasirAbsensi,
+        ownerKasirHistory,
+        ownerKasirTransaction,
+      ]) {
+        assert.equal(response.statusCode, 403);
+      }
+      for (const response of [kasirOtherExpenseDetail, kasirOtherExpenseUpdate, kasirOtherExpenseDelete]) {
+        assert.equal(response.statusCode, 404);
+      }
+      assert.equal(ownerOtherBranchExpense.statusCode, 200);
+    } finally {
+      await db.execute("DELETE FROM tbl_pengeluaran WHERE id = ?", [otherExpense.insertId]);
+      await db.execute("DELETE FROM tbl_users_mobile WHERE id = ?", [otherKasir.insertId]);
+      await db.execute("DELETE FROM tbl_cabang WHERE id = ?", [otherCabang.insertId]);
+    }
+  });
+
   await t.test("cashflow supports summary, income, owner and cashier expenses, detail, update, and delete", async () => {
     const create = await request(server, {
       method: "POST",
