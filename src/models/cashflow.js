@@ -157,7 +157,7 @@ const getPengeluaran = async (cabangId, idMitra, filter) => {
   }
 };
 
-const getListPengeluaran = async (cabangId, filter) => {
+const getListPengeluaran = async (cabangId, idMitra, filter) => {
   try {
     const dateFilter = getDateFilterCondition("p.waktuPengeluaran", filter);
     const [rows] = await dbPool.execute(
@@ -171,10 +171,11 @@ const getListPengeluaran = async (cabangId, filter) => {
       LEFT JOIN tbl_users_mobile u ON p.idUserMobile = u.id
       LEFT JOIN tbl_master_item_expense i ON p.itemId = i.id
       WHERE p.cabangId = ? 
+        AND p.idMitra = ?
         AND p.statusAktif = 1
         AND ${dateFilter}
       ORDER BY p.waktuPengeluaran DESC`,
-      [cabangId]
+      [cabangId, idMitra]
     );
 
     if (rows.length === 0) {

@@ -60,7 +60,6 @@ const createNewUser = async (body) => {
       statusAktif: true,
     };
 
-    console.log(dataPegawai);
 
     if (!body.password) {
       throw new Error("Password is required");
@@ -177,7 +176,6 @@ const updateUser = async (body, id) => {
     SQLQuery += ` WHERE id = ?`;
     values.push(id);
 
-    console.log("Update query values:", values);
 
     const [result] = await dbPool.execute(SQLQuery, values);
     return result;

@@ -4,8 +4,6 @@ const getHistoryTransaksi = async (req, res) => {
   const { cabangId } = req.query;
   const idMitra = req.user ? req.user.idMitra : null;
 
-  console.log("GET HISTORY TRANSAKSI REQUEST:", { cabangId, idMitra });
-
   if (!cabangId) {
     return res.status(400).json({
       error: "cabangId tidak ditemukan",
@@ -75,8 +73,6 @@ const getHistoryTransaksiKasir = async (req, res) => {
 const getHistoryMesin = async (req, res) => {
   const { cabangId } = req.query;
   const idMitra = req.user ? req.user.idMitra : null;
-
-  console.log("GET HISTORY MESIN REQUEST:", { cabangId, idMitra });
 
   if (!cabangId) {
     return res.status(400).json({

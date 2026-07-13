@@ -1,4 +1,5 @@
 const MasterMenuModel = require("../models/menus");
+const { withAuthenticatedAuditUsername } = require("../utils/validation");
 
 const getAll = async (req, res) => {
   try {
@@ -63,8 +64,7 @@ const getById = async (req, res) => {
 };
 
 const createNewMenu = async (req, res) => {
-  const { body } = req;
-  console.log(req);
+  const body = withAuthenticatedAuditUsername(req.body, req.user, "createdBy");
   if (!body.namaMenu || !body.url) {
     return res.status(400).json({
       message: "Anda mengirimkan data yang salah",
@@ -88,7 +88,7 @@ const createNewMenu = async (req, res) => {
 
 const updateMenu = async (req, res) => {
   const { id } = req.params;
-  const { body } = req;
+  const body = withAuthenticatedAuditUsername(req.body, req.user, "modifiedBy");
 
   try {
     await MasterMenuModel.updateMenu(body, id);

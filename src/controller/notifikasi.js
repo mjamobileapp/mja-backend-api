@@ -7,8 +7,6 @@ const getNotifikasi = async (req, res) => {
     const userCabangId = req.user.cabang_id || req.user.cabangId;
     const { filterCabangId } = req.query;
 
-    console.log("GET NOTIFIKASI REQUEST:", { userRole, idMitra, userCabangId, filterCabangId });
-
     if (!idMitra) {
       return res.status(400).json({
         error: "idMitra tidak ditemukan di token",
@@ -56,8 +54,6 @@ const getNotifikasi = async (req, res) => {
 
 const markAsRead = async (req, res) => {
   const { id } = req.params;
-
-  console.log("MARK AS READ REQUEST:", { id });
 
   try {
     const data = await NotifikasiModel.markAsRead(id);

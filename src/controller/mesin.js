@@ -1,11 +1,10 @@
 const MesinModel = require("../models/mesin");
+const { getMissingRequiredFields } = require("../utils/validation");
 
 const createNewMesin = async (req, res) => {
   const { body } = req;
-  console.log("BODY REQUEST:", body);
 
-  const requiredFields = ['idMitra', 'cabangId', 'espId'];
-  const missingFields = requiredFields.filter(field => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["idMitra", "cabangId", "espId"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -75,11 +74,7 @@ const updateMesin = async (req, res) => {
   const { body } = req;
   const updatedBy = req.user ? req.user.username || req.user.id : null;
 
-  console.log("UPDATE REQUEST:", { idMesinMaster, body });
-
-  // Validate required fields
-  const requiredFields = ['idMitra', 'cabangId', 'espId'];
-  const missingFields = requiredFields.filter(field => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["idMitra", "cabangId", "espId"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -145,8 +140,6 @@ const deleteMesin = async (req, res) => {
   // Mengambil username dari middleware authenticate (req.user)
   const username = req.user.username;
 
-  console.log("DELETE REQUEST:", { id, deletedBy: username });
-
   try {
     await MesinModel.deleteMesin(id, username);
     res.status(200).json({
@@ -174,8 +167,6 @@ const deleteMesin = async (req, res) => {
 const getMesinById = async (req, res) => {
   const { id } = req.params;
 
-  console.log("GET BY ID REQUEST:", { id });
-
   try {
     const data = await MesinModel.getMesinById(id);
     res.status(200).json({
@@ -197,8 +188,6 @@ const getMesinById = async (req, res) => {
 
 const getAllMesin = async (req, res) => {
   const { status } = req.query;
-  console.log("GET ALL REQUEST - Status Filter:", status || "active (default)");
-
   try {
     const data = await MesinModel.getAllMesin(status);
     res.status(200).json({
@@ -250,8 +239,6 @@ const restoreMesin = async (req, res) => {
   // Mengambil username dari middleware authenticate (req.user)
   const username = req.user.username;
 
-  console.log("RESTORE MESIN REQUEST:", { id, updatedBy: username });
-
   try {
     await MesinModel.restoreMesin(id, username);
     res.status(200).json({
@@ -273,8 +260,6 @@ const restoreMesin = async (req, res) => {
 
 const getMesinByEspId = async (req, res) => {
   const { espId } = req.params;
-
-  console.log("GET BY ESPID REQUEST:", { espId });
 
   try {
     const data = await MesinModel.getMesinByEspId(espId);
@@ -299,8 +284,6 @@ const getListMesinMobile = async (req, res) => {
   const { cabangId } = req.params;
   const filter = req.query.filter ? String(req.query.filter).toLowerCase() : null;
   const idMitra = req.user ? req.user.idMitra : null;
-
-  console.log("GET LIST MESIN MOBILE REQUEST:", { cabangId, idMitra, filter });
 
   if (!idMitra) {
     return res.status(400).json({
@@ -334,8 +317,6 @@ const getListMesinMobile = async (req, res) => {
 };
 
 const getAllMasterMesin = async (req, res) => {
-  console.log("GET ALL MASTER MESIN REQUEST");
-
   try {
     const data = await MesinModel.getAllMasterMesin();
     res.status(200).json({
@@ -360,8 +341,6 @@ const setMaintenance = async (req, res) => {
   const { idMesinDetail } = req.params;
   const updatedBy = req.user ? req.user.username || req.user.id : null;
 
-  console.log("SET MAINTENANCE REQUEST:", { idMesinDetail, updatedBy });
-
   try {
     const data = await MesinModel.setMaintenance(idMesinDetail, updatedBy);
     res.status(200).json({
@@ -384,8 +363,6 @@ const setMaintenance = async (req, res) => {
 const setReady = async (req, res) => {
   const { idMesinDetail } = req.params;
   const updatedBy = req.user ? req.user.username || req.user.id : null;
-
-  console.log("SET READY REQUEST:", { idMesinDetail, updatedBy });
 
   try {
     const data = await MesinModel.setReady(idMesinDetail, updatedBy);

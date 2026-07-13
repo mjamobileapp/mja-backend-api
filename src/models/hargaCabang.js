@@ -1,9 +1,11 @@
 const dbPool = require("../config/database");
 
 const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
+  const connection = await dbPool.getConnection();
   try {
+    await connection.beginTransaction();
     // 1. Validasi idMitra
-    const [mitraCheck] = await dbPool.execute(
+    const [mitraCheck] = await connection.execute(
       "SELECT id FROM tbl_mitra WHERE id = ? AND statusAktif = 1",
       [idMitra]
     );
@@ -12,7 +14,7 @@ const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
     }
 
     // 2. Validasi cabangId
-    const [cabangCheck] = await dbPool.execute(
+    const [cabangCheck] = await connection.execute(
       "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ? AND statusAktif = 1",
       [cabangId, idMitra]
     );
@@ -21,7 +23,7 @@ const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
     }
 
     // 3. DELETE data lama untuk idMitra & cabangId ini
-    await dbPool.execute(
+    await connection.execute(
       "DELETE FROM tbl_harga_cabang WHERE idMitra = ? AND cabangId = ?",
       [idMitra, cabangId]
     );
@@ -31,7 +33,7 @@ const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
     for (const item of items) {
       const { jenisLayanan, itemId, harga } = item;
 
-      const [result] = await dbPool.execute(
+      const [result] = await connection.execute(
         `INSERT INTO tbl_harga_cabang (idMitra, cabangId, jenisLayanan, itemId, harga, createdBy)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [idMitra, cabangId, jenisLayanan, itemId || null, harga, createdBy]
@@ -48,9 +50,13 @@ const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
       });
     }
 
+    await connection.commit();
     return insertedData;
   } catch (error) {
+    await connection.rollback();
     throw error;
+  } finally {
+    connection.release();
   }
 };
 

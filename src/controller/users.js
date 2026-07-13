@@ -2,12 +2,12 @@ const UsersModel = require("../models/users");
 const bcrypt = require("bcrypt"); // Ensure bcrypt is installed
 const { generateToken } = require("../utils/jwt");
 const { sendResetPasswordEmail } = require("../utils/email");
+const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
 
 const getAllUsers = async (req, res) => {
   const { status } = req.query;
   try {
     const [data] = await UsersModel.getAllUser(status);
-    console.log(data);
     const mappedData = data.map((data) => ({
       id: data.id,
       nama: data.nama,
@@ -63,11 +63,8 @@ const getUserById = async (req, res) => {
 };
 
 const createNewUser = async (req, res) => {
-  const { body } = req;
-
-    // Validate required fields
-  const requiredFields = ['nama', 'username', 'password', 'roleId', 'createdBy'];
-  const missingFields = requiredFields.filter(field => !body[field]);
+  const body = withAuthenticatedAuditUsername(req.body, req.user, "createdBy");
+  const missingFields = getMissingRequiredFields(body, ["nama", "username", "password", "roleId", "createdBy"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -138,10 +135,8 @@ const loginUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   const { id } = req.params;
-  const { body } = req;
-
-    const requiredFields = ['nama', 'username', 'roleId', 'updatedBy'];
-  const missingFields = requiredFields.filter(field => !body[field]);
+  const body = withAuthenticatedAuditUsername(req.body, req.user, "updatedBy");
+  const missingFields = getMissingRequiredFields(body, ["nama", "username", "roleId", "updatedBy"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({

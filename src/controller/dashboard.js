@@ -10,7 +10,6 @@ const getMitra = async (req, res) => {
       data: data,
     });
   } catch (error) {
-    console.error("Dashboard Controller Error (getMitra):", error);
     res.status(500).json({
       message: "Server Error",
       serverMessage: error.message,
@@ -28,7 +27,6 @@ const getCabang = async (req, res) => {
       data: data,
     });
   } catch (error) {
-    console.error("Dashboard Controller Error (getCabang):", error);
     res.status(500).json({
       message: "Server Error",
       serverMessage: error.message,
@@ -47,7 +45,6 @@ const getMesin = async (req, res) => {
       totalDryer: data.totalDryer,
     });
   } catch (error) {
-    console.error("Dashboard Controller Error (getMesin):", error);
     res.status(500).json({
       message: "Server Error",
       serverMessage: error.message,

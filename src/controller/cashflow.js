@@ -1,4 +1,5 @@
 const CashflowModel = require("../models/cashflow");
+const { getMissingRequiredFields } = require("../utils/validation");
 
 const getRequestDateFilter = (req) => req.query.filter ?? req.query.periode ?? req.query.tanggal ?? "";
 
@@ -54,8 +55,6 @@ const getPendapatan = async (req, res) => {
   const filter = getRequestDateFilter(req);
   const idMitra = req.user ? req.user.idMitra : null;
 
-  console.log("GET PENDAPATAN REQUEST:", { cabangId, idMitra, filter });
-
   if (!cabangId) {
     return res.status(400).json({
       error: "cabangId tidak ditemukan",
@@ -96,8 +95,6 @@ const getListPengeluaran = async (req, res) => {
   // Ambil cabangId dari token
   if (!cabangId) {
     cabangId = req.user.cabang_id || req.user.cabangId;
-    console.log("GET PENGELUARAN (KASIR):", { cabangId, idMitra, filter });
-
     if (!cabangId) {
       return res.status(400).json({
         error: "cabangId tidak ditemukan",
@@ -105,7 +102,7 @@ const getListPengeluaran = async (req, res) => {
     }
 
     try {
-      const data = await CashflowModel.getListPengeluaran(cabangId, filter);
+      const data = await CashflowModel.getListPengeluaran(cabangId, idMitra, filter);
       return res.status(200).json({
         success: "Get Data List Expense Success",
         data: data,
@@ -124,8 +121,6 @@ const getListPengeluaran = async (req, res) => {
   }
 
   // OWNER: ada cabangId di query params, gunakan grouping per tanggal
-  console.log("GET PENGELUARAN (OWNER):", { cabangId, idMitra, filter });
-
   if (!idMitra) {
     return res.status(400).json({
       error: "idMitra tidak ditemukan di token",
@@ -190,8 +185,6 @@ const createPengeluaran = async (req, res) => {
   const idMitra = req.user ? req.user.idMitra : null;
   const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
   const idUserMobile = req.user ? req.user.id : null;
-
-  console.log("CREATE PENGELUARAN REQUEST:", { idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal });
 
   // Validasi idMitra dari token
   if (!idMitra) {
@@ -265,8 +258,7 @@ const updatePengeluaran = async (req, res) => {
   const { body } = req;
   const idMitra = req.user ? req.user.idMitra : null;
 
-  const requiredFields = ["itemId", "jumlahBarang", "nominal"];
-  const missingFields = requiredFields.filter((field) => body[field] === undefined || body[field] === null || body[field] === "");
+  const missingFields = getMissingRequiredFields(body, ["itemId", "jumlahBarang", "nominal"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({

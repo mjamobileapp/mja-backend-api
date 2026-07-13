@@ -1,5 +1,6 @@
 const RoleModels = require("../models/roles");
-const moment = require("moment");
+const { getDatabaseTimestamp } = require("../utils/date");
+const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
 const getAllRoles = async (req, res) => {
   try {
     const [data] = await RoleModels.getAllRole();
@@ -24,7 +25,6 @@ const getAllRoles = async (req, res) => {
 
 const getRoleById = async (req, res) => {
   const { idRole } = req.params;
-  console.log(idRole);
   try {
     const [data] = await RoleModels.getRoleById(idRole);
     const dataResult = data[0];
@@ -47,20 +47,17 @@ const getRoleById = async (req, res) => {
 };
 
 const createNewRole = async (req, res) => {
-  var mysqlTimestamp = moment(Date.now()).format("YYYY-MM-DD HH:mm:ss");
-  // console.log(req);
-  const { body } = req;
+  const body = withAuthenticatedAuditUsername(req.body, req.user, "createdBy");
 
   const mapData = {
     namaRole: body.namaRole,
     description: body.description,
     createdBy: body.createdBy,
-    createdDate: mysqlTimestamp,
+    createdDate: getDatabaseTimestamp(),
   };
 
   // console.log(mapData);
-    const requiredFields = ['namaRole', 'description', 'createdBy'];
-  const missingFields = requiredFields.filter(field => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["namaRole", "description", "createdBy"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -85,17 +82,15 @@ const createNewRole = async (req, res) => {
 
 const updateRole = async (req, res) => {
   const { idRole } = req.params;
-  const { body } = req;
+  const body = withAuthenticatedAuditUsername(req.body, req.user, "updatedBy");
 
-  var mysqlTimestamp = moment(Date.now()).format("YYYY-MM-DD HH:mm:ss");
   const mapData = {
     namaRole: body.namaRole,
     description: body.description,
     updatedBy: body.updatedBy,
-    updatedDate: mysqlTimestamp,
+    updatedDate: getDatabaseTimestamp(),
   };
-    const requiredFields = ['namaRole', 'description', 'updatedBy'];
-  const missingFields = requiredFields.filter(field => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["namaRole", "description", "updatedBy"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({

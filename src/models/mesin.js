@@ -1,11 +1,14 @@
 const dbPool = require("../config/database");
 
 const createNewMesin = async (body, createdBy = null) => {
+  const { idMitra, cabangId, espId, washer, dryer } = body;
+  const connection = await dbPool.getConnection();
+
   try {
-    const { idMitra, cabangId, espId, washer, dryer } = body;
+    await connection.beginTransaction();
 
     // 1. Validasi Mitra Exist
-    const [existingMitra] = await dbPool.execute(
+    const [existingMitra] = await connection.execute(
       "SELECT id FROM tbl_mitra WHERE id = ? AND statusAktif = TRUE",
       [idMitra]
     );
@@ -14,7 +17,7 @@ const createNewMesin = async (body, createdBy = null) => {
     }
 
     // 2. Validasi Cabang Exist dan sesuai dengan Mitra
-    const [existingCabang] = await dbPool.execute(
+    const [existingCabang] = await connection.execute(
       "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ? AND statusAktif = TRUE",
       [cabangId, idMitra]
     );
@@ -23,7 +26,7 @@ const createNewMesin = async (body, createdBy = null) => {
     }
 
     // 3. Validasi duplikasi espId + cabangId
-    const [existingMaster] = await dbPool.execute(
+    const [existingMaster] = await connection.execute(
       "SELECT id FROM tbl_mesin_master WHERE espId = ? AND cabangId = ?",
       [espId, cabangId]
     );
@@ -37,7 +40,7 @@ const createNewMesin = async (body, createdBy = null) => {
     }
 
     // 5. Hitung jumlah modul (espId unik) yang sudah ada di cabang tersebut
-    const [countResult] = await dbPool.query(
+    const [countResult] = await connection.query(
       `SELECT COUNT(DISTINCT espId) AS totalGrupMesin 
       FROM tbl_mesin_master 
       WHERE idMitra = ? AND cabangId = ?`,
@@ -50,7 +53,7 @@ const createNewMesin = async (body, createdBy = null) => {
     // Output: "Mesin Laundry 1", "Mesin Laundry 2", dst.
 
     // 7. INSERT ke tbl_mesin_master
-    const [masterResult] = await dbPool.execute(
+    const [masterResult] = await connection.execute(
       `INSERT INTO tbl_mesin_master (idMitra, cabangId, espId, namaGroupMesin, createdBy) 
        VALUES (?, ?, ?, ?, ?)`,
       [idMitra, cabangId, espId, namaGroupMesinOtomatis, createdBy]
@@ -60,7 +63,7 @@ const createNewMesin = async (body, createdBy = null) => {
     // 8. Insert Washer jika ada
     let washerResult = null;
     if (washer === 1) {
-      const [detailWasher] = await dbPool.execute(
+      const [detailWasher] = await connection.execute(
         `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, status) 
          VALUES (?, 'WASHER', 'READY')`,
         [idMesinMaster]
@@ -71,13 +74,15 @@ const createNewMesin = async (body, createdBy = null) => {
     // 9. Insert Dryer jika ada
     let dryerResult = null;
     if (dryer === 1) {
-      const [detailDryer] = await dbPool.execute(
+      const [detailDryer] = await connection.execute(
         `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, status) 
          VALUES (?, 'DRYER', 'READY')`,
         [idMesinMaster]
       );
       dryerResult = { id: detailDryer.insertId, status: "Ready" };
     }
+
+    await connection.commit();
 
     return {
       idMitra,
@@ -88,7 +93,10 @@ const createNewMesin = async (body, createdBy = null) => {
       dryer: dryerResult,
     };
   } catch (error) {
+    await connection.rollback();
     throw error;
+  } finally {
+    connection.release();
   }
 };
 
@@ -177,10 +185,15 @@ const deleteMesin = async (id, updatedBy) => {
   try {
     // 1. Cek apakah mesin eksis dan aktif
     const [existingMesin] = await dbPool.execute(
-      `SELECT d.id, d.status, m.id AS masterId 
-       FROM tbl_mesin_detail d
-       JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
-       WHERE d.id = ? AND m.statusAktif = 1`,
+      `SELECT m.id AS masterId,
+              EXISTS (
+                SELECT 1
+                FROM tbl_mesin_detail d
+                WHERE d.idMesinMaster = m.id
+                  AND UPPER(d.status) = 'IN_USE'
+              ) AS isInUse
+       FROM tbl_mesin_master m
+       WHERE m.id = ? AND m.statusAktif = 1`,
       [id]
     );
 
@@ -189,7 +202,7 @@ const deleteMesin = async (id, updatedBy) => {
     }
 
     // 2. Tolak jika mesin sedang menyala (status = in_use)
-    if (existingMesin[0].status === "IN_USE" || existingMesin[0].status === "in_use") {
+    if (existingMesin[0].isInUse) {
       throw new Error("Mesin sedang menyala");
     }
 
@@ -197,7 +210,7 @@ const deleteMesin = async (id, updatedBy) => {
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = "UPDATE tbl_mesin_master SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
 
-    const [result] = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
+    const [result] = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, existingMesin[0].masterId]);
 
     return result;
   } catch (error) {
@@ -247,7 +260,7 @@ const getAllMesin = async (status) => {
   try {
     let SQLQuery = `
       SELECT 
-        d.id, d.jenisMesin AS tipeMesin, d.status, d.waktuSelesai, d.waktuPingTerakhir,
+        d.id, d.jenisMesin AS tipeMesin, d.status, d.waktuPingTerakhir,
         m.id AS masterId, m.idMitra, m.cabangId, m.espId, m.namaGroupMesin AS namaMesin, m.statusAktif,
         mitra.namaMitra, cabang.namaCabang 
       FROM tbl_mesin_detail d
@@ -282,8 +295,7 @@ const getMesinByIdMitra = async (idMitra) => {
         m.namaGroupMesin,
         d.id AS detailId,
         d.jenisMesin,
-        d.status,
-        d.waktuSelesai
+        d.status
        FROM tbl_mesin_master m
        LEFT JOIN tbl_mesin_detail d ON d.idMesinMaster = m.id
        WHERE m.idMitra = ? AND m.statusAktif = 1
@@ -336,8 +348,7 @@ const getMesinByIdCabang = async (cabangId) => {
         m.namaGroupMesin,
         d.id AS detailId,
         d.jenisMesin,
-        d.status,
-        d.waktuSelesai
+        d.status
        FROM tbl_mesin_master m
        LEFT JOIN tbl_mesin_detail d ON d.idMesinMaster = m.id
        WHERE m.cabangId = ? AND m.statusAktif = 1
@@ -385,10 +396,9 @@ const restoreMesin = async (id, updatedBy) => {
   try {
     // Check if mesin exists and is currently inactive
     const [existingMesin] = await dbPool.execute(
-      `SELECT d.id, m.id AS masterId
-       FROM tbl_mesin_detail d
-       JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
-       WHERE d.id = ? AND m.statusAktif = 0`,
+      `SELECT m.id AS masterId
+       FROM tbl_mesin_master m
+       WHERE m.id = ? AND m.statusAktif = 0`,
       [id]
     );
     if (existingMesin.length === 0) {
@@ -465,8 +475,7 @@ const getListMesinMobile = async (cabangId, idMitra, filter) => {
         m.namaGroupMesin,
         d.id AS detailId,
         d.jenisMesin,
-        d.status,
-        d.waktuSelesai
+        d.status
       FROM tbl_mesin_master m
       LEFT JOIN tbl_mesin_detail d ON d.idMesinMaster = m.id
       WHERE m.cabangId = ? 
@@ -637,7 +646,6 @@ const setReady = async (idMesinDetail, updatedBy) => {
       id: String(idMesinDetail),
       jenisMesin: existingDetail[0].jenisMesin,
       status: "READY",
-      waktuSelesai: null,
     };
   } catch (error) {
     throw error;

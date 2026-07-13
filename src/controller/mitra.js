@@ -1,11 +1,10 @@
 const MitraModel = require("../models/mitra");
+const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
 
 const createNewMitra = async (req, res) => {
-  const { body } = req;
-  console.log("BODY REQUEST:", body);
+  const body = withAuthenticatedAuditUsername(req.body, req.user, "createdBy");
 
-    const requiredFields = ['namaMitra', 'alamatMitra', 'createdBy'];
-  const missingFields = requiredFields.filter(field => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["namaMitra", "alamatMitra", "createdBy"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -36,13 +35,9 @@ const createNewMitra = async (req, res) => {
 
 const updateMitra = async (req, res) => {
   const { id } = req.params;
-  const { body } = req;
+  const body = withAuthenticatedAuditUsername(req.body, req.user, "updatedBy");
 
-  console.log("UPDATE REQUEST:", { id, body });
-
-    // Validate required fields
-  const requiredFields = ['namaMitra', 'alamatMitra', 'updatedBy'];
-  const missingFields = requiredFields.filter(field => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["namaMitra", "alamatMitra", "updatedBy"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -75,8 +70,6 @@ const deleteMitra = async (req, res) => {
   // Mengambil username dari middleware authenticate (req.user)
   const username = req.user.username;
 
-  console.log("DELETE REQUEST:", { id, updatedBy: username });
-
   try {
     await MitraModel.deleteMitra(id, username);
     res.status(200).json({
@@ -99,8 +92,6 @@ const deleteMitra = async (req, res) => {
 const getMitraById = async (req, res) => {
   const { id } = req.params;
 
-  console.log("GET BY ID REQUEST:", { id });
-
   try {
     const data = await MitraModel.getMitraById(id);
     res.status(200).json({
@@ -122,8 +113,6 @@ const getMitraById = async (req, res) => {
 
 const getAllMitra = async (req, res) => {
   const { status } = req.query;
-  console.log("GET ALL REQUEST - Status Filter:", status || "active (default)");
-
   try {
     const data = await MitraModel.getAllMitra(status);
     res.status(200).json({
@@ -142,8 +131,6 @@ const restoreMitra = async (req, res) => {
   const { id } = req.params;
   // Mengambil username dari middleware authenticate (req.user)
   const username = req.user.username;
-
-  console.log("RESTORE REQUEST:", { id, updatedBy: username });
 
   try {
     await MitraModel.restoreMitra(id, username);

@@ -1,6 +1,7 @@
 const KasirModel = require("../models/kasir");
 const { sendUserMobileCredentialEmail, sendResetPasswordEmail } = require("../utils/email");
 const { formatTanggalWIB } = require("../utils/date");
+const { getMissingRequiredFields } = require("../utils/validation");
 
 const createNewUserKasir = async (req, res) => {
   const { body } = req;
@@ -8,8 +9,7 @@ const createNewUserKasir = async (req, res) => {
   const usernameToken = req.user.username;
 
   // 1. Validasi field yang dibutuhkan di level controller
-  const requiredFields = ['username', 'cabangId', 'namaLengkap', 'noTelp', 'email'];
-  const missingFields = requiredFields.filter(field => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["username", "cabangId", "namaLengkap", "noTelp", "email"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -74,7 +74,7 @@ const getAllUserKasir = async (req, res) => {
   const { status } = req.query;
 
   try {
-    const data = await KasirModel.getAllUserKasir(status);
+    const data = await KasirModel.getAllUserKasir(status, req.user.idMitra);
     res.status(200).json({
       message: "Get All Kasir success",
       data: data,
@@ -88,7 +88,7 @@ const getUserKasirById = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const data = await KasirModel.getUserKasirById(id);
+    const data = await KasirModel.getUserKasirById(id, req.user.idMitra);
     res.status(200).json({
       message: "Get Kasir by Id success",
       data: data,
@@ -104,8 +104,7 @@ const updateUserKasir = async (req, res) => {
   const { body } = req;
   const usernameToken = req.user.username;
 
-  const requiredFields = ['namaLengkap', 'noTelp', 'email'];
-  const missingFields = requiredFields.filter(field => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["namaLengkap", "noTelp", "email"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({ 
@@ -115,7 +114,7 @@ const updateUserKasir = async (req, res) => {
   }
 
   try {
-    const data = await KasirModel.updateUserKasir(id, { ...body, updatedBy: usernameToken });
+    const data = await KasirModel.updateUserKasir(id, { ...body, updatedBy: usernameToken }, req.user.idMitra);
     res.status(200).json({
       message: "UPDATE Kasir success",
       data: data,
@@ -141,7 +140,7 @@ const deleteUserKasir = async (req, res) => {
   const usernameToken = req.user.username;
 
   try {
-    await KasirModel.deleteUserKasir(id, usernameToken);
+    await KasirModel.deleteUserKasir(id, usernameToken, req.user.idMitra);
     res.status(200).json({
       message: "Delete Kasir success",
       data: null,
@@ -157,7 +156,7 @@ const restoreUserKasir = async (req, res) => {
   const usernameToken = req.user.username;
 
   try {
-    await KasirModel.restoreUserKasir(id, usernameToken);
+    await KasirModel.restoreUserKasir(id, usernameToken, req.user.idMitra);
     res.status(200).json({
       message: "Restore Kasir success",
       data: null,
@@ -174,7 +173,7 @@ const resetDeviceId = async (req, res) => {
   const usernameToken = req.user.username;
 
   try {
-    const username = await KasirModel.resetDeviceId(id, body, usernameToken);
+    const username = await KasirModel.resetDeviceId(id, body, usernameToken, req.user.idMitra);
     res.status(200).json({
       message: "Reset Device ID success",
       data: {
@@ -215,7 +214,7 @@ const changePassword = async (req, res) => {
   }
 
   try {
-    const username = await KasirModel.changePassword(id, body, usernameToken);
+    const username = await KasirModel.changePassword(id, body, usernameToken, req.user.idMitra);
     res.status(200).json({
       message: "Password changed successfully",
       data: {

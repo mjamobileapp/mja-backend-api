@@ -3,13 +3,13 @@ const jwt = require("jsonwebtoken");
 const UserMobileModel = require("../models/userMobile");
 const UsersModel = require("../models/users");
 const { generateToken } = require("../utils/jwt");
+const { getMissingRequiredFields } = require("../utils/validation");
 
 const loginUser = async (req, res) => {
   const { body } = req;
 
   // 1. Validasi Input
-  const requiredFields = ["username", "password", "deviceId", "deviceName"];
-  const missingFields = requiredFields.filter((field) => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["username", "password", "deviceId", "deviceName"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -110,8 +110,7 @@ const activateAccount = async (req, res) => {
   const { token, password, confirmPassword } = body;
 
   // 1. Validasi input
-  const requiredFields = ["token", "password", "confirmPassword"];
-  const missingFields = requiredFields.filter((field) => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["token", "password", "confirmPassword"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({

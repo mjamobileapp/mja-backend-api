@@ -1,12 +1,12 @@
 const UserOwnerModel = require("../models/userOwner");
 const { sendUserMobileCredentialEmail, sendResetPasswordEmail } = require("../utils/email");
+const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
 
 const createNewUserOwner = async (req, res) => {
-  const { body } = req;
+  const body = withAuthenticatedAuditUsername(req.body, req.user, "createdBy");
 
   // 1. Validasi field yang dibutuhkan di level controller
-  const requiredFields = ['username', 'idMitra', 'namaLengkap', 'noTelp', 'email', 'createdBy'];
-  const missingFields = requiredFields.filter(field => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["username", "idMitra", "namaLengkap", "noTelp", "email", "createdBy"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -85,10 +85,9 @@ const getUserOwnerById = async (req, res) => {
 
 const updateUserOwner = async (req, res) => {
   const { id } = req.params;
-  const { body } = req;
+  const body = withAuthenticatedAuditUsername(req.body, req.user, "updatedBy");
 
-  const requiredFields = ['namaLengkap', 'noTelp', 'email', 'updatedBy'];
-  const missingFields = requiredFields.filter(field => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["namaLengkap", "noTelp", "email", "updatedBy"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({ 

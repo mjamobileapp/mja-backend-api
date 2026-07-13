@@ -64,9 +64,14 @@ const getAksesRole = async (req, res) => {
 const saveAksesRole = async (req, res) => {
   const { idRole } = req.params;
   const menuTree = req.body;
-  const conn = await dbPool.getConnection();
+  let conn;
+
+  if (!Array.isArray(menuTree)) {
+    return res.status(400).json({ message: "Payload akses harus berupa array menu" });
+  }
 
   try {
+    conn = await dbPool.getConnection();
     await conn.beginTransaction();
 
     // 1. Hapus akses lama
@@ -92,10 +97,10 @@ const saveAksesRole = async (req, res) => {
     await conn.commit();
     res.json({ message: "Akses role berhasil diperbarui" });
   } catch (err) {
-    await conn.rollback();
+    if (conn) await conn.rollback();
     res.status(500).json({ message: "Gagal menyimpan akses", error: err.message });
   } finally {
-    conn.release();
+    if (conn) conn.release();
   }
 };
 

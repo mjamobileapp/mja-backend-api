@@ -5,8 +5,6 @@ const createSettingHarga = async (req, res) => {
   const idMitra = req.user ? req.user.idMitra : null;
   const createdBy = req.user ? req.user.username || req.user.id : null;
 
-  console.log("CREATE SETTING HARGA REQUEST:", { idMitra, cabangId, item });
-
   if (!idMitra) {
     return res.status(400).json({
       message: "idMitra tidak ditemukan di token",
@@ -75,8 +73,6 @@ const createSettingHarga = async (req, res) => {
 const getSettingHarga = async (req, res) => {
   const { cabangId } = req.query;
   const idMitra = req.user ? req.user.idMitra : null;
-
-  console.log("GET SETTING HARGA REQUEST:", { idMitra, cabangId });
 
   if (!idMitra) {
     return res.status(400).json({
