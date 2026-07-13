@@ -6736,6 +6736,110 @@
       ]
     },
     {
+      "name": "Verified core API contract",
+      "description": "Request di folder ini diverifikasi oleh test/coreDomains.integration.test.js. Gunakan token sesuai domain dan ganti placeholder ID sebelum mengirim request.",
+      "item": [
+        {
+          "name": "Backoffice - List mesin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/backoffice/mesin?status=all"
+          },
+          "response": []
+        },
+        {
+          "name": "Backoffice - Dashboard mesin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/backoffice/dashboard/getmesin"
+          },
+          "response": []
+        },
+        {
+          "name": "Backoffice - Get akses role",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/backoffice/akses/role/{{roleId}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Kasir - Create transaksi",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"totalBayar\": 20000,\n  \"metodePembayaran\": \"CASH\",\n  \"items\": [{ \"jenisLayanan\": \"cuci\", \"jumlah\": 1, \"subtotal\": 20000 }]\n}"
+            },
+            "url": "{{baseUrl}}/api/kasir/transaksi"
+          },
+          "response": []
+        },
+        {
+          "name": "Kasir - Pending transaksi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/kasir/transaksi/pending"
+          },
+          "response": []
+        },
+        {
+          "name": "Owner - Cashflow cabang",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/owner/cashflow?cabangId={{cabangId}}&filter=hari_ini"
+          },
+          "response": []
+        },
+        {
+          "name": "Owner - Pendapatan cabang",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/owner/cashflow/pendapatan?cabangId={{cabangId}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Kasir - Create pengeluaran",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": {{itemId}},\n  \"jumlahBarang\": 1,\n  \"nominal\": 5000\n}"
+            },
+            "url": "{{baseUrl}}/api/owner/cashflow/pengeluaran"
+          },
+          "response": []
+        },
+        {
+          "name": "Owner - History transaksi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/owner/history/transaksi?cabangId={{cabangId}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Kasir - History transaksi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/kasir/history/transaksi"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Owner",
       "item": []
     },
@@ -6761,6 +6865,18 @@
     },
     {
       "key": "token",
+      "value": ""
+    },
+    {
+      "key": "roleId",
+      "value": ""
+    },
+    {
+      "key": "cabangId",
+      "value": ""
+    },
+    {
+      "key": "itemId",
       "value": ""
     }
   ]

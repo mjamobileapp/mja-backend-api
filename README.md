@@ -1,15 +1,57 @@
+# MJA Smart Laundry Backend API
 
-## 🚀 Project MJA Smart Laundry
-Project MJA Smart Laundry adalah sebuah aplikasi berbasis mobile yang dirancang untuk memberikan solusi manajemen operasional terpadu (End-to-End) yang menggabungkan kecanggihan Aplikasi Mobile dengan Internet of Things (IoT). Aplikasi ini bertujuan untuk mengotomatisasi bisnis, menutup celah kecurangan, dan memantau seluruh cabang dalam satu genggaman.
+Backend Express.js dan MySQL untuk backoffice, aplikasi mobile owner/kasir, transaksi laundry, serta integrasi MQTT mesin.
 
-## 🛠️ Teknologi yang Digunakan
-- Backend: Express.js (Framework Node.JS)
-- Database: MySQL
+## Prasyarat
 
-## ⚙️ Cara Menjalankan System Aplikasi
-Langkah-langkah berikut akan membantu Anda menjalankan aplikasi ini secara lokal:
+- Node.js 20 atau lebih baru.
+- npm.
+- MySQL yang dapat diakses oleh konfigurasi aplikasi.
+- Broker MQTT hanya diperlukan untuk fitur kontrol mesin.
 
-```bash [Terminal]
-git clone https://github.com/mjamobileapp/mja-backend-api.git
-npm i
+## Setup lokal
+
+1. Isi `.env` lokal dengan nilai database dan `JWT_SECRET` yang aman.
+2. Jalankan `npm install`.
+3. Jalankan `npm start` untuk server biasa atau `npm run dev` untuk mode nodemon.
+
+Server default berjalan pada port `9090` dan menyediakan health check di `GET /`.
+
+## Konfigurasi environment
+
+Nilai wajib saat server dijalankan:
+
+- `JWT_SECRET`
+- `DB_HOST`
+- `DB_USERNAME`
+- `DB_NAME`
+
+Konfigurasi runtime dibaca dari `.env`. Jangan commit `.env`, token, atau credential.
+
+## Quality check
+
+```bash
+npm test
+npm run check:syntax
+npm run lint
+npm run check
 ```
+
+`npm run check` menjalankan pemeriksaan syntax seluruh JavaScript aplikasi serta test bawaan Node.js. Unit test tidak membutuhkan database atau broker MQTT; suite juga mencakup integration test mobile dan domain inti pada schema test terisolasi.
+
+Integration test mobile memakai schema kosong `${DB_NAME}_refactor_test`. Buat schema tersebut dari struktur database aplikasi tanpa menyalin data produksi sebelum menjalankan seluruh suite test.
+
+## Struktur singkat
+
+```text
+src/app.js          membuat Express app tanpa membuka port
+src/server.js       memvalidasi environment, membuka port, dan memulai MQTT listener
+src/routes/         definisi endpoint dan middleware
+src/controller/     validasi request serta response HTTP
+src/models/         query MySQL dan transaction
+src/middleware/     authentication, error handling, dan response protection
+src/utils/          JWT, date, validation, email, dan MQTT
+test/               baseline automated tests
+```
+
+Dokumentasi audit dan roadmap refactor berada di `docs/code-review/`.
