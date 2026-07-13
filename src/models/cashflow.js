@@ -1,5 +1,5 @@
 const dbPool = require("../config/database");
-const { formatTanggalJamWIB, getDateFilterCondition } = require("../utils/date");
+const { formatTanggalJamWIB, getDateFilterCondition, getJakartaSqlDate } = require("../utils/date");
 
 const getCashflow = (cabangId, idMitra, cabangId2, idMitra2, filter) => {
   const pemasukanDateFilter = getDateFilterCondition("waktuOrder", filter);
@@ -36,7 +36,7 @@ const getPendapatan = async (cabangId, idMitra, filter) => {
     const [rows] = await dbPool.execute(
       `SELECT 
         o.id AS idTransaksi,
-        DATE(o.waktuOrder) AS tanggalGroup,
+        ${getJakartaSqlDate("o.waktuOrder")} AS tanggalGroup,
         o.waktuOrder AS waktuDetail,
         o.totalBayar AS nominal,
         k.namaLengkap AS namaKasir
@@ -98,7 +98,7 @@ const getPengeluaran = async (cabangId, idMitra, filter) => {
     const [rows] = await dbPool.execute(
       `SELECT 
         p.id AS idPengeluaran,
-        DATE(p.waktuPengeluaran) AS tanggalGroup,
+        ${getJakartaSqlDate("p.waktuPengeluaran")} AS tanggalGroup,
         p.waktuPengeluaran AS waktuDetail,
         CONCAT(i.namaItem, ' (x', p.jumlahBarang, ')') AS deskripsi,
         p.nominal,
@@ -311,7 +311,7 @@ const createPengeluaran = async (data) => {
     const jumlahBarangValue = jumlahBarang || 0;
     const [result] = await connection.execute(
       `INSERT INTO tbl_pengeluaran (idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal, waktuPengeluaran)
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+       VALUES (?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
       [idMitra, cabangId, idUserMobile, itemId, jumlahBarangValue, nominal]
     );
 

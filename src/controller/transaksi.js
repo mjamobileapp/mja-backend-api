@@ -16,6 +16,53 @@ const isPositiveInteger = (value) => Number.isInteger(Number(value)) && Number(v
 
 const getRequestDateFilter = (req) => req.query.filter ?? req.query.periode ?? req.query.tanggal ?? "";
 
+const getMachineControlContext = async (req) => {
+  const actor = req.machineControlActor;
+  let idMitra;
+  let cabangId;
+
+  if (actor?.type === "owner") {
+    idMitra = Number(req.user.idMitra);
+    cabangId = Number(req.body.cabangId);
+
+    if (req.body.idMitra !== undefined && Number(req.body.idMitra) !== idMitra) {
+      return { statusCode: 403, error: "Owner hanya dapat mengontrol mesin mitra sendiri" };
+    }
+  } else if (actor?.type === "backoffice") {
+    idMitra = Number(req.body.idMitra);
+    cabangId = Number(req.body.cabangId);
+  } else {
+    idMitra = Number(req.user?.idMitra);
+    cabangId = Number(req.user?.cabang_id || req.user?.cabangId);
+  }
+
+  if (!isPositiveInteger(idMitra) || !isPositiveInteger(cabangId)) {
+    return { statusCode: 400, error: "idMitra dan cabangId wajib diisi dan harus integer lebih dari 0" };
+  }
+
+  const cabangValid = await TransaksiModel.isActiveCabangForMitra(idMitra, cabangId);
+  if (!cabangValid) {
+    return { statusCode: 403, error: "Cabang tidak sesuai dengan mitra atau tidak aktif" };
+  }
+
+  const resolvedActor = actor || {
+    type: "kasir",
+    id: req.user?.id,
+    username: req.user?.username,
+  };
+
+  if (!isPositiveInteger(resolvedActor.id)) {
+    return { statusCode: 401, error: "Token tidak valid" };
+  }
+
+  return {
+    idMitra,
+    cabangId,
+    kasirId: resolvedActor.type === "kasir" ? Number(resolvedActor.id) : null,
+    actor: resolvedActor,
+  };
+};
+
 const getJumlahTransaksi = async (req, res) => {
   const idMitra = req.user ? req.user.idMitra : null;
   const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
@@ -213,15 +260,6 @@ const createTransaksi = async (req, res) => {
 
 const startMesin = async (req, res) => {
   const { mesinId, invoiceNumber } = req.body;
-  const idMitra = req.user ? req.user.idMitra : null;
-  const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
-  const kasirId = req.user ? req.user.id : null;
-
-  if (!idMitra || !cabangId || !kasirId) {
-    return res.status(401).json({
-      error: "Token tidak valid",
-    });
-  }
 
   if (!isPositiveInteger(mesinId)) {
     return res.status(400).json({
@@ -236,10 +274,13 @@ const startMesin = async (req, res) => {
   }
 
   try {
+    const context = await getMachineControlContext(req);
+    if (context.error) {
+      return res.status(context.statusCode).json({ error: context.error });
+    }
+
     await TransaksiModel.startMesin({
-      idMitra,
-      cabangId,
-      kasirId,
+      ...context,
       mesinId: Number(mesinId),
       invoiceNumber: invoiceNumber.trim(),
     });
@@ -265,15 +306,6 @@ const startMesin = async (req, res) => {
 
 const stopMesin = async (req, res) => {
   const { mesinId, invoiceNumber } = req.body;
-  const idMitra = req.user ? req.user.idMitra : null;
-  const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
-  const kasirId = req.user ? req.user.id : null;
-
-  if (!idMitra || !cabangId || !kasirId) {
-    return res.status(401).json({
-      error: "Token tidak valid",
-    });
-  }
 
   if (!isPositiveInteger(mesinId)) {
     return res.status(400).json({
@@ -288,10 +320,13 @@ const stopMesin = async (req, res) => {
   }
 
   try {
+    const context = await getMachineControlContext(req);
+    if (context.error) {
+      return res.status(context.statusCode).json({ error: context.error });
+    }
+
     await TransaksiModel.stopMesin({
-      idMitra,
-      cabangId,
-      kasirId,
+      ...context,
       mesinId: Number(mesinId),
       invoiceNumber: invoiceNumber ? invoiceNumber.trim() : null,
     });

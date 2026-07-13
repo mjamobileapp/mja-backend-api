@@ -1,6 +1,7 @@
 const REQUIRED_SERVER_ENV = ["JWT_SECRET", "DB_HOST", "DB_USERNAME", "DB_NAME"];
 const DEFAULT_PUBLIC_AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const DEFAULT_PUBLIC_AUTH_RATE_LIMIT_MAX_ATTEMPTS = 5;
+const DEFAULT_EMAIL_SEND_TIMEOUT_MS = 15 * 1000;
 
 const getPositiveInteger = (value, fallback) => {
   const parsedValue = Number.parseInt(value, 10);
@@ -64,8 +65,12 @@ const getPublicAuthRateLimitConfig = (environment = process.env) => ({
   ),
 });
 
+const getEmailSendTimeoutMs = (environment = process.env) =>
+  getPositiveInteger(environment.EMAIL_SEND_TIMEOUT_MS, DEFAULT_EMAIL_SEND_TIMEOUT_MS);
+
 module.exports = {
   getAllowedOrigins,
+  getEmailSendTimeoutMs,
   getMissingServerEnv,
   getPublicAuthRateLimitConfig,
   getRequiredJwtSecret,

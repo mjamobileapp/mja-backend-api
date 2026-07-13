@@ -296,7 +296,7 @@ Minimal test baseline:
 - [ ] Pisahkan security update dari refactor behavior bila risikonya besar.
 - [x] Perbaiki encoding README.
 - [x] Dokumentasikan prerequisites, setup, environment variable, start, test, lint, struktur proyek, dan troubleshooting.
-- [ ] Deferred: refresh seluruh contoh legacy pada Postman collection setelah route stabil. Folder `Verified core API contract`, termasuk tiga reset-password publik generic HTTP 202, sudah tersinkron dan teruji.
+- [x] Refresh seluruh contoh legacy pada Postman collection setelah route stabil. Folder `Backoffice route catalog` berisi 63 request yang disinkronkan terhadap route aktif, memakai variable auth/ID, dan body JSON valid; folder `Verified core API contract` mempertahankan 13 request yang memiliki bukti test, termasuk tiga reset-password publik generic HTTP 202.
 
 ### Tahap 4 - Susun Roadmap Refactor
 
@@ -447,7 +447,7 @@ Jika jawabannya tidak jelas, catat finding terlebih dahulu dan jangan extract.
 - [x] Error response tidak membocorkan detail internal.
 - [x] Authorization tenant/cabang memiliki negative test.
 - [ ] Tidak ada secret atau data sensitif baru yang ter-track/ter-log.
-- [ ] Deferred: dokumentasi setup, architecture, environment, test, dan API untuk scope aktif sudah sinkron; refresh Postman legacy masih tersisa.
+- [x] Dokumentasi setup, architecture, environment, test, dan API untuk scope aktif sudah sinkron. Postman membedakan route catalog tersinkron dari request verified agar contract route tidak disamakan dengan smoke test runtime.
 - [x] Perubahan high-risk dipisah dari cleanup kosmetik dan dapat di-rollback melalui commit delivery ini.
 
 ## Definition of Done per Refactor Task

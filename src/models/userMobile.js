@@ -24,7 +24,7 @@ const createAbsensi = async (idUserMobile, cabangId) => {
   );
 
   const [result] = await dbPool.execute(
-    "INSERT INTO tbl_absensi (idUserMobile, cabangId, waktuLogin) VALUES (?, ?, NOW())",
+    "INSERT INTO tbl_absensi (idUserMobile, cabangId, waktuLogin) VALUES (?, ?, UTC_TIMESTAMP())",
     [idUserMobile, cabangId]
   );
   return result;
@@ -32,7 +32,7 @@ const createAbsensi = async (idUserMobile, cabangId) => {
 
 const recordAbsensiLogout = async (idUserMobile, cabangId) => {
   const [result] = await dbPool.execute(
-    "UPDATE `tbl_absensi` SET `waktuLogout` = NOW() WHERE `idUserMobile` = ? AND `waktuLogout` IS NULL",
+    "UPDATE `tbl_absensi` SET `waktuLogout` = UTC_TIMESTAMP() WHERE `idUserMobile` = ? AND `waktuLogout` IS NULL",
     [idUserMobile]
   );
   return result;

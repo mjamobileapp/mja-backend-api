@@ -1,11 +1,11 @@
 const dbPool = require("../config/database");
-const { formatTanggalWIB } = require("../utils/date");
+const { formatTanggalWIB, formatJamWIB, getJakartaSqlDate } = require("../utils/date");
 
 const getHistoryTransaksi = async (cabangId, idMitra) => {
   try {
     const [rows] = await dbPool.execute(
       `SELECT 
-        DATE_FORMAT(o.waktuOrder, '%Y-%m-%d') AS tanggalGroup,
+        ${getJakartaSqlDate("o.waktuOrder")} AS tanggalGroup,
         o.idUserMobile AS idKasir,
         k.namaLengkap AS namaKasir,
         COUNT(o.id) AS totalTransaksiKasir,
@@ -17,7 +17,7 @@ const getHistoryTransaksi = async (cabangId, idMitra) => {
         AND o.idMitra = ?
         AND (o.statusPembayaran = 'PAID' OR o.statusPembayaran IS NULL)
       GROUP BY 
-        DATE_FORMAT(o.waktuOrder, '%Y-%m-%d'), 
+        ${getJakartaSqlDate("o.waktuOrder")},
         o.idUserMobile, 
         k.namaLengkap
       ORDER BY 
@@ -68,7 +68,7 @@ const getHistoryTransaksiKasir = async ({ cabangId, tanggal, namaKasir }) => {
   try {
     let SQLQuery = `
       SELECT 
-        DATE(o.waktuOrder) AS tanggalGroup,
+        ${getJakartaSqlDate("o.waktuOrder")} AS tanggalGroup,
         u.namaLengkap AS namaKasir,
         SUM(CASE WHEN d.jenisLayanan IN ('cuci', 'kering') THEN 1 ELSE 0 END) AS jumlahTransaksi
       FROM tbl_order_laundry o
@@ -79,7 +79,7 @@ const getHistoryTransaksiKasir = async ({ cabangId, tanggal, namaKasir }) => {
     const values = [cabangId];
 
     if (tanggal) {
-      SQLQuery += " AND DATE(o.waktuOrder) = ?";
+      SQLQuery += ` AND ${getJakartaSqlDate("o.waktuOrder")} = ?`;
       values.push(tanggal);
     }
 
@@ -89,7 +89,7 @@ const getHistoryTransaksiKasir = async ({ cabangId, tanggal, namaKasir }) => {
     }
 
     SQLQuery += `
-      GROUP BY DATE(o.waktuOrder), u.namaLengkap
+      GROUP BY ${getJakartaSqlDate("o.waktuOrder")}, u.namaLengkap
       ORDER BY tanggalGroup DESC, u.namaLengkap ASC
     `;
 
@@ -133,14 +133,6 @@ const getHistoryMesin = async (cabangId, idMitra) => {
     if (rows.length === 0) {
       throw new Error("Data tidak ditemukan");
     }
-
-    // Format jam ke format "HH:mm WIB"
-    const formatJamWIB = (dateString) => {
-      const date = new Date(dateString);
-      const jam = String(date.getHours()).padStart(2, '0');
-      const menit = String(date.getMinutes()).padStart(2, '0');
-      return `${jam}:${menit} WIB`;
-    };
 
     // Mapping data mentah dari SQL ke format JSON UI
     const finalResponse = rows.map(row => {

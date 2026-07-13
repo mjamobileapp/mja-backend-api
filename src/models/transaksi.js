@@ -1,5 +1,5 @@
 const dbPool = require("../config/database");
-const { getDateFilterCondition } = require("../utils/date");
+const { getDateFilterCondition, getTodayStringYYYYMMDD } = require("../utils/date");
 const { publishAndWaitAck } = require("../utils/mqttClient");
 
 const jenisMesinToLayanan = {
@@ -16,13 +16,10 @@ const createHttpError = (message, statusCode) => {
   return error;
 };
 
-const getInvoiceDate = async (connection) => {
-  const [rows] = await connection.execute("SELECT DATE_FORMAT(NOW(), '%Y%m%d') AS invoiceDate");
-  return rows[0].invoiceDate;
-};
+const getInvoiceDate = () => getTodayStringYYYYMMDD();
 
 const generateInvoiceNumber = async (connection, cabangId) => {
-  const invoiceDate = await getInvoiceDate(connection);
+  const invoiceDate = getInvoiceDate();
   const prefix = `INV-${cabangId}-${invoiceDate}-`;
 
   const [rows] = await connection.execute(
@@ -118,7 +115,7 @@ const reduceStockAndNotify = async (
     `UPDATE tbl_stok_cabang
      SET stokSekarang = stokSekarang - ?,
          updatedBy = ?,
-         updatedDate = NOW()
+         updatedDate = UTC_TIMESTAMP()
      WHERE idMitra = ? AND cabangId = ? AND itemId = ?`,
     [jumlah, updatedBy, idMitra, cabangId, item.itemId]
   );
@@ -171,7 +168,7 @@ const createTransaksi = async (data) => {
         metodePembayaran,
         statusPembayaran,
         waktuOrder
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
       [invoiceNumber, idMitra, cabangId, idUserMobile, totalBayar, metodePembayaran, "PAID"]
     );
 
@@ -253,21 +250,48 @@ const createTransaksi = async (data) => {
 
 const insertLogMesin = async (
   connection,
-  { idMitra, cabangId, mesinId, kasirId, invoiceNumber, statusPerintah, errorMessage = null }
+  { idMitra, cabangId, mesinId, kasirId, actor, invoiceNumber, statusPerintah, errorMessage = null }
 ) => {
+  const auditActor = actor || { type: "kasir", id: kasirId, username: null };
   await connection.execute(
     `INSERT INTO tbl_log_mesin (
       idMitra,
       cabangId,
       mesinId,
       kasirId,
+      actorType,
+      actorId,
+      actorUsername,
       invoiceNumber,
       statusPerintah,
       errorMessage,
       waktuLog
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-    [idMitra, cabangId, mesinId, kasirId, invoiceNumber, statusPerintah, errorMessage]
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
+    [
+      idMitra,
+      cabangId,
+      mesinId,
+      kasirId,
+      auditActor.type,
+      auditActor.id,
+      auditActor.username || null,
+      invoiceNumber,
+      statusPerintah,
+      errorMessage,
+    ]
   );
+};
+
+const isActiveCabangForMitra = async (idMitra, cabangId) => {
+  const [rows] = await dbPool.execute(
+    `SELECT c.id
+     FROM tbl_cabang c
+     JOIN tbl_mitra m ON m.id = c.idMitra
+     WHERE c.id = ? AND c.idMitra = ? AND c.statusAktif = 1 AND m.statusAktif = 1`,
+    [cabangId, idMitra]
+  );
+
+  return rows.length > 0;
 };
 
 const getMesinForStart = async (connection, { mesinId, idMitra, cabangId }) => {
@@ -387,7 +411,7 @@ const validateDryerCanStart = async (connection, orderId) => {
   }
 };
 
-const startMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber }) => {
+const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNumber }) => {
   const connection = await dbPool.getConnection();
   let shouldRollback = false;
 
@@ -442,6 +466,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber }
         cabangId,
         mesinId,
         kasirId,
+        actor,
         invoiceNumber,
         statusPerintah: "failed",
         errorMessage: mqttError.message,
@@ -471,6 +496,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber }
       cabangId,
       mesinId,
       kasirId,
+      actor,
       invoiceNumber,
       statusPerintah: "success",
     });
@@ -493,7 +519,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber }
   }
 };
 
-const stopMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber = null }) => {
+const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNumber = null }) => {
   const connection = await dbPool.getConnection();
   let shouldRollback = false;
 
@@ -536,6 +562,7 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber = 
         cabangId,
         mesinId,
         kasirId,
+        actor,
         invoiceNumber,
         statusPerintah: "failed",
         errorMessage: mqttError.message,
@@ -558,6 +585,7 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber = 
       cabangId,
       mesinId,
       kasirId,
+      actor,
       invoiceNumber,
       statusPerintah: "success",
     });
@@ -635,6 +663,7 @@ module.exports = {
   createTransaksi,
   getPendingTransaksi,
   getJumlahTransaksi,
+  isActiveCabangForMitra,
   startMesin,
   stopMesin,
 };

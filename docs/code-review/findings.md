@@ -171,12 +171,12 @@
 
 ## REV-018 - Quality gate lacked lint and documentation was not synchronized
 
-- Status: Fixed baseline; legacy Postman examples remain an explicit follow-up.
+- Status: Fixed.
 - Prioritas: P2
 - Kategori: Tooling, Documentation
 - Lokasi: `eslint.config.js`, `package.json`, `README.md`, `docs/API_LIST.md`, Postman collection.
-- Perbaikan: ESLint is part of `npm run check`; roadmap/inventory/findings now distinguish completed work from deferred broker/device and contract-refresh work; verified core requests are added to Postman.
-- Test: `npm run check` and Postman JSON parse validation.
+- Perbaikan: ESLint is part of `npm run check`; `googleapis` yang tidak dipakai dihapus setelah audit source; Postman memisahkan 63 request route catalog tersinkron dari 13 request verified core dengan bukti test. Katalog memakai variable role-specific, tidak lagi menyimpan ID/email contoh lama, dan seluruh raw body JSON valid.
+- Test: `npm run check`, `npm audit --omit=dev`, dan `npm run check:postman`.
 
 ## REV-019 - MQTT and server lifecycle had no graceful cleanup
 
@@ -200,7 +200,7 @@
 
 ## REV-021 - Owner/kasir route families lacked an explicit authorization matrix
 
-- Status: Fixed for current owner/kasir route families; legacy machine-control alias remains a separate contract follow-up.
+- Status: Fixed for current owner/kasir route families and the supported machine-control alias contract.
 - Prioritas: P1
 - Kategori: Authorization, Data Isolation
 - Lokasi: `src/routes/{kasir,absensiKasir,history,historyKasir,hargaCabang,transaksi,cashflow}.js`, `src/middleware/authorization.js`, `src/controller/cashflow.js`, `src/models/cashflow.js`.
@@ -218,6 +218,47 @@
 - Perbaikan: JWT secret kini wajib tersedia saat email token dibuat atau diverifikasi. Limiter in-memory per alamat IP membatasi login, activation, dan seluruh reset password bersama-sama. Reset password selalu menjawab HTTP 202 dengan pesan generik, baik akun tidak ada maupun email gagal terkirim.
 - Test: `test/environment.config.test.js`, `test/publicAuthRateLimit.middleware.test.js`, dan `test/resetPassword.controller.test.js` membuktikan kegagalan secret eksplisit, window limiter, dan respons reset yang identik.
 
+## REV-023 - Role lookup and delete interpolated a route parameter into SQL
+
+- Status: Fixed
+- Prioritas: P1
+- Kategori: Security, SQL
+- Lokasi: `src/models/roles.js`, `src/controller/roles.js`.
+- Bukti: `idRole` dari route sebelumnya dibentuk langsung ke query `SELECT` dan `DELETE`. Nilai seperti `1 OR 1=1` dapat mengubah predicate SQL.
+- Perbaikan: model memakai placeholder `?` dan controller menerima hanya integer positif aman sebelum memanggil model pada get, update, dan delete.
+- Test: `test/roles.security.test.js` membuktikan ID dibinding sebagai parameter dan payload berbentuk injeksi ditolak dengan HTTP 400 tanpa memanggil model.
+
+## REV-024 - Timestamp UTC was formatted and filtered using process/database local time
+
+- Status: Fixed
+- Prioritas: P2
+- Kategori: Data Integrity, Timezone
+- Lokasi: `src/utils/date.js`, `src/models/{transaksi,cashflow,history,kasir,userMobile}.js`.
+- Bukti: timestamp disimpan dalam UTC, tetapi formatter WIB sebelumnya memakai timezone proses Node. Filter dan grouping SQL memakai `NOW()`, `CURDATE()`, atau `DATE(column)`, sehingga hari bisnis berubah bila VPS atau MySQL tidak berada di WIB.
+- Perbaikan: kebijakan waktu sekarang eksplisit: `DATETIME` disimpan sebagai UTC; penulisan yang memakai fungsi MySQL menggunakan `UTC_TIMESTAMP()`; invoice, formatter, filter, grouping laporan, dan jam absensi mengonversi UTC ke `Asia/Jakarta`/`+07:00` secara eksplisit.
+- Test: `test/date.utils.test.js` mencakup batas tengah malam UTC ke WIB serta filter hari Jakarta.
+
+## REV-025 - External email delivery could wait indefinitely
+
+- Status: Fixed
+- Prioritas: P2
+- Kategori: Reliability, External Integration
+- Lokasi: `src/utils/email.js`, `src/config/environment.js`.
+- Bukti: reset password menunggu `sendMail()` sebelum mengembalikan respons generik HTTP 202. Kegagalan Gmail/OAuth atau koneksi SMTP yang menggantung dapat menahan request tanpa batas yang dikendalikan aplikasi.
+- Perbaikan: `EMAIL_SEND_TIMEOUT_MS` membatasi total pengiriman email (default 15 detik); timeout Nodemailer untuk DNS, koneksi, greeting, dan socket memakai batas yang sama; saat batas total tercapai transporter ditutup dan error `EMAIL_SEND_TIMEOUT` ditangani oleh flow respons generik yang ada.
+- Test: `test/email.utils.test.js` membuktikan pengiriman sukses dan penutupan transporter saat pengiriman menggantung; `test/environment.config.test.js` memverifikasi konfigurasi timeout.
+
+## REV-026 - Machine-control alias did not implement the owner/backoffice mitigation contract
+
+- Status: Fixed
+- Prioritas: P2
+- Kategori: Authorization, Audit Integrity
+- Lokasi: `src/routes/transaksiStartMesin.js`, `src/middleware/authCombined.js`, `src/controller/transaksi.js`, `src/models/transaksi.js`.
+- Bukti: alias `/api/transaksi/startmesin|stopmesin` sebelumnya hanya menerima token mobile. Owner tidak memiliki `cabangId` token, backoffice tidak dapat melewati autentikasi, dan kasir justru dapat memakai alias. Selain itu seluruh log dipaksa ke `kasirId`.
+- Perbaikan: alias memakai combined authentication khusus owner/backoffice. Owner selalu memakai `idMitra` token dan wajib mengirim cabang milik mitranya; backoffice wajib mengirim pasangan `idMitra`/`cabangId` yang diverifikasi aktif di database; kasir tetap khusus `/api/kasir/transaksi/*`. Log menyimpan `actorType`, `actorId`, dan `actorUsername`, sementara `kasirId` hanya diisi untuk actor kasir.
+- Migrasi: jalankan `npm run migrate:machine-log-actor` sebelum deploy agar kolom actor tersedia dan `kasirId` menjadi nullable.
+- Test: `test/transaksi.machineControl.controller.test.js` dan `test/coreDomains.integration.test.js` memverifikasi scope owner/backoffice, penolakan kasir, spoofing tenant, serta audit actor yang diteruskan ke model.
+
 ## PRE verification matrix
 
 | PRE | Final status | Evidence |
@@ -232,11 +273,11 @@
 | PRE-008 | Fixed for pilot; deferred repository-wide | REV-005 |
 | PRE-009 | Deferred | Large-model decomposition needs contract capture |
 | PRE-010 | Deferred | Response/token contract normalization is not repository-wide |
-| PRE-011 | Deferred | Timezone storage policy remains undecided |
+| PRE-011 | Fixed | REV-024 |
 | PRE-012 | Deferred | Explicit-column migration needs response snapshots |
-| PRE-013 | Deferred | Both machine-control paths remain supported aliases |
+| PRE-013 | Accepted | Both machine-control paths remain supported aliases; role and tenant contract is covered by REV-026 |
 | PRE-014 | Fixed | Configured CORS and startup validation in REV-006 |
-| PRE-015 | Deferred | npm is standardized; frontend dependency usage still needs audit |
+| PRE-015 | Fixed | npm is standardized; unused direct dependency `googleapis` and its transitive lockfile entries were removed after source audit |
 | PRE-016 | Fixed baseline; device parity deferred | REV-015, REV-019 |
 | PRE-017 | Fixed baseline | README and quality instructions updated |
 | PRE-018 | Deferred | Operational logs/comments require domain-by-domain review |
@@ -249,8 +290,8 @@
 
 ## Formal batch disposition
 
-- Status: Accepted/Deferred register recorded
+- Status: Accepted/Completed register recorded
 - Lokasi: `docs/code-review/refactor-roadmap.md`.
-- Keputusan: Batch C, G, dan H diterima untuk checkout ini karena mitigasi yang menjadi tujuan scope telah dibuktikan oleh REV-002, REV-020, REV-021, serta fake MQTT coverage pada REV-015. Batch D, F, dan I didefer secara eksplisit karena memerlukan keputusan business/operasional atau contract capture sebelum perubahan aman dilakukan.
-- Batasan: status `Accepted` bukan `Completed`; ia tidak menghapus technical debt yang dipisahkan ke task berikutnya. Status `Deferred` memiliki trigger pembukaan dan bukti penutupan yang wajib dipenuhi.
+- Keputusan: Batch C, D, F, G, dan H diterima untuk checkout ini karena mitigasi scope aktif telah memiliki bukti. Batch I selesai setelah audit dependency dan penyegaran koleksi Postman. Debt structured logging dan explicit-column migration tetap dipisahkan agar tidak menjadi completion claim tersembunyi.
+- Batasan: status `Accepted` bukan `Completed`; ia tidak menghapus technical debt yang dipisahkan ke task berikutnya. Batch I `Completed` hanya untuk scope dependency dan dokumentasi yang tercatat di roadmap.
 - Bukti: formal disposition register memuat alasan, trigger pembukaan, dan required closure evidence untuk seluruh batch terkait.

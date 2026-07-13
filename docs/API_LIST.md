@@ -25,7 +25,7 @@ Base URL: `http://localhost:9090`. Semua endpoint selain yang ditandai **public*
 |---|---|---|
 | Mobile auth | `/api/mobile` | `POST /login` **public, rate limited**, `POST /activateaccount` **public, rate limited**, `POST /logout`, `GET /notifications`, `PUT /notifications/:id/read` |
 | Transaksi kasir | `/api/kasir/transaksi` | `GET /`, `GET /pending`, `POST /`, `POST /startmesin`, `POST /stopmesin` (kasir) |
-| Mesin legacy | `/api/transaksi` | `POST /startmesin`, `POST /stopmesin` |
+| Mesin mitigasi | `/api/transaksi` | `POST /startmesin`, `POST /stopmesin` (owner mengirim `cabangId` untuk mitra tokennya; backoffice mengirim `idMitra` dan `cabangId`; kasir ditolak) |
 | Manajemen kasir owner | `/api/owner/kasir` | `GET /absensi`, `POST /`, `GET /`, `GET /:id`, `PUT /:id`, `DELETE /:id`, `POST /:id/restore`, `PUT /:id/resetdeviceid`, `POST /:id/changepassword`; seluruh operasi manajemen memerlukan role owner; `POST /:email/resetpassword` **public, rate limited, generic HTTP 202** |
 | Absensi kasir | `/api/kasir/absensi` | `GET /` (kasir, cabang token) |
 | Stok minimum owner | `/api/owner/stokmitra` | `GET /`, `POST /`, `PUT /:id`, `GET /mitra/:idMitra` |
@@ -34,4 +34,4 @@ Base URL: `http://localhost:9090`. Semua endpoint selain yang ditandai **public*
 | History kasir | `/api/kasir/history` | `GET /transaksi` (kasir, cabang token) |
 | Harga cabang owner | `/api/owner/settingharga` | `GET /`, `POST /` (owner) |
 
-Payload dan response detail harus mengikuti controller masing-masing. Folder `Verified core API contract` pada Postman collection memuat request yang diverifikasi oleh integration atau controller test, termasuk reset password publik yang selalu merespons HTTP 202 secara generik. Contoh lama di folder lain tetap perlu direfresh sebelum dijadikan acuan contract baru.
+Payload dan response detail harus mengikuti controller masing-masing. Koleksi Postman memiliki `Backoffice route catalog` berisi 63 request yang disinkronkan terhadap route aktif, variable auth/ID, dan body JSON valid. Folder `Verified core API contract` memuat 13 request dengan bukti integration atau controller test, termasuk reset password publik yang selalu merespons HTTP 202 secara generik. Route catalog tidak menyatakan bahwa setiap request telah smoke-tested satu per satu.

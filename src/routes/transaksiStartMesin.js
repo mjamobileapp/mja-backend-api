@@ -1,10 +1,10 @@
 const express = require("express");
 const TransaksiController = require("../controller/transaksi");
-const { authenticateMobileWithErrorResponse } = require("../middleware/authMobile");
+const { authenticateBackofficeOrOwnerMachineControl } = require("../middleware/authCombined");
 
 const router = express.Router();
 
-router.post("/startmesin", authenticateMobileWithErrorResponse, TransaksiController.startMesin);
-router.post("/stopmesin", authenticateMobileWithErrorResponse, TransaksiController.stopMesin);
+router.post("/startmesin", authenticateBackofficeOrOwnerMachineControl(), TransaksiController.startMesin);
+router.post("/stopmesin", authenticateBackofficeOrOwnerMachineControl(), TransaksiController.stopMesin);
 
 module.exports = router;

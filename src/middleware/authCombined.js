@@ -116,8 +116,47 @@ const authenticateBackofficeOrOwnerKasir = () => {
   };
 };
 
+const authenticateBackofficeOrOwnerMachineControl = () => {
+  return async (req, res, next) => {
+    try {
+      const user = await verifyBackofficeToken(req);
+      req.user = user;
+      req.machineControlActor = {
+        type: "backoffice",
+        id: user.id,
+        username: user.username,
+      };
+      return next();
+    } catch (backofficeError) {
+      try {
+        const user = await verifyMobileToken(req);
+
+        if (String(user.role || "").toLowerCase() !== "owner") {
+          return res.status(403).json({
+            success: false,
+            code: "FORBIDDEN",
+            message: "Akses alias kontrol mesin hanya diizinkan untuk owner atau backoffice",
+          });
+        }
+
+        req.user = user;
+        req.machineControlActor = {
+          type: "owner",
+          id: user.id,
+          username: user.username,
+        };
+        return next();
+      } catch (mobileError) {
+        const error = mobileError.statusCode ? mobileError : backofficeError;
+        return sendAuthError(res, error);
+      }
+    }
+  };
+};
+
 module.exports = {
   authenticateBackofficeOrOwner,
   authenticateBackofficeOrOwnerKasirCabang,
   authenticateBackofficeOrOwnerKasir,
+  authenticateBackofficeOrOwnerMachineControl,
 };

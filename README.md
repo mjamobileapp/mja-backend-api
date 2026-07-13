@@ -33,8 +33,17 @@ Konfigurasi opsional untuk endpoint autentikasi publik:
 - `PUBLIC_AUTH_RATE_LIMIT_MAX` — maksimum percobaan per alamat IP dan jenis flow (default `5`).
 - `PUBLIC_AUTH_RATE_LIMIT_WINDOW_MS` — durasi window limiter dalam milidetik (default `900000` atau 15 menit).
 - `TRUST_PROXY=true` — aktifkan hanya bila aplikasi berada di balik reverse proxy tepercaya.
+- `EMAIL_SEND_TIMEOUT_MS` — batas total pengiriman email, termasuk koneksi, DNS, greeting SMTP, dan `sendMail()` (default `15000`).
 
 Saat `TRUST_PROXY=true`, Express menggunakan alamat klien yang diteruskan oleh reverse proxy untuk limiter. Endpoint login, aktivasi akun, dan reset password akan mengembalikan HTTP `429` saat batas ini terlampaui. Reset password selalu mengembalikan HTTP `202` dengan respons generik agar email yang terdaftar tidak dapat dienumerasi.
+
+## Kebijakan waktu
+
+Kolom `DATETIME` aplikasi menyimpan timestamp UTC tanpa suffix timezone. Nomor invoice, filter laporan, pengelompokan tanggal, dan tampilan pengguna selalu dihitung dalam `Asia/Jakarta` (WIB). Jangan memakai `NOW()`, `CURDATE()`, atau method waktu lokal Node untuk keputusan bisnis tanpa konversi UTC/Jakarta yang eksplisit.
+
+## Migrasi database
+
+Sebelum menerapkan alias kontrol mesin owner/backoffice, jalankan sekali `npm run migrate:machine-log-actor`. Migrasi ini membuat audit actor eksplisit pada `tbl_log_mesin` dan menjadikan `kasirId` nullable untuk perintah yang dijalankan owner atau backoffice.
 
 ## Quality check
 

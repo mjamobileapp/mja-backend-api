@@ -1,6 +1,7 @@
 const dbPool = require("../config/database");
 const bcrypt = require("bcrypt");
 const { generateAndHashPassword } = require("../utils/password");
+const { getJakartaSqlDate, getJakartaSqlTime } = require("../utils/date");
 
 const createNewUserKasir = async (body) => {
   try {
@@ -353,9 +354,9 @@ const getAbsensiKasir = ({ cabangId, idMitra, tanggal, namaKasir }) => {
     SELECT
       a.id AS absensiId,
       u.namaLengkap AS namaKasir,
-      DATE(a.waktuLogin) AS tanggalShift,
-      DATE_FORMAT(a.waktuLogin, '%H:%i') AS jamMasuk,
-      IF(a.waktuLogout IS NOT NULL, DATE_FORMAT(a.waktuLogout, '%H:%i'), 'Belum') AS jamPulang
+      ${getJakartaSqlDate("a.waktuLogin")} AS tanggalShift,
+      ${getJakartaSqlTime("a.waktuLogin")} AS jamMasuk,
+      IF(a.waktuLogout IS NOT NULL, ${getJakartaSqlTime("a.waktuLogout")}, 'Belum') AS jamPulang
     FROM tbl_absensi a
     JOIN tbl_cabang c ON a.cabangId = c.id
     JOIN tbl_users_mobile u ON a.idUserMobile = u.id AND u.idMitra = c.idMitra
@@ -364,7 +365,7 @@ const getAbsensiKasir = ({ cabangId, idMitra, tanggal, namaKasir }) => {
   const values = [cabangId, idMitra];
 
   if (tanggal) {
-    SQLQuery += " AND DATE(a.waktuLogin) = ?";
+    SQLQuery += ` AND ${getJakartaSqlDate("a.waktuLogin")} = ?`;
     values.push(tanggal);
   }
 

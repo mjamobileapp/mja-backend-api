@@ -1,6 +1,11 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { getPublicAuthRateLimitConfig, getRequiredJwtSecret, getTrustProxy } = require("../src/config/environment");
+const {
+  getEmailSendTimeoutMs,
+  getPublicAuthRateLimitConfig,
+  getRequiredJwtSecret,
+  getTrustProxy,
+} = require("../src/config/environment");
 
 test("getRequiredJwtSecret rejects an absent or blank JWT secret", () => {
   assert.throws(() => getRequiredJwtSecret({}), /JWT_SECRET/);
@@ -37,4 +42,10 @@ test("getPublicAuthRateLimitConfig validates configured values and uses safe def
     }),
     { windowMs: 15 * 60 * 1000, maxAttempts: 5 }
   );
+});
+
+test("getEmailSendTimeoutMs validates configured values and uses a safe default", () => {
+  assert.equal(getEmailSendTimeoutMs({}), 15 * 1000);
+  assert.equal(getEmailSendTimeoutMs({ EMAIL_SEND_TIMEOUT_MS: "2500" }), 2500);
+  assert.equal(getEmailSendTimeoutMs({ EMAIL_SEND_TIMEOUT_MS: "0" }), 15 * 1000);
 });

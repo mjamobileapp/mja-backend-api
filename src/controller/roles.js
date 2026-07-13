@@ -1,6 +1,24 @@
 const RoleModels = require("../models/roles");
 const { getDatabaseTimestamp } = require("../utils/date");
 const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
+
+const getValidatedRoleId = (req, res) => {
+  const rawId = String(req.params?.idRole || "");
+
+  if (!/^[1-9]\d*$/.test(rawId)) {
+    res.status(400).json({ message: "idRole harus berupa integer positif" });
+    return null;
+  }
+
+  const idRole = Number(rawId);
+  if (!Number.isSafeInteger(idRole)) {
+    res.status(400).json({ message: "idRole harus berupa integer positif" });
+    return null;
+  }
+
+  return idRole;
+};
+
 const getAllRoles = async (req, res) => {
   try {
     const [data] = await RoleModels.getAllRole();
@@ -24,7 +42,9 @@ const getAllRoles = async (req, res) => {
 };
 
 const getRoleById = async (req, res) => {
-  const { idRole } = req.params;
+  const idRole = getValidatedRoleId(req, res);
+  if (!idRole) return;
+
   try {
     const [data] = await RoleModels.getRoleById(idRole);
     const dataResult = data[0];
@@ -81,7 +101,9 @@ const createNewRole = async (req, res) => {
 };
 
 const updateRole = async (req, res) => {
-  const { idRole } = req.params;
+  const idRole = getValidatedRoleId(req, res);
+  if (!idRole) return;
+
   const body = withAuthenticatedAuditUsername(req.body, req.user, "updatedBy");
 
   const mapData = {
@@ -117,7 +139,9 @@ const updateRole = async (req, res) => {
 };
 
 const deleteRole = async (req, res) => {
-  const { idRole } = req.params;
+  const idRole = getValidatedRoleId(req, res);
+  if (!idRole) return;
+
   try {
     await RoleModels.deleteRole(idRole);
     res.json({

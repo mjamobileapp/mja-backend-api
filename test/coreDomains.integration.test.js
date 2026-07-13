@@ -9,6 +9,7 @@ process.env.DB_NAME = `${process.env.DB_NAME}_refactor_test`;
 
 const db = require("../src/config/database");
 const { createApp } = require("../src/app");
+const { migrateMachineLogActor } = require("../scripts/migrate-machine-log-actor");
 
 const request = (server, { method = "GET", path, token, body }) =>
   new Promise((resolve, reject) => {
@@ -52,6 +53,8 @@ const backofficeToken = () =>
   });
 
 test.before(async () => {
+  await migrateMachineLogActor(db);
+
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const [mitra] = await db.execute(
     "INSERT INTO tbl_mitra (kodeMitra, namaMitra, alamatMitra, createdBy, statusAktif) VALUES (?, ?, ?, ?, 1)",
@@ -356,6 +359,55 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       await db.execute("DELETE FROM tbl_users_mobile WHERE id = ?", [otherKasir.insertId]);
       await db.execute("DELETE FROM tbl_cabang WHERE id = ?", [otherCabang.insertId]);
     }
+  });
+
+  await t.test("machine-control alias scopes owner and backoffice while rejecting kasir", async () => {
+    const ownerStart = await request(server, {
+      method: "POST",
+      path: "/api/transaksi/startmesin",
+      token: ownerToken(),
+      body: { mesinId: fixture.mesinDetailId, invoiceNumber: "MISSING-OWNER", cabangId: fixture.cabangId },
+    });
+    const backofficeStart = await request(server, {
+      method: "POST",
+      path: "/api/transaksi/startmesin",
+      token: backofficeToken(),
+      body: {
+        mesinId: fixture.mesinDetailId,
+        invoiceNumber: "MISSING-BACKOFFICE",
+        idMitra: fixture.idMitra,
+        cabangId: fixture.cabangId,
+      },
+    });
+    const kasirAlias = await request(server, {
+      method: "POST",
+      path: "/api/transaksi/startmesin",
+      token: mobileToken(),
+      body: { mesinId: fixture.mesinDetailId, invoiceNumber: "MISSING-KASIR", cabangId: fixture.cabangId },
+    });
+    const ownerForeignCabang = await request(server, {
+      method: "POST",
+      path: "/api/transaksi/startmesin",
+      token: ownerToken(),
+      body: { mesinId: fixture.mesinDetailId, invoiceNumber: "MISSING-FOREIGN", cabangId: 999999 },
+    });
+    const backofficeMismatchedScope = await request(server, {
+      method: "POST",
+      path: "/api/transaksi/startmesin",
+      token: backofficeToken(),
+      body: {
+        mesinId: fixture.mesinDetailId,
+        invoiceNumber: "MISSING-MISMATCHED",
+        idMitra: 999999,
+        cabangId: fixture.cabangId,
+      },
+    });
+
+    assert.equal(ownerStart.statusCode, 404);
+    assert.equal(backofficeStart.statusCode, 404);
+    assert.equal(kasirAlias.statusCode, 403);
+    assert.equal(ownerForeignCabang.statusCode, 403);
+    assert.equal(backofficeMismatchedScope.statusCode, 403);
   });
 
   await t.test("cashflow supports summary, income, owner and cashier expenses, detail, update, and delete", async () => {

@@ -1,7 +1,7 @@
 const nodemailer = require("nodemailer");
 const EmailTemplateModel = require("../models/emailTemplate");
 const jwt = require("jsonwebtoken");
-const { getRequiredJwtSecret } = require("../config/environment");
+const { getEmailSendTimeoutMs, getRequiredJwtSecret } = require("../config/environment");
 
 const getTransporter = () => {
   const requiredConfig = [
@@ -17,8 +17,14 @@ const getTransporter = () => {
     throw new Error(`Konfigurasi email OAuth2 belum lengkap: ${missingConfig.join(", ")}`);
   }
 
+  const timeoutMs = getEmailSendTimeoutMs();
+
   return nodemailer.createTransport({
     service: "gmail",
+    connectionTimeout: timeoutMs,
+    greetingTimeout: timeoutMs,
+    socketTimeout: timeoutMs,
+    dnsTimeout: timeoutMs,
     auth: {
       type: "OAuth2",
       user: process.env.GMAIL_USER,
@@ -27,6 +33,28 @@ const getTransporter = () => {
       refreshToken: process.env.GMAIL_REFRESH_TOKEN,
     },
   });
+};
+
+const createEmailTimeoutError = (timeoutMs) => {
+  const error = new Error(`Pengiriman email melebihi batas waktu ${timeoutMs}ms`);
+  error.code = "EMAIL_SEND_TIMEOUT";
+  return error;
+};
+
+const sendMailWithTimeout = async (transporter, message, timeoutMs = getEmailSendTimeoutMs()) => {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      transporter.close?.();
+      reject(createEmailTimeoutError(timeoutMs));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([transporter.sendMail(message), timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 };
 
 /**
@@ -78,7 +106,7 @@ const sendUserMobileCredentialEmail = async ({ to, username, role }) => {
     YEAR: new Date().getFullYear(),
   };
 
-  return transporter.sendMail({
+  return sendMailWithTimeout(transporter, {
     from: process.env.MAIL_FROM,
     to,
     subject: compileTemplate(template.subject, placeholders),
@@ -118,7 +146,7 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
     YEAR: new Date().getFullYear(),
   };
 
-  return transporter.sendMail({
+  return sendMailWithTimeout(transporter, {
     from: process.env.MAIL_FROM,
     to,
     subject: compileTemplate(template.subject, placeholders),
@@ -127,6 +155,7 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
 };
 
 module.exports = {
+  sendMailWithTimeout,
   sendUserMobileCredentialEmail,
   sendResetPasswordEmail,
 };
