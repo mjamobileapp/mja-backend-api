@@ -1,8 +1,6 @@
 const jwt = require("jsonwebtoken");
 
 const generateToken = (user) => {
-  console.log(user);
-  
   const userId = user.id ?? user.id_user;
 
   // Bangun payload JWT

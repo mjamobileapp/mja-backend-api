@@ -87,8 +87,15 @@ const authenticate = async (req, res, next) => {
     req.user = await verifyBackofficeToken(req);
     next();
   } catch (err) {
-    console.error("Authentication Error:", err);
     const statusCode = err.statusCode || 401;
+
+    if (statusCode >= 500) {
+      console.error("Authentication Error:", {
+        code: err.code || "UNAUTHORIZED",
+        message: err.message,
+      });
+    }
+
     return res.status(statusCode).json({
       success: false,
       code: err.code || "UNAUTHORIZED",

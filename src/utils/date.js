@@ -6,6 +6,8 @@ const getTodayStringYYYYMMDD = () => {
   return `${year}${month}${day}`;
 };
 
+const getDatabaseTimestamp = (date = new Date()) => date.toISOString().slice(0, 19).replace("T", " ");
+
 const formatTanggalWIB = (dateString) => {
   const date = new Date(dateString);
   const monthNames = [
@@ -69,6 +71,7 @@ const getDateFilterCondition = (columnName, filter = "") => {
 };
 
 module.exports = {
+  getDatabaseTimestamp,
   getTodayStringYYYYMMDD,
   formatTanggalWIB,
   formatTanggalJamWIB,

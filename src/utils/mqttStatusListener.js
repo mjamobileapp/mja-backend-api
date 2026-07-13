@@ -67,13 +67,13 @@ const handleStatusMessage = async (topic, message) => {
   });
 };
 
-const startMqttStatusListener = () => {
+const startMqttStatusListener = ({ clientFactory = connectClient } = {}) => {
   if (statusListenerClient) {
     return statusListenerClient;
   }
 
   try {
-    statusListenerClient = connectClient({
+    statusListenerClient = clientFactory({
       clientIdPrefix: "mja-api-status-listener",
       reconnectPeriod: Number(process.env.MQTT_RECONNECT_PERIOD_MS) || 5000,
     });
@@ -121,6 +121,30 @@ const startMqttStatusListener = () => {
   return statusListenerClient;
 };
 
+const stopMqttStatusListener = async () => {
+  const client = statusListenerClient;
+  statusListenerClient = null;
+
+  if (!client) {
+    return false;
+  }
+
+  try {
+    client.removeAllListeners();
+
+    if (typeof client.end === "function") {
+      await new Promise((resolve) => {
+        client.end(true, resolve);
+      });
+    }
+  } catch (error) {
+    console.error("[MQTT STATUS] Gagal menghentikan listener:", error.message);
+  }
+
+  return true;
+};
+
 module.exports = {
   startMqttStatusListener,
+  stopMqttStatusListener,
 };
