@@ -1,6 +1,7 @@
 const dbPool = require("../config/database");
 const { formatTanggalJamWIB, getDateFilterCondition, getJakartaSqlDate } = require("../utils/date");
 const { withTransaction } = require("../utils/transaction");
+const { createHttpError } = require("../utils/httpError");
 
 const getCashflow = (cabangId, idMitra, cabangId2, idMitra2, filter) => {
   const pemasukanDateFilter = getDateFilterCondition("waktuOrder", filter);
@@ -52,7 +53,7 @@ const getPendapatan = async (cabangId, idMitra, filter) => {
     );
 
     if (rows.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "CASHFLOW_NOT_FOUND");
     }
 
     // Grouping per tanggal
@@ -116,7 +117,7 @@ const getPengeluaran = async (cabangId, idMitra, filter) => {
     );
 
     if (rows.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "CASHFLOW_NOT_FOUND");
     }
 
     // Grouping per tanggal
@@ -180,7 +181,7 @@ const getListPengeluaran = async (cabangId, idMitra, filter) => {
     );
 
     if (rows.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "CASHFLOW_NOT_FOUND");
     }
 
     const formattedData = rows.map(row => ({
@@ -241,7 +242,7 @@ const getPengeluaranById = async (id, idMitra, filter, cabangId = null) => {
     );
 
     if (rows.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "CASHFLOW_NOT_FOUND");
     }
 
     const row = rows[0];
@@ -275,7 +276,7 @@ const createPengeluaran = async (data) => {
       [idMitra]
     );
     if (mitraCheck.length === 0) {
-      throw new Error("Mitra tidak ditemukan");
+      throw createHttpError(404, "Mitra tidak ditemukan", "CASHFLOW_MITRA_NOT_FOUND");
     }
 
     // 2. Validasi cabangId (cek juga milik mitra yang sama)
@@ -284,7 +285,7 @@ const createPengeluaran = async (data) => {
       [cabangId, idMitra]
     );
     if (cabangCheck.length === 0) {
-      throw new Error("Cabang tidak ditemukan");
+      throw createHttpError(404, "Cabang tidak ditemukan", "CASHFLOW_CABANG_NOT_FOUND");
     }
 
     // 3. Validasi idUserMobile
@@ -293,7 +294,7 @@ const createPengeluaran = async (data) => {
       [idUserMobile]
     );
     if (userCheck.length === 0) {
-      throw new Error("User tidak ditemukan");
+      throw createHttpError(404, "User tidak ditemukan", "CASHFLOW_USER_NOT_FOUND");
     }
 
     // 4. Validasi itemId
@@ -302,7 +303,7 @@ const createPengeluaran = async (data) => {
       [itemId]
     );
     if (itemCheck.length === 0) {
-      throw new Error("Item tidak ditemukan");
+      throw createHttpError(404, "Item tidak ditemukan", "CASHFLOW_ITEM_NOT_FOUND");
     }
 
     // 5. INSERT pengeluaran
@@ -336,7 +337,7 @@ const createPengeluaran = async (data) => {
     );
 
     if (newData.length === 0) {
-      throw new Error("Gagal mengambil data pengeluaran");
+      throw createHttpError(500, "Gagal mengambil data pengeluaran", "CASHFLOW_READ_FAILED");
     }
 
     const row = newData[0];
@@ -368,7 +369,7 @@ const updatePengeluaran = async (body, id, idMitra, cabangId = null) => {
     );
 
     if (existingPengeluaran.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "CASHFLOW_NOT_FOUND");
     }
 
     const [itemCheck] = await dbPool.execute(
@@ -377,7 +378,7 @@ const updatePengeluaran = async (body, id, idMitra, cabangId = null) => {
     );
 
     if (itemCheck.length === 0) {
-      throw new Error("Item tidak ditemukan");
+      throw createHttpError(404, "Item tidak ditemukan", "CASHFLOW_ITEM_NOT_FOUND");
     }
 
     await dbPool.execute(
@@ -422,7 +423,7 @@ const deletePengeluaran = async (id, idMitra, cabangId = null) => {
     );
 
     if (existingPengeluaran.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "CASHFLOW_NOT_FOUND");
     }
 
     const SQLQuery = `UPDATE tbl_pengeluaran SET statusAktif = 0 WHERE id = ? AND idMitra = ?${cabangFilter}`;
