@@ -1,55 +1,34 @@
 const DashboardModel = require("../models/dashboard");
 
 const getMitra = async (req, res) => {
-  try {
-    const data = await DashboardModel.getMitra();
+  const data = await DashboardModel.getMitra();
 
-    res.status(200).json({
-      success: true,
-      total: data.length,
-      data: data,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  return res.status(200).json({
+    success: true,
+    total: data.length,
+    data: data,
+  });
 };
 
 const getCabang = async (req, res) => {
-  try {
-    const data = await DashboardModel.getCabang();
+  const data = await DashboardModel.getCabang();
 
-    res.status(200).json({
-      success: true,
-      total: data.length,
-      data: data,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  return res.status(200).json({
+    success: true,
+    total: data.length,
+    data: data,
+  });
 };
 
 const getMesin = async (req, res) => {
-  try {
-    const data = await DashboardModel.getMesin();
+  const data = await DashboardModel.getMesin();
 
-    res.status(200).json({
-      success: "Get Jumlah Mesin Success",
-      total: data.total,
-      totalWasher: data.totalWasher,
-      totalDryer: data.totalDryer,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  return res.status(200).json({
+    success: "Get Jumlah Mesin Success",
+    total: data.total,
+    totalWasher: data.totalWasher,
+    totalDryer: data.totalDryer,
+  });
 };
 
 module.exports = {
