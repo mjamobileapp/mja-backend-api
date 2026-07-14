@@ -1,6 +1,7 @@
 const dbPool = require("../config/database");
 const { getTodayStringYYYYMMDD } = require("../utils/date");
 const { withTransaction } = require("../utils/transaction");
+const { createHttpError } = require("../utils/httpError");
 
 const createNewMitra = async (body) => {
   return withTransaction(async (connection) => {
@@ -32,7 +33,7 @@ const createNewMitra = async (body) => {
     );
 
     if (existingMitra.length > 0) {
-      throw new Error("Mitra sudah terdaftar");
+      throw createHttpError(400, "Mitra sudah terdaftar", "MITRA_DUPLICATE");
     }
 
     const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -65,7 +66,7 @@ const updateMitra = async (id, body) => {
       [id]
     );
     if (existingMitra.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MITRA_NOT_FOUND");
     }
 
     // Get current timestamp
@@ -108,7 +109,7 @@ const deleteMitra = async (id, updatedBy) => {
       [id]
     );
     if (existingMitra.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MITRA_NOT_FOUND");
     }
 
     // Get current timestamp
@@ -131,7 +132,7 @@ const getMitraById = async (id) => {
       [id]
     );
     if (mitra.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MITRA_NOT_FOUND");
     }
     return mitra[0];
   } catch (error) {
@@ -168,7 +169,7 @@ const restoreMitra = async (id, updatedBy) => {
       [id]
     );
     if (existingMitra.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MITRA_NOT_FOUND");
     }
 
     // Get current timestamp
