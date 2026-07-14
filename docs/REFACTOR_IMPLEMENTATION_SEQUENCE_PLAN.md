@@ -409,6 +409,14 @@ Lanjutkan `ASYNC_ERROR_HANDLING_PLAN.md` Tahap 4 sampai Tahap 7.
 - [ ] Dokumentasi dan Postman sesuai route serta kontrak terbaru.
 - [ ] Perubahan terbagi menjadi commit yang kecil dan dapat di-rollback.
 
+### Status audit implementasi Fase 7
+
+Quality gate `scripts/check-refactor-quality.js` sekarang menjadi bagian dari `npm.cmd run check`. Gate ini memverifikasi bahwa seluruh route yang memanggil controller async dibungkus `catchAsync` dan arithmetic pricing transaksi tetap berada di domain/service/model, bukan di controller.
+
+Audit akhir juga memastikan controller tidak lagi mengirim detail error internal melalui response 5xx. Error internal transaksi, machine-control, dan aktivasi akun diteruskan sebagai typed 500 dan disanitasi oleh global error handler. Lifecycle `startMesin`/`stopMesin` tetap menjadi pengecualian workflow MQTT yang eksplisit; helper transaksi generik tidak digunakan untuknya.
+
+Validasi terakhir: quality gate lulus, `npm.cmd run check` lulus (107 test pass, 1 test MQTT skip), dan `git diff --check` lulus.
+
 ## Urutan Commit yang Disarankan
 
 Nama commit dapat disesuaikan, tetapi urutan tanggung jawabnya jangan diacak:

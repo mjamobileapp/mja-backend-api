@@ -1,6 +1,7 @@
 const TransaksiModel = require("../models/transaksi");
 const { normalizeTransaksiPayload } = require("../domain/transaksi");
 const TransaksiService = require("../services/transaksi");
+const { createHttpError } = require("../utils/httpError");
 
 const isPositiveInteger = (value) => Number.isInteger(Number(value)) && Number(value) > 0;
 
@@ -168,10 +169,7 @@ const createTransaksi = async (req, res) => {
       });
     }
 
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
+    throw createHttpError(500, "Internal transaction error", "TRANSACTION_INTERNAL_ERROR");
   }
 };
 
@@ -214,10 +212,7 @@ const startMesin = async (req, res) => {
     }
 
     console.error("Error Start Mesin:", error);
-    return res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
+    throw createHttpError(500, "Internal machine-control error", "MACHINE_CONTROL_INTERNAL_ERROR");
   }
 };
 
@@ -260,10 +255,7 @@ const stopMesin = async (req, res) => {
     }
 
     console.error("Error Stop Mesin:", error);
-    return res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
+    throw createHttpError(500, "Internal machine-control error", "MACHINE_CONTROL_INTERNAL_ERROR");
   }
 };
 

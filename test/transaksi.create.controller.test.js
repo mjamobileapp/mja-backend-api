@@ -107,13 +107,13 @@ test("createTransaksi preserves the legacy controller contract before business-v
       assert.deepEqual(response400.body, { error: "Stok tidak mencukupi" });
       assert.equal(response400.statusCode, 400);
 
-      const response500 = createResponse();
       TransaksiModel.createTransaksi = async () => {
         throw new Error("database baseline failure");
       };
-      await TransaksiController.createTransaksi(validRequest(), response500);
-      assert.equal(response500.statusCode, 500);
-      assert.equal(response500.body.serverMessage, "database baseline failure");
+      await assert.rejects(
+        TransaksiController.createTransaksi(validRequest(), createResponse()),
+        (error) => error.statusCode === 500 && error.code === "TRANSACTION_INTERNAL_ERROR"
+      );
     });
   } finally {
     TransaksiModel.createTransaksi = originalCreateTransaksi;

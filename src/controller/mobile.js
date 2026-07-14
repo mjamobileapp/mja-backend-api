@@ -5,6 +5,7 @@ const UsersModel = require("../models/users");
 const { generateToken, TOKEN_TYPES } = require("../utils/jwt");
 const { getMissingRequiredFields } = require("../utils/validation");
 const { getRequiredJwtSecret } = require("../config/environment");
+const { createHttpError } = require("../utils/httpError");
 
 const loginUser = async (req, res) => {
   const { body } = req;
@@ -231,10 +232,7 @@ const activateAccount = async (req, res) => {
         });
       }
 
-      res.status(500).json({
-        message: "Server Error",
-        serverMessage: error.message,
-      });
+      throw createHttpError(500, "Internal account activation error", "ACCOUNT_ACTIVATION_INTERNAL_ERROR");
     }
 };
 

@@ -11,8 +11,9 @@
     "check:syntax": "node scripts/check-syntax.js",
     "lint": "eslint .",
     "check:postman": "node scripts/check-postman-collection.js",
+    "check:refactor-quality": "node scripts/check-refactor-quality.js",
     "refresh:postman": "node scripts/check-postman-collection.js --write",
-    "check": "npm run check:syntax && npm run lint && npm run check:postman && npm test",
+    "check": "npm run check:syntax && npm run lint && npm run check:postman && npm run check:refactor-quality && npm test",
     "migrate:machine-log-actor": "node scripts/migrate-machine-log-actor.js"
   },
   "dependencies": {
