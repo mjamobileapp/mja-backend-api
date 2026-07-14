@@ -10,7 +10,7 @@ const router = express.Router();
 router.get("/pending", authenticateMobile, requireMobileKasir, catchAsync(TransaksiController.getPendingTransaksi));
 router.get("/", authenticateMobile, requireMobileKasir, catchAsync(TransaksiController.getJumlahTransaksi));
 router.post("/", authenticateMobile, requireMobileKasir, validateTransaksiPayload, catchAsync(TransaksiController.createTransaksi));
-router.post("/startmesin", authenticateMobile, requireMobileKasir, TransaksiController.startMesin);
-router.post("/stopmesin", authenticateMobile, requireMobileKasir, TransaksiController.stopMesin);
+router.post("/startmesin", authenticateMobile, requireMobileKasir, catchAsync(TransaksiController.startMesin));
+router.post("/stopmesin", authenticateMobile, requireMobileKasir, catchAsync(TransaksiController.stopMesin));
 
 module.exports = router;
