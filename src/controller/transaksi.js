@@ -70,20 +70,8 @@ const getJumlahTransaksi = async (req, res) => {
     });
   }
 
-  try {
-    const data = await TransaksiModel.getJumlahTransaksi(cabangId, idMitra, filter);
-
-    res.status(200).json({
-      success: "Get Data Transaksi Success",
-      data: data,
-    });
-  } catch (error) {
-    console.error("Error Get Jumlah Transaksi:", error);
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  const data = await TransaksiModel.getJumlahTransaksi(cabangId, idMitra, filter);
+  return res.status(200).json({ success: "Get Data Transaksi Success", data });
 };
 
 const getPendingTransaksi = async (req, res) => {
@@ -102,8 +90,7 @@ const getPendingTransaksi = async (req, res) => {
     });
   }
 
-  try {
-    const rows = await TransaksiModel.getPendingTransaksi(cabangId, idMitra);
+  const rows = await TransaksiModel.getPendingTransaksi(cabangId, idMitra);
 
     const data = rows.map((row) => {
       const layananPending = row.layananPending || "";
@@ -120,17 +107,7 @@ const getPendingTransaksi = async (req, res) => {
       };
     });
 
-    res.status(200).json({
-      success: "Get Data Antrian Transaksi Success",
-      data: data,
-    });
-  } catch (error) {
-    console.error("Error Get Antrean:", error);
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  return res.status(200).json({ success: "Get Data Antrian Transaksi Success", data });
 };
 
 const createTransaksi = async (req, res) => {

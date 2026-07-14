@@ -7,8 +7,8 @@ const { catchAsync } = require("../utils/catchAsync");
 
 const router = express.Router();
 
-router.get("/pending", authenticateMobile, requireMobileKasir, TransaksiController.getPendingTransaksi);
-router.get("/", authenticateMobile, requireMobileKasir, TransaksiController.getJumlahTransaksi);
+router.get("/pending", authenticateMobile, requireMobileKasir, catchAsync(TransaksiController.getPendingTransaksi));
+router.get("/", authenticateMobile, requireMobileKasir, catchAsync(TransaksiController.getJumlahTransaksi));
 router.post("/", authenticateMobile, requireMobileKasir, validateTransaksiPayload, catchAsync(TransaksiController.createTransaksi));
 router.post("/startmesin", authenticateMobile, requireMobileKasir, TransaksiController.startMesin);
 router.post("/stopmesin", authenticateMobile, requireMobileKasir, TransaksiController.stopMesin);
