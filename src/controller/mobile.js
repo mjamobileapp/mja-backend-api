@@ -21,8 +21,7 @@ const loginUser = async (req, res) => {
 
   const { username, password, deviceId, deviceName } = body;
 
-  try {
-    // 2. Cari User
+  // 2. Cari User
     const user = await UserMobileModel.getUserByUsername(username);
 
     if (!user) {
@@ -97,13 +96,6 @@ const loginUser = async (req, res) => {
         token: token,
       },
     });
-  } catch (error) {
-    console.error("Mobile Login error:", error);
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
 };
 
 const activateAccount = async (req, res) => {
@@ -256,8 +248,7 @@ const logoutUser = async (req, res) => {
     });
   }
 
-  try {
-    // Cari user di database untuk memastikan username valid dan ambil datanya
+  // Cari user di database untuk memastikan username valid dan ambil datanya
     const user = await UserMobileModel.getUserByUsername(username);
 
     if (!user) {
@@ -287,13 +278,6 @@ const logoutUser = async (req, res) => {
         username: user.username,
       },
     });
-  } catch (error) {
-    console.error("Mobile Logout error:", error);
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
 };
 
 module.exports = {

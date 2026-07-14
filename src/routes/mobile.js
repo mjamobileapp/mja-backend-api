@@ -8,9 +8,9 @@ const { catchAsync } = require("../utils/catchAsync");
 const router = express.Router();
 
 // Public route (tanpa authenticate middleware)
-router.post("/login", publicLoginRateLimiter, MobileController.loginUser);
-router.post("/activateaccount", publicActivationRateLimiter, MobileController.activateAccount);
-router.post("/logout", authenticateMobile, MobileController.logoutUser);
+router.post("/login", publicLoginRateLimiter, catchAsync(MobileController.loginUser));
+router.post("/activateaccount", publicActivationRateLimiter, catchAsync(MobileController.activateAccount));
+router.post("/logout", authenticateMobile, catchAsync(MobileController.logoutUser));
 
 // GET - Get Notifikasi Mobile
 router.get("/notifications", authenticateMobile, catchAsync(NotifikasiController.getNotifikasi));
