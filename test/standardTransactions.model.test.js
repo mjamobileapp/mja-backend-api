@@ -106,3 +106,35 @@ test("price and cashflow writes use a single standard transaction lifecycle", as
     assert.deepEqual(cashflowCalls.slice(-2), ["commit", "release"]);
   } finally { cashflow.restore(); }
 });
+
+test("stock settings read their response before commit and roll back a failed read", async () => {
+  const successCalls = [];
+  let executeCount = 0;
+  const success = loadModelWithTransaction("../src/models/settingStokMitra", createConnection(successCalls, async () => {
+    executeCount += 1;
+    if (executeCount <= 2) return [[{ id: executeCount }]];
+    if (executeCount === 4) return [{ insertId: 12 }];
+    return [[{ id: 12, idMitra: 1, itemId: 2 }]];
+  }));
+  try {
+    const result = await success.model.createNewSetting({ idMitra: 1, itemId: 2, batasMinimum: 3, createdBy: "admin" });
+    assert.equal(result.id, 12);
+    assert.deepEqual(successCalls.slice(-2), ["commit", "release"]);
+  } finally { success.restore(); }
+
+  const failureCalls = [];
+  let failureExecuteCount = 0;
+  const failure = loadModelWithTransaction("../src/models/settingStokMitra", createConnection(failureCalls, async () => {
+    failureExecuteCount += 1;
+    if (failureExecuteCount <= 2) return [[{ id: failureExecuteCount }]];
+    if (failureExecuteCount === 4) return [{ insertId: 12 }];
+    throw new Error("response read failed");
+  }));
+  try {
+    await assert.rejects(
+      failure.model.createNewSetting({ idMitra: 1, itemId: 2, batasMinimum: 3, createdBy: "admin" }),
+      /response read failed/
+    );
+    assert.deepEqual(failureCalls.slice(-2), ["rollback", "release"]);
+  } finally { failure.restore(); }
+});

@@ -1,9 +1,8 @@
 const dbPool = require("../config/database");
+const { withTransaction } = require("../utils/transaction");
 
 const createNewSetting = async (body) => {
-  const connection = await dbPool.getConnection();
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
     const { idMitra, itemId, batasMinimum, createdBy } = body;
 
     // 1. Validasi Mitra Exist dan Aktif
@@ -39,10 +38,8 @@ const createNewSetting = async (body) => {
     const values = [idMitra, itemId, batasMinimum, createdBy, dateNow];
     const [result] = await connection.execute(SQLQuery, values);
 
-    await connection.commit();
-
-    // Ambil data terbaru dengan JOIN untuk response
-    const [insertedData] = await dbPool.execute(
+    // Ambil data response sebelum commit agar kegagalan read membatalkan write.
+    const [insertedData] = await connection.execute(
       `SELECT s.*, m.namaMitra, i.namaItem 
        FROM tbl_treshold_stok_mitra s
        JOIN tbl_mitra m ON s.idMitra = m.id
@@ -51,18 +48,11 @@ const createNewSetting = async (body) => {
     );
 
     return insertedData[0];
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const createBulkSettings = async (idMitra, items, createdBy) => {
-  const connection = await dbPool.getConnection();
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     // 1. Validasi Mitra Exist dan Aktif
     const [existingMitra] = await connection.execute(
@@ -102,10 +92,8 @@ const createBulkSettings = async (idMitra, items, createdBy) => {
       await connection.execute(SQLQuery, values);
     }
 
-    await connection.commit();
-
-    // Ambil semua data terbaru milik Mitra ini untuk response
-    const [result] = await dbPool.execute(
+    // Ambil data response sebelum commit agar kegagalan read membatalkan write.
+    const [result] = await connection.execute(
       `SELECT s.*, m.namaMitra, i.namaItem 
        FROM tbl_treshold_stok_mitra s
        JOIN tbl_mitra m ON s.idMitra = m.id
@@ -114,12 +102,7 @@ const createBulkSettings = async (idMitra, items, createdBy) => {
     );
 
     return result;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const updateSetting = async (id, body) => {
