@@ -120,9 +120,10 @@ test.before(async () => {
     "INSERT INTO tbl_users (username, password, statusAktif, createdBy, nama, roleId) VALUES (?, ?, 1, ?, ?, ?)",
     [restrictedBackofficeUsername, "not-used", "integration-test", "Restricted Backoffice", restrictedRole.insertId]
   );
+  const itemName = `Item ${suffix}`;
   const [item] = await db.execute(
     "INSERT INTO tbl_master_item_expense (namaItem, tipeItem, createdBy, statusAktif) VALUES (?, 'stok', ?, 1)",
-    [`Item ${suffix}`, "integration-test"]
+    [itemName, "integration-test"]
   );
   await db.execute(
     `INSERT INTO tbl_harga_cabang (idMitra, cabangId, jenisLayanan, itemId, harga, createdBy)
@@ -177,6 +178,7 @@ test.before(async () => {
     restrictedBackofficeUserId: restrictedBackofficeUser.insertId,
     restrictedBackofficeUsername,
     itemId: item.insertId,
+    itemName,
     mesinMasterIds: [mesinMaster.insertId],
     mesinDetailId: mesinDetail.insertId,
     parentMenuId: parentMenu.insertId,
@@ -357,6 +359,37 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       await db.execute("DELETE FROM tbl_cabang WHERE id IN (?, ?)", [otherCabang.insertId, foreignCabang.insertId]);
       await db.execute("DELETE FROM tbl_mitra WHERE id = ?", [foreignMitra.insertId]);
     }
+  });
+
+  await t.test("master item routes forward typed errors through catchAsync and the global handler", async () => {
+    const successResponse = await request(server, {
+      path: `/api/backoffice/item/${fixture.itemId}`,
+      token: backofficeToken(),
+    });
+    const missingResponse = await request(server, {
+      path: "/api/backoffice/item/999999999",
+      token: backofficeToken(),
+    });
+    const duplicateResponse = await request(server, {
+      method: "POST",
+      path: "/api/backoffice/item",
+      token: backofficeToken(),
+      body: { namaItem: fixture.itemName, tipeItem: "stok", createdBy: "spoofed-user" },
+    });
+
+    assert.equal(successResponse.statusCode, 200);
+    assert.equal(missingResponse.statusCode, 404);
+    assert.deepEqual(missingResponse.body, {
+      success: false,
+      code: "MASTER_ITEM_NOT_FOUND",
+      message: "data not found",
+    });
+    assert.equal(duplicateResponse.statusCode, 409);
+    assert.deepEqual(duplicateResponse.body, {
+      success: false,
+      code: "MASTER_ITEM_DUPLICATE",
+      message: "Master Item sudah terdaftar",
+    });
   });
 
   await t.test("mesin CRUD, dashboard, and mobile machine list", async () => {

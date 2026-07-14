@@ -63,7 +63,7 @@ test("master item update uses the authenticated username instead of spoofed body
   assert.equal(res.statusCode, 200);
 });
 
-test("master item duplicate error preserves the existing conflict response shape", async () => {
+test("master item duplicate error is propagated to the global error handler", async () => {
   const controller = createMasterItemController({
     createNewMasterItem: async () => {
       throw createHttpError(409, "Master Item sudah terdaftar", "MASTER_ITEM_DUPLICATE");
@@ -71,16 +71,18 @@ test("master item duplicate error preserves the existing conflict response shape
   });
   const res = createResponse();
 
-  await controller.createNewMasterItem(
-    {
-      body: { namaItem: "Deterjen", tipeItem: "stok" },
-      user: { username: "authenticated-user" },
-    },
-    res
+  await assert.rejects(
+    controller.createNewMasterItem(
+      {
+        body: { namaItem: "Deterjen", tipeItem: "stok" },
+        user: { username: "authenticated-user" },
+      },
+      res
+    ),
+    (error) => error.statusCode === 409 && error.code === "MASTER_ITEM_DUPLICATE"
   );
 
-  assert.equal(res.statusCode, 409);
-  assert.deepEqual(res.body, { error: "Master Item sudah terdaftar" });
+  assert.equal(res.statusCode, null);
 });
 
 test("master item list forwards each supported status filter", async () => {
@@ -163,7 +165,7 @@ test("master item delete and restore use the authenticated username", async () =
   assert.deepEqual(restoreResponse.body, { message: "Restore Master Item success", data: null });
 });
 
-test("master item returns not found for missing data", async () => {
+test("master item not-found error is propagated to the global error handler", async () => {
   const controller = createMasterItemController({
     getMasterItemById: async () => {
       throw createHttpError(404, "data not found", "MASTER_ITEM_NOT_FOUND");
@@ -171,10 +173,12 @@ test("master item returns not found for missing data", async () => {
   });
   const res = createResponse();
 
-  await controller.getMasterItemById({ params: { id: "404" } }, res);
+  await assert.rejects(
+    controller.getMasterItemById({ params: { id: "404" } }, res),
+    (error) => error.statusCode === 404 && error.code === "MASTER_ITEM_NOT_FOUND"
+  );
 
-  assert.equal(res.statusCode, 404);
-  assert.deepEqual(res.body, { error: "data not found" });
+  assert.equal(res.statusCode, null);
 });
 
 test("shared required-field validation accepts zero and false values", () => {
