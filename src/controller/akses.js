@@ -1,4 +1,5 @@
 const dbPool = require("../config/database");
+const AksesModel = require("../models/akses");
 
 /**
  * Mengambil daftar menu beserta status akses (checked) untuk role tertentu
@@ -64,43 +65,15 @@ const getAksesRole = async (req, res) => {
 const saveAksesRole = async (req, res) => {
   const { idRole } = req.params;
   const menuTree = req.body;
-  let conn;
-
   if (!Array.isArray(menuTree)) {
     return res.status(400).json({ message: "Payload akses harus berupa array menu" });
   }
 
   try {
-    conn = await dbPool.getConnection();
-    await conn.beginTransaction();
-
-    // 1. Hapus akses lama
-    await conn.execute("DELETE FROM tbl_akses WHERE roleId = ?", [idRole]);
-
-    // 2. Insert data baru secara iteratif
-    for (const parent of menuTree) {
-      await conn.execute(
-        "INSERT INTO tbl_akses (roleId, menuId, akses) VALUES (?, ?, ?)",
-        [idRole, parent.id, parent.checked ? 1 : 0]
-      );
-
-      if (parent.children && Array.isArray(parent.children)) {
-        for (const child of parent.children) {
-          await conn.execute(
-            "INSERT INTO tbl_akses (roleId, menuId, akses) VALUES (?, ?, ?)",
-            [idRole, child.id, child.checked ? 1 : 0]
-          );
-        }
-      }
-    }
-
-    await conn.commit();
+    await AksesModel.saveAksesRole(idRole, menuTree);
     res.json({ message: "Akses role berhasil diperbarui" });
   } catch (err) {
-    if (conn) await conn.rollback();
     res.status(500).json({ message: "Gagal menyimpan akses", error: err.message });
-  } finally {
-    if (conn) conn.release();
   }
 };
 
