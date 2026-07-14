@@ -94,10 +94,7 @@ const createNewMesin = async (body, createdBy = null) => {
 const updateMesin = async (idMesinMaster, body, updatedBy) => {
   const { idMitra, cabangId, espId, washer, dryer } = body;
 
-  const connection = await dbPool.getConnection();
-  await connection.beginTransaction();
-
-  try {
+  return withTransaction(async (connection) => {
     // 1. Dapatkan master ID dan namaGroupMesin bawaan dari database
     const [masterRecord] = await connection.execute(
       `SELECT id, namaGroupMesin FROM tbl_mesin_master WHERE id = ? AND idMitra = ? AND statusAktif = 1 LIMIT 1`,
@@ -152,9 +149,6 @@ const updateMesin = async (idMesinMaster, body, updatedBy) => {
     const idWasher = await syncMesin('WASHER', washer);
     const idDryer = await syncMesin('DRYER', dryer);
 
-    // Selesai, simpan permanen
-    await connection.commit();
-
     return {
       idMitra,
       cabangId,
@@ -163,13 +157,7 @@ const updateMesin = async (idMesinMaster, body, updatedBy) => {
       washer: washer === 1 ? { id: idWasher, status: "Ready" } : null,
       dryer: dryer === 1 ? { id: idDryer, status: "Ready" } : null,
     };
-  } catch (error) {
-    // Batalkan semua perubahan jika terjadi error
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const deleteMesin = async (id, updatedBy) => {

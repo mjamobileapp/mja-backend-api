@@ -154,3 +154,31 @@ test("createNewMesin rolls back and releases the connection when a detail insert
     restore();
   }
 });
+
+test("updateMesin releases the connection when begin transaction fails", async () => {
+  const calls = [];
+  const connection = {
+    async beginTransaction() {
+      calls.push("beginTransaction");
+      throw new Error("Begin gagal");
+    },
+    release() {
+      calls.push("release");
+    },
+  };
+  const { mesinModel, restore } = loadMesinModel({
+    async getConnection() {
+      return connection;
+    },
+  });
+
+  try {
+    await assert.rejects(
+      mesinModel.updateMesin(1, { idMitra: 1, cabangId: 2, espId: "ESP-01", washer: 1, dryer: 0 }, "admin"),
+      /Begin gagal/
+    );
+    assert.deepEqual(calls, ["beginTransaction", "release"]);
+  } finally {
+    restore();
+  }
+});
