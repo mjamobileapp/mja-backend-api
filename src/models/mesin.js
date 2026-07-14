@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const { withTransaction } = require("../utils/transaction");
+const { createHttpError } = require("../utils/httpError");
 
 const createNewMesin = async (body, createdBy = null) => {
   const { idMitra, cabangId, espId, washer, dryer } = body;
@@ -11,7 +12,7 @@ const createNewMesin = async (body, createdBy = null) => {
       [idMitra]
     );
     if (existingMitra.length === 0) {
-      throw new Error("Mitra tidak ditemukan atau tidak aktif");
+      throw createHttpError(400, "Mitra tidak ditemukan atau tidak aktif", "MESIN_MITRA_INVALID");
     }
 
     // 2. Validasi Cabang Exist dan sesuai dengan Mitra
@@ -20,7 +21,7 @@ const createNewMesin = async (body, createdBy = null) => {
       [cabangId, idMitra]
     );
     if (existingCabang.length === 0) {
-      throw new Error("Cabang tidak ditemukan / tidak aktif / tidak sesuai dengan Mitra");
+      throw createHttpError(400, "Cabang tidak ditemukan / tidak aktif / tidak sesuai dengan Mitra", "MESIN_CABANG_INVALID");
     }
 
     // 3. Validasi duplikasi espId + cabangId
@@ -29,12 +30,12 @@ const createNewMesin = async (body, createdBy = null) => {
       [espId, cabangId]
     );
     if (existingMaster.length > 0) {
-      throw new Error("Modul ESP ini sudah terdaftar di cabang yang sama");
+      throw createHttpError(400, "Modul ESP ini sudah terdaftar di cabang yang sama", "MESIN_ESP_DUPLICATE");
     }
 
     // 4. Validasi minimal washer atau dryer
     if (washer !== 1 && dryer !== 1) {
-      throw new Error("Minimal salah satu washer atau dryer harus bernilai 1");
+      throw createHttpError(400, "Minimal salah satu washer atau dryer harus bernilai 1", "MESIN_TYPE_REQUIRED");
     }
 
     // 5. Hitung jumlah modul (espId unik) yang sudah ada di cabang tersebut
@@ -102,7 +103,7 @@ const updateMesin = async (idMesinMaster, body, updatedBy) => {
     );
 
     if (masterRecord.length === 0) {
-      throw new Error("Modul mesin tidak ditemukan di sistem.");
+      throw createHttpError(404, "Modul mesin tidak ditemukan di sistem.", "MESIN_MODULE_NOT_FOUND");
     }
 
     const namaMesinAsli = masterRecord[0].namaGroupMesin;
@@ -177,12 +178,12 @@ const deleteMesin = async (id, updatedBy) => {
     );
 
     if (existingMesin.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MESIN_NOT_FOUND");
     }
 
     // 2. Tolak jika mesin sedang menyala (status = in_use)
     if (existingMesin[0].isInUse) {
-      throw new Error("Mesin sedang menyala");
+      throw createHttpError(400, "Mesin sedang menyala", "MESIN_RUNNING");
     }
 
     // 3. Soft delete: update statusAktif menjadi 0 dan update updatedBy pada master
@@ -212,7 +213,7 @@ const getMesinById = async (id) => {
     );
 
     if (rows.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MESIN_NOT_FOUND");
     }
 
     let hasWasher = 0;
@@ -381,7 +382,7 @@ const restoreMesin = async (id, updatedBy) => {
       [id]
     );
     if (existingMesin.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MESIN_NOT_FOUND");
     }
 
     // Get current timestamp
@@ -409,7 +410,7 @@ const getMesinByEspId = async (espId) => {
       [espId]
     );
     if (mesins.length === 0) {
-      throw new Error("Data not found");
+      throw createHttpError(404, "Data not found", "MESIN_NOT_FOUND");
     }
 
     // Map ke format response: washer dan dryer sebagai 1 (ada) atau 0 (tidak ada)
@@ -465,7 +466,7 @@ const getListMesinMobile = async (cabangId, idMitra, filter) => {
     );
 
     if (rows.length === 0) {
-      throw new Error("Data not found");
+      throw createHttpError(404, "Data not found", "MESIN_NOT_FOUND");
     }
 
     // Siapkan wadah untuk Grouping
@@ -518,7 +519,7 @@ const getMitraIdByCabangId = async (cabangId) => {
   );
 
   if (rows.length === 0) {
-    throw new Error("Data not found");
+    throw createHttpError(404, "Data not found", "MESIN_NOT_FOUND");
   }
 
   return rows[0].idMitra;
@@ -544,7 +545,7 @@ const getAllMasterMesin = async () => {
     );
 
     if (rows.length === 0) {
-      throw new Error("Data not found");
+      throw createHttpError(404, "Data not found", "MESIN_NOT_FOUND");
     }
 
     // Grup berdasarkan id master
@@ -594,7 +595,7 @@ const setMaintenance = async (idMesinDetail, updatedBy) => {
     );
 
     if (existingDetail.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MESIN_NOT_FOUND");
     }
 
     // Update status menjadi OFFLINE
@@ -625,7 +626,7 @@ const setReady = async (idMesinDetail, updatedBy) => {
     );
 
     if (existingDetail.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MESIN_NOT_FOUND");
     }
 
     // Update status menjadi READY
