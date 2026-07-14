@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const bcrypt = require("bcrypt");
+const { createHttpError } = require("../utils/httpError");
 
 const getAllUser = (status) => {
   let SQLQuery = `Select 
@@ -62,7 +63,7 @@ const createNewUser = async (body) => {
 
 
     if (!body.password) {
-      throw new Error("Password is required");
+      throw createHttpError(400, "Password is required", "USER_PASSWORD_REQUIRED");
     }
 
     const [existingUser] = await dbPool.execute(
@@ -71,7 +72,7 @@ const createNewUser = async (body) => {
     );
 
     if (existingUser.length > 0) {
-      throw new Error("User sudah terdaftar");
+      throw createHttpError(400, "User sudah terdaftar", "USER_DUPLICATE");
     }
 
     const hashedPassword = await bcrypt.hash(body.password, 10); // Hash the password
@@ -134,7 +135,7 @@ const updateUser = async (body, id) => {
     );
 
     if (existingUser.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "USER_NOT_FOUND");
     }
 
     if (username !== existingUser[0].username) {
@@ -144,7 +145,7 @@ const updateUser = async (body, id) => {
       );
 
       if (duplicate.length > 0) {
-        throw new Error("User sudah terdaftar");
+        throw createHttpError(400, "User sudah terdaftar", "USER_DUPLICATE");
       }
     }
 
@@ -193,7 +194,7 @@ const deleteUser = async (id, updatedBy) => {
     );
 
     if (existingUser.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "USER_NOT_FOUND");
     }
 
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -212,7 +213,7 @@ const restoreUser = async (id, updatedBy) => {
     );
 
     if (existingUser.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "USER_NOT_FOUND");
     }
 
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -233,14 +234,14 @@ const changePassword = async (id, body, updatedBy) => {
       [id]
     );
 
-    if (rows.length === 0) throw new Error("data not found");
+    if (rows.length === 0) throw createHttpError(404, "data not found", "USER_NOT_FOUND");
 
     const user = rows[0];
 
     // 2. Verifikasi password lama
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      throw new Error("Password lama salah");
+      throw createHttpError(400, "Password lama salah", "USER_OLD_PASSWORD_INVALID");
     }
 
     // 3. Hash password baru
