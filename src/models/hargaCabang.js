@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const { withTransaction } = require("../utils/transaction");
+const { createHttpError } = require("../utils/httpError");
 
 const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
   return withTransaction(async (connection) => {
@@ -9,7 +10,7 @@ const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
       [idMitra]
     );
     if (mitraCheck.length === 0) {
-      throw new Error("Mitra tidak ditemukan");
+      throw createHttpError(404, "Mitra tidak ditemukan", "MITRA_NOT_FOUND");
     }
 
     // 2. Validasi cabangId
@@ -18,7 +19,7 @@ const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
       [cabangId, idMitra]
     );
     if (cabangCheck.length === 0) {
-      throw new Error("Cabang tidak ditemukan");
+      throw createHttpError(404, "Cabang tidak ditemukan", "CABANG_NOT_FOUND");
     }
 
     // 3. DELETE data lama untuk idMitra & cabangId ini
@@ -61,7 +62,7 @@ const getSettingHarga = async (idMitra, cabangId) => {
       [idMitra]
     );
     if (mitraCheck.length === 0) {
-      throw new Error("Mitra tidak ditemukan");
+      throw createHttpError(404, "Mitra tidak ditemukan", "MITRA_NOT_FOUND");
     }
 
     // 2. Validasi cabangId
@@ -70,7 +71,7 @@ const getSettingHarga = async (idMitra, cabangId) => {
       [cabangId, idMitra]
     );
     if (cabangCheck.length === 0) {
-      throw new Error("Cabang tidak ditemukan");
+      throw createHttpError(404, "Cabang tidak ditemukan", "CABANG_NOT_FOUND");
     }
 
     // 3. Ambil data setting harga
@@ -106,7 +107,7 @@ ORDER BY
     );
 
     if (rows.length === 0) {
-      throw new Error("Data setting harga tidak ditemukan untuk cabang ini");
+      throw createHttpError(404, "Data setting harga tidak ditemukan untuk cabang ini", "BRANCH_PRICE_NOT_FOUND");
     }
 
     return rows;
