@@ -1,9 +1,8 @@
 const dbPool = require("../config/database");
+const { withTransaction } = require("../utils/transaction");
 
 const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
-  const connection = await dbPool.getConnection();
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
     // 1. Validasi idMitra
     const [mitraCheck] = await connection.execute(
       "SELECT id FROM tbl_mitra WHERE id = ? AND statusAktif = 1",
@@ -50,14 +49,8 @@ const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
       });
     }
 
-    await connection.commit();
     return insertedData;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const getSettingHarga = async (idMitra, cabangId) => {

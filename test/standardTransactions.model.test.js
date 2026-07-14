@@ -75,3 +75,34 @@ test("createNewCabang and resetCabang use one standard transaction lifecycle", a
     assert.deepEqual(resetCalls.slice(-2), ["commit", "release"]);
   } finally { reset.restore(); }
 });
+
+test("price and cashflow writes use a single standard transaction lifecycle", async () => {
+  const hargaCalls = [];
+  let hargaExecuteCount = 0;
+  const harga = loadModelWithTransaction("../src/models/hargaCabang", createConnection(hargaCalls, async () => {
+    hargaExecuteCount += 1;
+    if (hargaExecuteCount <= 2) return [[{ id: hargaExecuteCount }]];
+    if (hargaExecuteCount === 4) return [{ insertId: 9 }];
+    return [[]];
+  }));
+  try {
+    const result = await harga.model.createSettingHarga(1, 2, [{ jenisLayanan: "cuci", itemId: null, harga: 20000 }], "admin");
+    assert.equal(result[0].id, 9);
+    assert.deepEqual(hargaCalls.slice(-2), ["commit", "release"]);
+  } finally { harga.restore(); }
+
+  const cashflowCalls = [];
+  let cashflowExecuteCount = 0;
+  const cashflow = loadModelWithTransaction("../src/models/cashflow", createConnection(cashflowCalls, async () => {
+    cashflowExecuteCount += 1;
+    if (cashflowExecuteCount <= 3) return [[{ id: cashflowExecuteCount, namaLengkap: "Kasir" }]];
+    if (cashflowExecuteCount === 4) return [[{ id: 4, tipeItem: "non_stok" }]];
+    if (cashflowExecuteCount === 5) return [{ insertId: 10 }];
+    return [[{ id: 10, idMitra: 1, cabangId: 2, idUserMobile: 3, itemId: 4, jumlahBarang: 0, nominal: 5000 }]];
+  }));
+  try {
+    const result = await cashflow.model.createPengeluaran({ idMitra: 1, cabangId: 2, idUserMobile: 3, itemId: 4, jumlahBarang: 0, nominal: 5000 });
+    assert.equal(result.id, 10);
+    assert.deepEqual(cashflowCalls.slice(-2), ["commit", "release"]);
+  } finally { cashflow.restore(); }
+});

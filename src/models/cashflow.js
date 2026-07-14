@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const { formatTanggalJamWIB, getDateFilterCondition, getJakartaSqlDate } = require("../utils/date");
+const { withTransaction } = require("../utils/transaction");
 
 const getCashflow = (cabangId, idMitra, cabangId2, idMitra2, filter) => {
   const pemasukanDateFilter = getDateFilterCondition("waktuOrder", filter);
@@ -266,10 +267,7 @@ const getPengeluaranById = async (id, idMitra, filter, cabangId = null) => {
 
 const createPengeluaran = async (data) => {
   const { idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal } = data;
-  const connection = await dbPool.getConnection();
-
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     // 1. Validasi idMitra
     const [mitraCheck] = await connection.execute(
@@ -343,8 +341,6 @@ const createPengeluaran = async (data) => {
 
     const row = newData[0];
 
-    await connection.commit();
-
     return {
       id: row.id,
       idMitra: String(row.idMitra),
@@ -356,12 +352,7 @@ const createPengeluaran = async (data) => {
       waktuPengeluaran: row.waktuPengeluaran ? new Date(row.waktuPengeluaran).toISOString() : "",
       createdDate: row.createdDate ? new Date(row.createdDate).toISOString() : "",
     };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const updatePengeluaran = async (body, id, idMitra, cabangId = null) => {
