@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const { getDateFilterCondition, getTodayStringYYYYMMDD } = require("../utils/date");
+const { createHttpError } = require("../utils/httpError");
 const { publishAndWaitAck } = require("../utils/mqttClient");
 
 const jenisMesinToLayanan = {
@@ -9,12 +10,6 @@ const jenisMesinToLayanan = {
 
 const normalizeEspId = (espId) => String(espId || "").trim().toUpperCase();
 const isMqttDebugEnabled = () => String(process.env.MQTT_DEBUG || "").toLowerCase() === "true";
-
-const createHttpError = (message, statusCode) => {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  return error;
-};
 
 const getInvoiceDate = () => getTodayStringYYYYMMDD();
 
@@ -314,16 +309,16 @@ const getMesinForStart = async (connection, { mesinId, idMitra, cabangId }) => {
   );
 
   if (rows.length === 0) {
-    throw createHttpError("Mesin tidak ditemukan", 404);
+    throw createHttpError(404, "Mesin tidak ditemukan", "MACHINE_NOT_FOUND");
   }
 
   const mesin = rows[0];
   if (String(mesin.status).toUpperCase() !== "READY") {
-    throw createHttpError("Mesin tidak tersedia", 409);
+    throw createHttpError(409, "Mesin tidak tersedia", "MACHINE_NOT_READY");
   }
 
   if (!jenisMesinToLayanan[mesin.jenisMesin]) {
-    throw createHttpError("Jenis mesin tidak valid", 400);
+    throw createHttpError(400, "Jenis mesin tidak valid", "INVALID_MACHINE_TYPE");
   }
 
   return mesin;
@@ -349,16 +344,16 @@ const getMesinForStop = async (connection, { mesinId, idMitra, cabangId }) => {
   );
 
   if (rows.length === 0) {
-    throw createHttpError("Mesin tidak ditemukan", 404);
+    throw createHttpError(404, "Mesin tidak ditemukan", "MACHINE_NOT_FOUND");
   }
 
   const mesin = rows[0];
   if (String(mesin.status).toUpperCase() !== "IN_USE") {
-    throw createHttpError("Mesin tidak sedang digunakan", 409);
+    throw createHttpError(409, "Mesin tidak sedang digunakan", "MACHINE_NOT_IN_USE");
   }
 
   if (!jenisMesinToLayanan[mesin.jenisMesin]) {
-    throw createHttpError("Jenis mesin tidak valid", 400);
+    throw createHttpError(400, "Jenis mesin tidak valid", "INVALID_MACHINE_TYPE");
   }
 
   return mesin;
@@ -389,7 +384,7 @@ const getPendingDetailForStart = async (
   );
 
   if (rows.length === 0) {
-    throw createHttpError("Transaksi pending tidak ditemukan", 404);
+    throw createHttpError(404, "Transaksi pending tidak ditemukan", "PENDING_TRANSACTION_NOT_FOUND");
   }
 
   return rows[0];
@@ -407,7 +402,7 @@ const validateDryerCanStart = async (connection, orderId) => {
   const hasUnfinishedWash = rows.some((row) => row.statusEksekusi !== "selesai");
 
   if (hasUnfinishedWash) {
-    throw createHttpError("Layanan cuci belum selesai", 409);
+    throw createHttpError(409, "Layanan cuci belum selesai", "WASH_NOT_COMPLETED");
   }
 };
 
@@ -474,7 +469,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceN
 
       await connection.commit();
       shouldRollback = false;
-      throw createHttpError("Gagal mengirim perintah ke mesin", 502);
+      throw createHttpError(502, "Gagal mengirim perintah ke mesin", "MQTT_COMMAND_FAILED");
     }
 
     await connection.execute(
@@ -570,7 +565,7 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
 
       await connection.commit();
       shouldRollback = false;
-      throw createHttpError("Gagal mengirim perintah off ke mesin", 502);
+      throw createHttpError(502, "Gagal mengirim perintah off ke mesin", "MQTT_COMMAND_FAILED");
     }
 
     await connection.execute(
