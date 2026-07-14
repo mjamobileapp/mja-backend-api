@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const { formatTanggalWIB, formatJamWIB, getJakartaSqlDate } = require("../utils/date");
+const { createHttpError } = require("../utils/httpError");
 
 const getHistoryTransaksi = async (cabangId, idMitra) => {
   try {
@@ -27,7 +28,7 @@ const getHistoryTransaksi = async (cabangId, idMitra) => {
     );
 
     if (rows.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "HISTORY_NOT_FOUND");
     }
 
     // Grouping per tanggal
@@ -96,7 +97,7 @@ const getHistoryTransaksiKasir = async ({ cabangId, tanggal, namaKasir }) => {
     const [rows] = await dbPool.execute(SQLQuery, values);
 
     if (rows.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "HISTORY_NOT_FOUND");
     }
 
     return rows.map((row) => ({
@@ -131,7 +132,7 @@ const getHistoryMesin = async (cabangId, idMitra) => {
     );
 
     if (rows.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "HISTORY_NOT_FOUND");
     }
 
     // Mapping data mentah dari SQL ke format JSON UI
