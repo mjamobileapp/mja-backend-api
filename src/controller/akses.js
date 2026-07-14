@@ -6,8 +6,7 @@ const AksesModel = require("../models/akses");
  */
 const getAksesRole = async (req, res) => {
   const { idRole } = req.params;
-  try {
-    const [cekAksesRows] = await dbPool.execute(
+  const [cekAksesRows] = await dbPool.execute(
       "SELECT COUNT(*) AS count FROM tbl_akses WHERE roleId = ?",
       [idRole]
     );
@@ -53,10 +52,7 @@ const getAksesRole = async (req, res) => {
           })),
       }));
 
-    res.json(treeMenus);
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  return res.json(treeMenus);
 };
 
 /**
@@ -69,12 +65,8 @@ const saveAksesRole = async (req, res) => {
     return res.status(400).json({ message: "Payload akses harus berupa array menu" });
   }
 
-  try {
-    await AksesModel.saveAksesRole(idRole, menuTree);
-    res.json({ message: "Akses role berhasil diperbarui" });
-  } catch (err) {
-    res.status(500).json({ message: "Gagal menyimpan akses", error: err.message });
-  }
+  await AksesModel.saveAksesRole(idRole, menuTree);
+  return res.json({ message: "Akses role berhasil diperbarui" });
 };
 
 /**
@@ -82,8 +74,7 @@ const saveAksesRole = async (req, res) => {
  */
 const getAksesByUser = async (req, res) => {
   const { email } = req.params;
-  try {
-    const [menus] = await dbPool.query(
+  const [menus] = await dbPool.query(
       `SELECT m.id, m.namaMenu, m.iconMenu, m.url, m.parentId, m.noUrut
        FROM tbl_users u
        JOIN tbl_role r ON r.id = u.roleId 
@@ -118,10 +109,7 @@ const getAksesByUser = async (req, res) => {
       }
     });
 
-    res.json([{ heading: "Pages", items }]);
-  } catch (err) {
-    res.status(500).json({ error: "Server error", details: err.message });
-  }
+  return res.json([{ heading: "Pages", items }]);
 };
 
 module.exports = {
