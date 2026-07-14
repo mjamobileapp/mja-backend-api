@@ -60,7 +60,7 @@ test("createTransaksi preserves the legacy controller contract before business-v
       );
 
       assert.equal(response.statusCode, 201);
-      assert.equal(calls.at(-1).totalBayar, "20000.50");
+      assert.equal(calls.at(-1).totalBayar, 20000.5);
     });
 
     await t.test("rejects legacy invalid transport payloads before calling the model", async () => {
@@ -123,5 +123,3 @@ test("createTransaksi preserves the legacy controller contract before business-v
 test.skip("Fase 5: rejects a client total that is self-consistent but below tbl_harga_cabang", () => {
   // Target security behavior. The integration fixture will provide the official branch price.
 });
-
-test.todo("Fase 4: rejects unsafe numeric values before money arithmetic");
