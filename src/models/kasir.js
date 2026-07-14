@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const bcrypt = require("bcrypt");
+const { createHttpError } = require("../utils/httpError");
 const { generateAndHashPassword } = require("../utils/password");
 const { getJakartaSqlDate, getJakartaSqlTime } = require("../utils/date");
 
@@ -18,7 +19,7 @@ const createNewUserKasir = async (body) => {
     // 0. Validasi Format Email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      throw new Error("Format email tidak valid");
+      throw createHttpError(400, "Format email tidak valid", "KASIR_EMAIL_INVALID");
     }
 
     // 1. Validasi Mitra Exist
@@ -27,7 +28,7 @@ const createNewUserKasir = async (body) => {
       [idMitra]
     );
     if (existingMitra.length === 0) {
-      throw new Error("Mitra tidak ditemukan atau tidak aktif");
+      throw createHttpError(400, "Mitra tidak ditemukan atau tidak aktif", "KASIR_MITRA_INVALID");
     }
 
     // 1b. Validasi Cabang (milik idMitra yang sama)
@@ -37,7 +38,7 @@ const createNewUserKasir = async (body) => {
         [cabangId, idMitra]
       );
       if (existingCabang.length === 0) {
-        throw new Error("Cabang tidak ditemukan atau tidak sesuai dengan Mitra");
+      throw createHttpError(400, "Cabang tidak ditemukan atau tidak sesuai dengan Mitra", "KASIR_CABANG_INVALID");
       }
     }
 
@@ -57,17 +58,17 @@ const createNewUserKasir = async (body) => {
 
       // Cek duplikasi username (tidak peduli status aktif/nonaktif)
       if (duplicates.some((u) => u.username === username)) {
-        throw new Error("Username sudah terdaftar");
+        throw createHttpError(400, "Username sudah terdaftar", "KASIR_USERNAME_DUPLICATE");
       }
       
       // Cek duplikasi email HANYA JIKA statusnya aktif
       if (duplicates.some((u) => u.email === email && u.statusAktif === 1)) {
-        throw new Error("Email sudah terdaftar dan sedang aktif digunakan");
+        throw createHttpError(400, "Email sudah terdaftar dan sedang aktif digunakan", "KASIR_EMAIL_DUPLICATE");
       }
       
       // Cek duplikasi nomor telepon HANYA JIKA statusnya aktif
       if (duplicates.some((u) => u.noTelp === noTelp && u.statusAktif === 1)) {
-        throw new Error("Nomor Telepon sudah terdaftar dan sedang aktif digunakan");
+        throw createHttpError(400, "Nomor Telepon sudah terdaftar dan sedang aktif digunakan", "KASIR_PHONE_DUPLICATE");
       }
     }
 
@@ -163,7 +164,7 @@ const getUserKasirById = async (id, idMitra) => {
       "SELECT * FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir'",
       [id, idMitra]
     );
-    if (user.length === 0) throw new Error("data not found");
+    if (user.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
     delete user[0].password;
     delete user[0].deviceId;
     delete user[0].deviceName;
@@ -180,7 +181,7 @@ const updateUserKasir = async (id, body, idMitra) => {
     // 0. Validasi Format Email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      throw new Error("Format email tidak valid");
+      throw createHttpError(400, "Format email tidak valid", "KASIR_EMAIL_INVALID");
     }
 
     // 1. Cek eksistensi
@@ -188,7 +189,7 @@ const updateUserKasir = async (id, body, idMitra) => {
       "SELECT * FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir'",
       [id, idMitra]
     );
-    if (existing.length === 0) throw new Error("data not found");
+    if (existing.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     // 2. Validasi duplikasi jika data unik diubah
     const [duplicates] = await dbPool.execute(
@@ -196,8 +197,8 @@ const updateUserKasir = async (id, body, idMitra) => {
       [email, noTelp, id]
     );
     if (duplicates.length > 0) {
-      if (duplicates.some((u) => u.email === email)) throw new Error("Email sudah terdaftar");
-      if (duplicates.some((u) => u.noTelp === noTelp)) throw new Error("Nomor Telepon sudah terdaftar");
+      if (duplicates.some((u) => u.email === email)) throw createHttpError(400, "Email sudah terdaftar", "KASIR_EMAIL_DUPLICATE");
+      if (duplicates.some((u) => u.noTelp === noTelp)) throw createHttpError(400, "Nomor Telepon sudah terdaftar", "KASIR_PHONE_DUPLICATE");
     }
 
     // 2b. Validasi Cabang (jika diisi)
@@ -207,7 +208,7 @@ const updateUserKasir = async (id, body, idMitra) => {
         [cabangId, existing[0].idMitra]
       );
       if (existingCabang.length === 0) {
-        throw new Error("Cabang tidak ditemukan atau tidak sesuai dengan Mitra");
+      throw createHttpError(400, "Cabang tidak ditemukan atau tidak sesuai dengan Mitra", "KASIR_CABANG_INVALID");
       }
     }
 
@@ -242,7 +243,7 @@ const deleteUserKasir = async (id, updatedBy, idMitra) => {
       "SELECT id FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 1",
       [id, idMitra]
     );
-    if (existing.length === 0) throw new Error("data not found");
+    if (existing.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = "UPDATE tbl_users_mobile SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
@@ -259,7 +260,7 @@ const restoreUserKasir = async (id, updatedBy, idMitra) => {
       "SELECT id FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 0",
       [id, idMitra]
     );
-    if (existing.length === 0) throw new Error("data not found");
+    if (existing.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = "UPDATE tbl_users_mobile SET statusAktif = 1, updatedBy = ?, updatedDate = ? WHERE id = ?";
@@ -278,7 +279,7 @@ const resetDeviceId = async (id, body, updatedBy, idMitra) => {
       [id, idMitra]
     );
 
-    if (existing.length === 0) throw new Error("data not found");
+    if (existing.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = "UPDATE tbl_users_mobile SET deviceId = NULL, deviceName = NULL, updatedBy = ?, updatedDate = ? WHERE id = ?";
@@ -300,14 +301,14 @@ const changePassword = async (id, body, updatedBy, idMitra) => {
       [id, idMitra]
     );
 
-    if (rows.length === 0) throw new Error("data not found");
+    if (rows.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     const user = rows[0];
 
     // 2. Verifikasi password lama
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      throw new Error("Password lama salah");
+      throw createHttpError(400, "Password lama salah", "KASIR_OLD_PASSWORD_INVALID");
     }
 
     // 3. Hash password baru
@@ -332,7 +333,7 @@ const resetPassword = async (email) => {
       [email]
     );
 
-    if (rows.length === 0) throw new Error("data not found");
+    if (rows.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     return { username: rows[0].username, email: rows[0].email };
   } catch (error) {
