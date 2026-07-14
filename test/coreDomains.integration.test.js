@@ -45,12 +45,25 @@ const request = (server, { method = "GET", path, token, body }) =>
 let server;
 let fixture;
 
-const mobileToken = () => jwt.sign({ id: fixture.kasirId, idMitra: fixture.idMitra }, process.env.JWT_SECRET, { expiresIn: "5m" });
-const ownerToken = () => jwt.sign({ id: fixture.ownerId, idMitra: fixture.idMitra }, process.env.JWT_SECRET, { expiresIn: "5m" });
+const mobileToken = () =>
+  jwt.sign({ id: fixture.kasirId, idMitra: fixture.idMitra, tokenType: "mobile" }, process.env.JWT_SECRET, { expiresIn: "5m" });
+const ownerToken = () =>
+  jwt.sign({ id: fixture.ownerId, idMitra: fixture.idMitra, tokenType: "mobile" }, process.env.JWT_SECRET, { expiresIn: "5m" });
 const backofficeToken = () =>
-  jwt.sign({ id: fixture.backofficeUserId, username: fixture.backofficeUsername, role: fixture.roleId }, process.env.JWT_SECRET, {
+  jwt.sign({ id: fixture.backofficeUserId, username: fixture.backofficeUsername, role: fixture.roleId, tokenType: "backoffice" }, process.env.JWT_SECRET, {
     expiresIn: "5m",
   });
+const restrictedBackofficeToken = () =>
+  jwt.sign(
+    {
+      id: fixture.restrictedBackofficeUserId,
+      username: fixture.restrictedBackofficeUsername,
+      role: fixture.restrictedRoleId,
+      tokenType: "backoffice",
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "5m" }
+  );
 
 test.before(async () => {
   await migrateMachineLogActor(db);
@@ -80,10 +93,32 @@ test.before(async () => {
     "INSERT INTO tbl_role (namaRole, description, createdBy) VALUES (?, ?, ?)",
     [`Role ${suffix}`, "Integration test", "integration-test"]
   );
+  const [roleMenus] = await db.execute("SELECT id FROM tbl_menu WHERE url = ? LIMIT 1", ["/settings/role"]);
+  let roleMenuId = roleMenus[0]?.id;
+  let createdRoleMenu = false;
+  if (!roleMenuId) {
+    const [roleMenu] = await db.execute(
+      `INSERT INTO tbl_menu (url, namaMenu, parentId, levelMenu, noUrut, createdBy)
+       VALUES (?, ?, NULL, ?, ?, ?)`,
+      ["/settings/role", `Role Permission ${suffix}`, 1, 999999, "integration-test"]
+    );
+    roleMenuId = roleMenu.insertId;
+    createdRoleMenu = true;
+  }
+  await db.execute("INSERT INTO tbl_akses (roleId, menuId, akses) VALUES (?, ?, 1)", [role.insertId, roleMenuId]);
   const backofficeUsername = `backoffice-${suffix}`;
   const [backofficeUser] = await db.execute(
     "INSERT INTO tbl_users (username, password, statusAktif, createdBy, nama, roleId) VALUES (?, ?, 1, ?, ?, ?)",
     [backofficeUsername, "not-used", "integration-test", "Backoffice Integration", role.insertId]
+  );
+  const [restrictedRole] = await db.execute(
+    "INSERT INTO tbl_role (namaRole, description, createdBy) VALUES (?, ?, ?)",
+    [`Restricted Role ${suffix}`, "No backoffice menu access", "integration-test"]
+  );
+  const restrictedBackofficeUsername = `restricted-backoffice-${suffix}`;
+  const [restrictedBackofficeUser] = await db.execute(
+    "INSERT INTO tbl_users (username, password, statusAktif, createdBy, nama, roleId) VALUES (?, ?, 1, ?, ?, ?)",
+    [restrictedBackofficeUsername, "not-used", "integration-test", "Restricted Backoffice", restrictedRole.insertId]
   );
   const [item] = await db.execute(
     "INSERT INTO tbl_master_item_expense (namaItem, tipeItem, createdBy, statusAktif) VALUES (?, 'stok', ?, 1)",
@@ -115,8 +150,13 @@ test.before(async () => {
     ownerId: owner.insertId,
     kasirId: kasir.insertId,
     roleId: role.insertId,
+    roleMenuId,
+    createdRoleMenu,
     backofficeUserId: backofficeUser.insertId,
     backofficeUsername,
+    restrictedRoleId: restrictedRole.insertId,
+    restrictedBackofficeUserId: restrictedBackofficeUser.insertId,
+    restrictedBackofficeUsername,
     itemId: item.insertId,
     mesinMasterIds: [mesinMaster.insertId],
     mesinDetailId: mesinDetail.insertId,
@@ -142,6 +182,7 @@ test.after(async () => {
   await db.execute(`DELETE d FROM tbl_detail_order d JOIN tbl_order_laundry o ON o.id = d.orderId WHERE o.idMitra = ?`, [fixture.idMitra]);
   await db.execute("DELETE FROM tbl_order_laundry WHERE idMitra = ?", [fixture.idMitra]);
   await db.execute("DELETE FROM tbl_pengeluaran WHERE idMitra = ?", [fixture.idMitra]);
+  await db.execute("DELETE FROM tbl_notifikasi WHERE idMitra = ?", [fixture.idMitra]);
   await db.execute("DELETE FROM tbl_stok_cabang WHERE idMitra = ?", [fixture.idMitra]);
   for (const masterId of masterIds) {
     await db.execute("DELETE FROM tbl_mesin_detail WHERE idMesinMaster = ?", [masterId]);
@@ -149,8 +190,12 @@ test.after(async () => {
   }
   await db.execute("DELETE FROM tbl_akses WHERE roleId = ?", [fixture.roleId]);
   await db.execute("DELETE FROM tbl_menu WHERE id IN (?, ?)", [fixture.parentMenuId, fixture.childMenuId]);
-  await db.execute("DELETE FROM tbl_users WHERE id = ?", [fixture.backofficeUserId]);
+  if (fixture.createdRoleMenu) {
+    await db.execute("DELETE FROM tbl_menu WHERE id = ?", [fixture.roleMenuId]);
+  }
+  await db.execute("DELETE FROM tbl_users WHERE id IN (?, ?)", [fixture.backofficeUserId, fixture.restrictedBackofficeUserId]);
   await db.execute("DELETE FROM tbl_role WHERE id = ?", [fixture.roleId]);
+  await db.execute("DELETE FROM tbl_role WHERE id = ?", [fixture.restrictedRoleId]);
   await db.execute("DELETE FROM tbl_master_item_expense WHERE id = ?", [fixture.itemId]);
   await db.execute("DELETE FROM tbl_users_mobile WHERE id IN (?, ?)", [fixture.ownerId, fixture.kasirId]);
   await db.execute("DELETE FROM tbl_cabang WHERE id = ?", [fixture.cabangId]);
@@ -159,6 +204,141 @@ test.after(async () => {
 });
 
 test("core domains complete their HTTP flows on the isolated integration schema", async (t) => {
+  await t.test("mobile token cannot impersonate a backoffice account with the same id", async () => {
+    const collidingMobileToken = jwt.sign(
+      {
+        id: fixture.backofficeUserId,
+        username: "mobile-user-with-colliding-id",
+        role: 2,
+        idMitra: fixture.idMitra,
+        tokenType: "mobile",
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "5m" }
+    );
+
+    const response = await request(server, {
+      path: "/api/backoffice/dashboard/getmitra",
+      token: collidingMobileToken,
+    });
+
+    assert.equal(response.statusCode, 401);
+    assert.equal(response.body.code, "INVALID_TOKEN_TYPE");
+  });
+
+  await t.test("backoffice token must match the current database identity", async () => {
+    const mismatchedBackofficeToken = jwt.sign(
+      {
+        id: fixture.backofficeUserId,
+        username: "different-backoffice-username",
+        role: fixture.roleId,
+        tokenType: "backoffice",
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "5m" }
+    );
+
+    const response = await request(server, {
+      path: "/api/backoffice/dashboard/getmitra",
+      token: mismatchedBackofficeToken,
+    });
+
+    assert.equal(response.statusCode, 401);
+    assert.equal(response.body.code, "TOKEN_IDENTITY_MISMATCH");
+  });
+
+  await t.test("backoffice API denies a role without the required menu permission", async () => {
+    const requests = [
+      {
+        method: "POST",
+        path: "/api/backoffice/users",
+        token: restrictedBackofficeToken(),
+      },
+      {
+        method: "POST",
+        path: "/api/backoffice/roles",
+        token: restrictedBackofficeToken(),
+      },
+      {
+        method: "POST",
+        path: `/api/backoffice/akses/role/${fixture.roleId}`,
+        token: restrictedBackofficeToken(),
+      },
+    ];
+
+    for (const requestOptions of requests) {
+      const response = await request(server, requestOptions);
+      assert.equal(response.statusCode, 403);
+      assert.equal(response.body.code, "FORBIDDEN");
+    }
+  });
+
+  await t.test("notification mark-as-read is restricted to the authenticated tenant and cashier branch", async () => {
+    const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const [otherCabang] = await db.execute(
+      "INSERT INTO tbl_cabang (idMitra, kodeCabang, namaCabang, alamatCabang, createdBy, statusAktif) VALUES (?, ?, ?, ?, ?, 1)",
+      [fixture.idMitra, `NOTIF-CAB-${suffix}`, `Notifikasi Cabang ${suffix}`, "Integration test", "integration-test"]
+    );
+    const [foreignMitra] = await db.execute(
+      "INSERT INTO tbl_mitra (kodeMitra, namaMitra, alamatMitra, createdBy, statusAktif) VALUES (?, ?, ?, ?, 1)",
+      [`NOTIF-${suffix}`, `Notifikasi Mitra ${suffix}`, "Integration test", "integration-test"]
+    );
+    const [foreignCabang] = await db.execute(
+      "INSERT INTO tbl_cabang (idMitra, kodeCabang, namaCabang, alamatCabang, createdBy, statusAktif) VALUES (?, ?, ?, ?, ?, 1)",
+      [foreignMitra.insertId, `NOTIF-FOREIGN-${suffix}`, `Notifikasi Foreign ${suffix}`, "Integration test", "integration-test"]
+    );
+    const [ownNotification] = await db.execute(
+      "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan) VALUES (?, ?, ?, ?, ?)",
+      [fixture.idMitra, fixture.cabangId, "TEST", "Own notification", "Notification within tenant"]
+    );
+    const [otherBranchNotification] = await db.execute(
+      "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan) VALUES (?, ?, ?, ?, ?)",
+      [fixture.idMitra, otherCabang.insertId, "TEST", "Other branch notification", "Notification on another branch"]
+    );
+    const [foreignNotification] = await db.execute(
+      "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan) VALUES (?, ?, ?, ?, ?)",
+      [foreignMitra.insertId, foreignCabang.insertId, "TEST", "Foreign notification", "Notification in another tenant"]
+    );
+
+    try {
+      const ownResponse = await request(server, {
+        method: "PUT",
+        path: `/api/mobile/notifications/${ownNotification.insertId}/read`,
+        token: ownerToken(),
+      });
+      const foreignResponse = await request(server, {
+        method: "PUT",
+        path: `/api/mobile/notifications/${foreignNotification.insertId}/read`,
+        token: ownerToken(),
+      });
+      const otherBranchResponse = await request(server, {
+        method: "PUT",
+        path: `/api/mobile/notifications/${otherBranchNotification.insertId}/read`,
+        token: mobileToken(),
+      });
+      const [notifications] = await db.execute(
+        "SELECT id, isRead FROM tbl_notifikasi WHERE id IN (?, ?, ?)",
+        [ownNotification.insertId, otherBranchNotification.insertId, foreignNotification.insertId]
+      );
+      const isReadById = new Map(notifications.map((notification) => [notification.id, notification.isRead]));
+
+      assert.equal(ownResponse.statusCode, 200);
+      assert.equal(foreignResponse.statusCode, 404);
+      assert.equal(otherBranchResponse.statusCode, 404);
+      assert.equal(isReadById.get(ownNotification.insertId), 1);
+      assert.equal(isReadById.get(otherBranchNotification.insertId), 0);
+      assert.equal(isReadById.get(foreignNotification.insertId), 0);
+    } finally {
+      await db.execute("DELETE FROM tbl_notifikasi WHERE id IN (?, ?, ?)", [
+        ownNotification.insertId,
+        otherBranchNotification.insertId,
+        foreignNotification.insertId,
+      ]);
+      await db.execute("DELETE FROM tbl_cabang WHERE id IN (?, ?)", [otherCabang.insertId, foreignCabang.insertId]);
+      await db.execute("DELETE FROM tbl_mitra WHERE id = ?", [foreignMitra.insertId]);
+    }
+  });
+
   await t.test("mesin CRUD, dashboard, and mobile machine list", async () => {
     const create = await request(server, {
       method: "POST",
@@ -178,9 +358,11 @@ test("core domains complete their HTTP flows on the isolated integration schema"
     const getById = await request(server, { path: `/api/backoffice/mesin/${createdMasterId}`, token: backofficeToken() });
     const list = await request(server, { path: "/api/backoffice/mesin?status=all", token: backofficeToken() });
     const mobileList = await request(server, { path: `/api/backoffice/mesin/list/cabang/${fixture.cabangId}`, token: mobileToken() });
+    const backofficeList = await request(server, { path: `/api/backoffice/mesin/list/cabang/${fixture.cabangId}`, token: backofficeToken() });
     assert.equal(getById.statusCode, 200);
     assert.equal(list.statusCode, 200);
     assert.equal(mobileList.statusCode, 200);
+    assert.equal(backofficeList.statusCode, 200);
 
     const [details] = await db.execute("SELECT id FROM tbl_mesin_detail WHERE idMesinMaster = ? ORDER BY id", [createdMasterId]);
     const maintenance = await request(server, { method: "PUT", path: `/api/backoffice/mesin/maintenance/${details[0].id}`, token: backofficeToken() });
@@ -207,7 +389,10 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       method: "POST",
       path: `/api/backoffice/akses/role/${fixture.roleId}`,
       token: backofficeToken(),
-      body: [{ id: fixture.parentMenuId, checked: true, children: [{ id: fixture.childMenuId, checked: true }] }],
+      body: [
+        { id: fixture.parentMenuId, checked: true, children: [{ id: fixture.childMenuId, checked: true }] },
+        { id: fixture.roleMenuId, checked: true },
+      ],
     });
     const roleAccess = await request(server, { path: `/api/backoffice/akses/role/${fixture.roleId}`, token: backofficeToken() });
     const userAccess = await request(server, {
@@ -240,9 +425,31 @@ test("core domains complete their HTTP flows on the isolated integration schema"
     assert.equal(invalidStart.statusCode, 400);
 
     await db.execute(
-      `INSERT INTO tbl_log_mesin (idMitra, cabangId, mesinId, kasirId, invoiceNumber, statusPerintah)
-       VALUES (?, ?, ?, ?, ?, 'success')`,
-      [fixture.idMitra, fixture.cabangId, fixture.mesinDetailId, fixture.kasirId, create.body.data.invoiceNumber]
+      `INSERT INTO tbl_log_mesin
+        (idMitra, cabangId, mesinId, kasirId, actorType, actorId, actorUsername, invoiceNumber, statusPerintah)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'success'), (?, ?, ?, NULL, ?, ?, ?, NULL, 'success'), (?, ?, ?, NULL, ?, ?, ?, NULL, 'success')`,
+      [
+        fixture.idMitra,
+        fixture.cabangId,
+        fixture.mesinDetailId,
+        fixture.kasirId,
+        "kasir",
+        fixture.kasirId,
+        "kasir-audit",
+        create.body.data.invoiceNumber,
+        fixture.idMitra,
+        fixture.cabangId,
+        fixture.mesinDetailId,
+        "owner",
+        fixture.ownerId,
+        "owner-audit",
+        fixture.idMitra,
+        fixture.cabangId,
+        fixture.mesinDetailId,
+        "backoffice",
+        fixture.backofficeUserId,
+        fixture.backofficeUsername,
+      ]
     );
     const ownerHistory = await request(server, { path: `/api/owner/history/transaksi?cabangId=${fixture.cabangId}`, token: ownerToken() });
     const kasirHistory = await request(server, { path: "/api/kasir/history/transaksi", token: mobileToken() });
@@ -250,6 +457,10 @@ test("core domains complete their HTTP flows on the isolated integration schema"
     assert.equal(ownerHistory.statusCode, 200);
     assert.equal(kasirHistory.statusCode, 200);
     assert.equal(machineHistory.statusCode, 200);
+    const machineOperators = machineHistory.body.data.map((log) => log.namaOperator);
+    assert.ok(machineOperators.includes("Kasir Integration"));
+    assert.ok(machineOperators.includes("owner-audit"));
+    assert.ok(machineOperators.includes(fixture.backofficeUsername));
   });
 
   await t.test("absensi only permits the authenticated tenant and cashier branch", async () => {

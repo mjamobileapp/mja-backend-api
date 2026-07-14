@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const dbPool = require("../config/database");
+const { TOKEN_TYPES } = require("../utils/jwt");
 
 /**
  * Memverifikasi token JWT mobile dan memvalidasi keaktifan user, mitra (tenant),
@@ -35,14 +36,22 @@ const verifyMobileToken = async (req) => {
     throw error;
   }
 
-  // 3. Validasi struktur dasar token mobile
+  // 3. Token backoffice atau token JWT lain tidak boleh digunakan sebagai token mobile.
+  if (decoded.tokenType !== TOKEN_TYPES.MOBILE) {
+    const error = new Error("Token tidak valid untuk akses mobile");
+    error.statusCode = 401;
+    error.code = "INVALID_TOKEN_TYPE";
+    throw error;
+  }
+
+  // 4. Validasi struktur dasar token mobile
   if (!decoded.id || !decoded.idMitra) {
     const error = new Error("Token tidak valid untuk akses mobile");
     error.statusCode = 401;
     throw error;
   }
 
-  // 4. Validasi real-time status User, Mitra, & Cabang (1 Single Query dengan JOIN)
+  // 5. Validasi real-time status User, Mitra, & Cabang (1 Single Query dengan JOIN)
   // Menggunakan LEFT JOIN untuk cabang karena akun role Owner memiliki cabangId = NULL di database
   const [users] = await dbPool.execute(
     `SELECT 
@@ -72,7 +81,7 @@ const verifyMobileToken = async (req) => {
 
   const currentUser = users[0];
 
-  // 5. Validasi Keaktifan Perusahaan/Mitra (SaaS Tenant Security)
+  // 6. Validasi Keaktifan Perusahaan/Mitra (SaaS Tenant Security)
   if (!currentUser.mitraAktif) {
     const error = new Error("Akses Ditolak: Mitra telah dinonaktifkan");
     error.statusCode = 403;
@@ -80,7 +89,7 @@ const verifyMobileToken = async (req) => {
     throw error;
   }
 
-  // 6. Validasi Keaktifan Cabang (Khusus untuk user yang memiliki cabangId seperti KASIR)
+  // 7. Validasi Keaktifan Cabang (Khusus untuk user yang memiliki cabangId seperti KASIR)
   if (currentUser.cabangId && currentUser.cabangAktif === 0) {
     const error = new Error("Akses Ditolak: Cabang telah dinonaktifkan");
     error.statusCode = 403;
@@ -88,7 +97,7 @@ const verifyMobileToken = async (req) => {
     throw error;
   }
 
-  // 7. Validasi Keaktifan Akun Kasir/Owner individu
+  // 8. Validasi Keaktifan Akun Kasir/Owner individu
   if (!currentUser.userAktif) {
     const error = new Error("Akses Ditolak: Akun Anda telah dinonaktifkan");
     error.statusCode = 403;

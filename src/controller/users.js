@@ -1,6 +1,6 @@
 const UsersModel = require("../models/users");
 const bcrypt = require("bcrypt"); // Ensure bcrypt is installed
-const { generateToken } = require("../utils/jwt");
+const { generateToken, TOKEN_TYPES } = require("../utils/jwt");
 const EmailService = require("../utils/email");
 const { sendResetPasswordAccepted } = require("../utils/publicAuth");
 const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
@@ -115,7 +115,7 @@ const loginUser = async (req, res) => {
 
     const dataUser = dataUser_[0];
     // console.log(dataUser);
-    const token = generateToken(dataUser);
+    const token = generateToken(dataUser, TOKEN_TYPES.BACKOFFICE);
 
     res.json({
       message: "Login successful",

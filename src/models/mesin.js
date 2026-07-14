@@ -532,6 +532,19 @@ const getListMesinMobile = async (cabangId, idMitra, filter) => {
   }
 };
 
+const getMitraIdByCabangId = async (cabangId) => {
+  const [rows] = await dbPool.execute(
+    "SELECT idMitra FROM tbl_cabang WHERE id = ? LIMIT 1",
+    [cabangId]
+  );
+
+  if (rows.length === 0) {
+    throw new Error("Data not found");
+  }
+
+  return rows[0].idMitra;
+};
+
 const getAllMasterMesin = async () => {
   try {
     const [rows] = await dbPool.execute(
@@ -664,6 +677,7 @@ module.exports = {
   getMesinByIdCabang,
   getMesinByEspId,
   getListMesinMobile,
+  getMitraIdByCabangId,
   setMaintenance,
   setReady,
 };

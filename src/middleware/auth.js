@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const dbPool = require("../config/database");
+const { TOKEN_TYPES } = require("../utils/jwt");
 
 /**
  * Memverifikasi token JWT backoffice dan memvalidasi keaktifan user secara real-time.
@@ -34,7 +35,15 @@ const verifyBackofficeToken = async (req) => {
     throw error;
   }
 
-  // 3. Validasi struktur dasar token backoffice
+  // 3. Token mobile atau token JWT lain tidak boleh digunakan sebagai token backoffice.
+  if (decoded.tokenType !== TOKEN_TYPES.BACKOFFICE) {
+    const error = new Error("Token tidak valid untuk akses backoffice");
+    error.statusCode = 401;
+    error.code = "INVALID_TOKEN_TYPE";
+    throw error;
+  }
+
+  // 4. Validasi struktur dasar token backoffice
   if (!decoded.id || !decoded.username || !decoded.role) {
     const error = new Error("Token tidak valid untuk akses backoffice");
     error.statusCode = 401;
@@ -42,7 +51,7 @@ const verifyBackofficeToken = async (req) => {
     throw error;
   }
 
-  // 4. Validasi real-time status User lewat database (1 Single Query ke tbl_users)
+  // 5. Validasi real-time status User lewat database (1 Single Query ke tbl_users)
   // Menghilangkan referensi ke tbl_mitra karena ini merupakan sistem internal pemilik laundry
   const [users] = await dbPool.execute(
     `SELECT 
@@ -65,7 +74,19 @@ const verifyBackofficeToken = async (req) => {
 
   const currentUser = users[0];
 
-  // 5. Validasi Keaktifan Akun Individu
+  // Token harus tetap mewakili akun yang sama. Ini mencegah id dari tabel lain
+  // dipetakan menjadi akun backoffice yang kebetulan memakai id identik.
+  if (
+    currentUser.username !== decoded.username ||
+    String(currentUser.role) !== String(decoded.role)
+  ) {
+    const error = new Error("Token tidak valid untuk akses backoffice");
+    error.statusCode = 401;
+    error.code = "TOKEN_IDENTITY_MISMATCH";
+    throw error;
+  }
+
+  // 6. Validasi Keaktifan Akun Individu
   if (!currentUser.statusAktif) {
     const error = new Error("Akses Ditolak: Akun Anda telah dinonaktifkan");
     error.statusCode = 403;

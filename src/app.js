@@ -59,7 +59,7 @@ const createApp = ({ environment = process.env } = {}) => {
   app.use("/api/backoffice/login", loginRoutes);
   app.use("/api/backoffice/roles", roleRoutes);
   app.use("/api/backoffice/menus", menuRoutes);
-  app.use("/api/backoffice/getMenuHeader", authenticate, getMenuHeader);
+  app.get("/api/backoffice/getMenuHeader", authenticate, getMenuHeader);
   app.use("/api/backoffice/akses", aksesRoutes);
   app.use("/api/backoffice/mitra", mitraRoutes);
   app.use("/api/backoffice/cabang", cabangRoutes);

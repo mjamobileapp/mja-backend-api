@@ -117,7 +117,7 @@ const getHistoryMesin = async (cabangId, idMitra) => {
         l.id AS idLog,
         m.namaGroupMesin AS namaMesin,
         d.jenisMesin,
-        u.namaLengkap AS namaOperator,
+        COALESCE(u.namaLengkap, NULLIF(l.actorUsername, '')) AS namaOperator,
         l.waktuLog AS waktuLengkap
       FROM tbl_log_mesin l
       JOIN tbl_mesin_detail d ON l.mesinId = d.id

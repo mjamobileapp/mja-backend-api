@@ -72,7 +72,8 @@ test.after(async () => {
   await db.end();
 });
 
-const createToken = (id, idMitra) => jwt.sign({ id, idMitra }, process.env.JWT_SECRET, { expiresIn: "5m" });
+const createToken = (id, idMitra) =>
+  jwt.sign({ id, idMitra, tokenType: "mobile" }, process.env.JWT_SECRET, { expiresIn: "5m" });
 
 test("active owner can access own tenant stock settings", async () => {
   const response = await request(server, `/api/owner/stokmitra/mitra/${fixture.idMitra}`, createToken(fixture.ownerId, fixture.idMitra));

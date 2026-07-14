@@ -27,23 +27,34 @@ const getNotifikasi = async (idMitra, cabangId, filterCabangId) => {
   }
 };
 
-const markAsRead = async (id) => {
+const markAsRead = async (id, idMitra, cabangId = null) => {
   try {
-    // 1. Cek apakah notifikasi dengan id tersebut ada
-    const [existing] = await dbPool.execute(
-      "SELECT id, isRead FROM tbl_notifikasi WHERE id = ?",
-      [id]
-    );
+    // 1. Cek notifikasi dalam scope tenant; kasir hanya boleh mengubah cabangnya sendiri
+    // atau notifikasi tenant-wide yang tidak terikat cabang.
+    let scopeQuery = "SELECT id, isRead FROM tbl_notifikasi WHERE id = ? AND idMitra = ?";
+    const scopeParams = [id, idMitra];
+
+    if (cabangId) {
+      scopeQuery += " AND (cabangId = ? OR cabangId IS NULL)";
+      scopeParams.push(cabangId);
+    }
+
+    const [existing] = await dbPool.execute(scopeQuery, scopeParams);
 
     if (existing.length === 0) {
       throw new Error("Id tidak ditemukan");
     }
 
     // 2. Update isRead menjadi 1 (true)
-    await dbPool.execute(
-      "UPDATE tbl_notifikasi SET isRead = 1 WHERE id = ?",
-      [id]
-    );
+    let updateQuery = "UPDATE tbl_notifikasi SET isRead = 1 WHERE id = ? AND idMitra = ?";
+    const updateParams = [id, idMitra];
+
+    if (cabangId) {
+      updateQuery += " AND (cabangId = ? OR cabangId IS NULL)";
+      updateParams.push(cabangId);
+    }
+
+    await dbPool.execute(updateQuery, updateParams);
 
     return {
       id: String(id),

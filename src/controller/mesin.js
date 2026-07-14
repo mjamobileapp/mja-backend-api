@@ -283,13 +283,6 @@ const getMesinByEspId = async (req, res) => {
 const getListMesinMobile = async (req, res) => {
   const { cabangId } = req.params;
   const filter = req.query.filter ? String(req.query.filter).toLowerCase() : null;
-  const idMitra = req.user ? req.user.idMitra : null;
-
-  if (!idMitra) {
-    return res.status(400).json({
-      error: "idMitra tidak ditemukan di token",
-    });
-  }
 
   if (filter && filter !== "washer" && filter !== "dryer") {
     return res.status(400).json({
@@ -298,6 +291,9 @@ const getListMesinMobile = async (req, res) => {
   }
 
   try {
+    // User mobile membawa idMitra pada profilnya. Backoffice tidak membawa tenant
+    // di token, sehingga tenant diturunkan dari cabang yang diminta.
+    const idMitra = req.user?.idMitra || await MesinModel.getMitraIdByCabangId(cabangId);
     const data = await MesinModel.getListMesinMobile(cabangId, idMitra, filter);
     res.status(200).json({
       success: true,

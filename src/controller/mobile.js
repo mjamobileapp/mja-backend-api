@@ -2,7 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const UserMobileModel = require("../models/userMobile");
 const UsersModel = require("../models/users");
-const { generateToken } = require("../utils/jwt");
+const { generateToken, TOKEN_TYPES } = require("../utils/jwt");
 const { getMissingRequiredFields } = require("../utils/validation");
 const { getRequiredJwtSecret } = require("../config/environment");
 
@@ -59,7 +59,7 @@ const loginUser = async (req, res) => {
       idMitra: user.idMitra,
       cabangId: user.cabangId || null,
       id_role: user.role === "owner" ? 1 : 2, // Mapping role ke id_role
-    });
+    }, TOKEN_TYPES.MOBILE);
 
     // 6. Proses Role Kasir
     if (user.role === "kasir") {

@@ -6010,9 +6010,135 @@
               ]
             }
           ]
+        },
+        {
+          "name": "Route source coverage",
+          "description": "Request yang ditambahkan untuk menjaga cakupan route source.",
+          "item": [
+            {
+              "name": "POST /api/backoffice/users/:id/changepassword",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/users/{{backofficeUserId}}/changepassword"
+              },
+              "response": []
+            },
+            {
+              "name": "POST /api/backoffice/users/:email/resetpassword",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/users/{{resetEmail}}/resetpassword",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /api/backoffice/cabang/:id",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/cabang/{{cabangId}}"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/mesin/list/cabang/:cabangId",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/mesin/list/cabang/{{cabangId}}"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/mesin/master",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/mesin/master"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/mesin/esp/:espId",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/mesin/esp/{{espId}}"
+              },
+              "response": []
+            },
+            {
+              "name": "PUT /api/backoffice/mesin/maintenance/:idMesinDetail",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/mesin/maintenance/{{mesinDetailId}}"
+              },
+              "response": []
+            },
+            {
+              "name": "PUT /api/backoffice/mesin/ready/:idMesinDetail",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/mesin/ready/{{mesinDetailId}}"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/item/tipe/:tipeItem",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/item/tipe/{{tipeItem}}"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/dashboard/getmitra",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/dashboard/getmitra"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/dashboard/getcabang",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/dashboard/getcabang"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/dashboard/getmesin",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/dashboard/getmesin"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/getMenuHeader",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/getMenuHeader"
+              },
+              "response": []
+            }
+          ]
         }
       ],
-      "description": "Katalog route backoffice yang telah disinkronkan dengan mount dan file route aktif. Isi variable koleksi sebelum mengirim request. Request katalog tervalidasi terhadap contract path/method dan payload JSON, tetapi tidak diklaim sebagai smoke test runtime satu per satu. Gunakan folder Verified core API contract untuk request yang memiliki bukti controller atau integration test.",
+      "description": "Katalog route backoffice dibandingkan dua arah dengan mount dan file route aktif. Isi variable koleksi sebelum mengirim request. Request katalog tervalidasi terhadap contract path/method dan payload JSON, tetapi tidak diklaim sebagai smoke test runtime satu per satu. Gunakan folder Verified core API contract untuk request yang memiliki bukti controller atau integration test.",
       "auth": {
         "type": "bearer",
         "bearer": [
@@ -6374,6 +6500,14 @@
     },
     {
       "key": "espId",
+      "value": ""
+    },
+    {
+      "key": "mesinDetailId",
+      "value": ""
+    },
+    {
+      "key": "tipeItem",
       "value": ""
     },
     {

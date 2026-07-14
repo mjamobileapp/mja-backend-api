@@ -54,9 +54,18 @@ const getNotifikasi = async (req, res) => {
 
 const markAsRead = async (req, res) => {
   const { id } = req.params;
+  const idMitra = req.user.idMitra || req.user.mitra_id;
+  const role = String(req.user.role || "").toLowerCase();
+  const cabangId = role === "kasir" ? req.user.cabang_id || req.user.cabangId : null;
+
+  if (!idMitra) {
+    return res.status(400).json({
+      error: "idMitra tidak ditemukan di token",
+    });
+  }
 
   try {
-    const data = await NotifikasiModel.markAsRead(id);
+    const data = await NotifikasiModel.markAsRead(id, idMitra, cabangId);
     res.status(200).json({
       success: "Mark as Read Success",
       data: data,
