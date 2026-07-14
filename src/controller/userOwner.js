@@ -5,255 +5,72 @@ const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("..
 
 const createNewUserOwner = async (req, res) => {
   const body = withAuthenticatedAuditUsername(req.body, req.user, "createdBy");
-
-  // 1. Validasi field yang dibutuhkan di level controller
   const missingFields = getMissingRequiredFields(body, ["username", "idMitra", "namaLengkap", "noTelp", "email", "createdBy"]);
-
-  if (missingFields.length > 0) {
-    return res.status(400).json({
-      message: "Bad request, missing required fields",
-      missingFields: missingFields,
-    });
-  }
-
+  if (missingFields.length > 0) return res.status(400).json({ message: "Bad request, missing required fields", missingFields });
+  const result = await UserOwnerModel.createNewUserOwner(body);
   try {
-    // 2. Panggil Model untuk menyimpan data
-    const result = await UserOwnerModel.createNewUserOwner(body);
-
-    // 3. Kirim email kredensial ke user
-    try {
-      await EmailService.sendUserMobileCredentialEmail({
-        to: result.email,
-        username: result.username,
-        role: result.role,
-      });
-    } catch (emailError) {
-      console.error("Gagal mengirim email create owner:", emailError.message);
-    }
-
-    res.status(201).json({
-      message: "CREATE new User Owner success",
-      data: result,
-    });
-  } catch (error) {
-    // 3. Handle error validasi spesifik (400 Bad Request)
-    if (
-      error.message === "Mitra tidak ditemukan atau tidak aktif" || 
-      error.message === "Username sudah terdaftar" ||
-      error.message === "Email sudah terdaftar dan sedang aktif digunakan" ||
-      error.message === "Nomor Telepon sudah terdaftar dan sedang aktif digunakan" ||
-      error.message === "Format email tidak valid"
-    ) {
-      return res.status(400).json({
-        error: error.message,
-      });
-    }
-
-    // 4. Handle Server Error (500)
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
+    await EmailService.sendUserMobileCredentialEmail({ to: result.email, username: result.username, role: result.role });
+  } catch (emailError) {
+    console.error("Gagal mengirim email create owner:", emailError.message);
   }
+  return res.status(201).json({ message: "CREATE new User Owner success", data: result });
 };
 
 const getAllUserOwner = async (req, res) => {
-  const { idMitra, status } = req.query;
-  try {
-    const data = await UserOwnerModel.getAllUserOwner(idMitra, status);
-    res.status(200).json({
-      message: "Get All User Owner success",
-      data: data,
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Server Error", serverMessage: error.message });
-  }
+  const data = await UserOwnerModel.getAllUserOwner(req.query.idMitra, req.query.status);
+  return res.status(200).json({ message: "Get All User Owner success", data });
 };
 
 const getUserOwnerById = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const data = await UserOwnerModel.getUserOwnerById(id);
-    res.status(200).json({
-      message: "Get User Owner by Id success",
-      data: data,
-    });
-  } catch (error) {
-    if (error.message === "data not found") return res.status(404).json({ error: error.message });
-    res.status(500).json({ message: "Server Error", serverMessage: error.message });
-  }
+  const data = await UserOwnerModel.getUserOwnerById(req.params.id);
+  return res.status(200).json({ message: "Get User Owner by Id success", data });
 };
 
 const updateUserOwner = async (req, res) => {
-  const { id } = req.params;
   const body = withAuthenticatedAuditUsername(req.body, req.user, "updatedBy");
-
   const missingFields = getMissingRequiredFields(body, ["namaLengkap", "noTelp", "email", "updatedBy"]);
-
-  if (missingFields.length > 0) {
-    return res.status(400).json({ 
-      message: "Bad request, missing required fields",
-      missingFields: missingFields 
-    });
-  }
-
-  try {
-    const data = await UserOwnerModel.updateUserOwner(id, body);
-    res.status(200).json({
-      message: "UPDATE User Owner success",
-      data: data,
-    });
-  } catch (error) {
-    if (error.message === "data not found") return res.status(404).json({ error: error.message });
-    if (
-      error.message === "Username sudah terdaftar" ||
-      error.message === "Email sudah terdaftar" ||
-      error.message === "Nomor Telepon sudah terdaftar" ||
-      error.message === "Format email tidak valid"
-    ) {
-      return res.status(400).json({ error: error.message });
-    }
-    
-    res.status(500).json({ message: "Server Error", serverMessage: error.message });
-  }
+  if (missingFields.length > 0) return res.status(400).json({ message: "Bad request, missing required fields", missingFields });
+  const data = await UserOwnerModel.updateUserOwner(req.params.id, body);
+  return res.status(200).json({ message: "UPDATE User Owner success", data });
 };
 
 const deleteUserOwner = async (req, res) => {
-  const { id } = req.params;
-  const username = req.user.username;
-
-  try {
-    await UserOwnerModel.deleteUserOwner(id, username);
-    res.status(200).json({
-      message: "Delete User Owner success",
-      data: null,
-    });
-  } catch (error) {
-    if (error.message === "data not found") return res.status(404).json({ error: error.message });
-    res.status(500).json({ message: "Server Error", serverMessage: error.message });
-  }
+  await UserOwnerModel.deleteUserOwner(req.params.id, req.user.username);
+  return res.status(200).json({ message: "Delete User Owner success", data: null });
 };
 
 const restoreUserOwner = async (req, res) => {
-  const { id } = req.params;
-  const username = req.user.username;
-
-  try {
-    await UserOwnerModel.restoreUserOwner(id, username);
-    res.status(200).json({
-      message: "Restore User Owner success",
-      data: null,
-    });
-  } catch (error) {
-    if (error.message === "data not found") return res.status(404).json({ error: error.message });
-    res.status(500).json({ message: "Server Error", serverMessage: error.message });
-  }
+  await UserOwnerModel.restoreUserOwner(req.params.id, req.user.username);
+  return res.status(200).json({ message: "Restore User Owner success", data: null });
 };
 
 const resetDeviceId = async (req, res) => {
-  const { id } = req.params;
-  const { body } = req;
-  const usernameToken = req.user.username;
-
-  try {
-    const username = await UserOwnerModel.resetDeviceId(id, body, usernameToken);
-    res.status(200).json({
-      message: "Reset Device ID success",
-      data: {
-        username: username,
-      },
-    });
-  } catch (error) {
-    if (error.message === "data not found") {
-      return res.status(404).json({
-        error: "Data Not Found",
-      });
-    }
-    res.status(500).json({ message: "Server Error", serverMessage: error.message });
-  }
+  const username = await UserOwnerModel.resetDeviceId(req.params.id, req.body, req.user.username);
+  return res.status(200).json({ message: "Reset Device ID success", data: { username } });
 };
 
 const changePassword = async (req, res) => {
-  const { id } = req.params;
-  const { body } = req;
-  const usernameToken = req.user.username;
-
-  // 1. Validasi field yang dibutuhkan
-  const requiredPasswordFields = ['oldPassword', 'newPassword', 'ConfirmNewPassword'];
-  const missingPasswordFields = requiredPasswordFields.filter(field => !body[field]);
-
-  if (missingPasswordFields.length > 0) {
-    return res.status(400).json({
-      message: "Bad request, missing required fields",
-      missingFields: missingPasswordFields,
-    });
-  }
-
-  // 2. Validasi kecocokan password baru
-  if (body.newPassword !== body.ConfirmNewPassword) {
-    return res.status(400).json({
-      error: "Password baru dan konfirmasi tidak cocok",
-    });
-  }
-
-  // 3. Validasi password lama dan baru tidak boleh sama
-  if (body.oldPassword === body.newPassword) {
-    return res.status(400).json({
-      error: "Password baru tidak boleh sama dengan password lama",
-    });
-  }
-
-  try {
-    const username = await UserOwnerModel.changePassword(id, body, usernameToken);
-    res.status(200).json({
-      message: "Password changed successfully",
-      data: {
-        username: username,
-      },
-    });
-  } catch (error) {
-    if (error.message === "data not found") {
-      return res.status(404).json({ error: "Data Not Found" });
-    }
-    if (error.message === "Password lama salah") {
-      return res.status(400).json({ error: error.message });
-    }
-    res.status(500).json({ message: "Server Error", serverMessage: error.message });
-  }
+  const requiredFields = ["oldPassword", "newPassword", "ConfirmNewPassword"];
+  const missingFields = requiredFields.filter((field) => !req.body[field]);
+  if (missingFields.length > 0) return res.status(400).json({ message: "Bad request, missing required fields", missingFields });
+  if (req.body.newPassword !== req.body.ConfirmNewPassword) return res.status(400).json({ error: "Password baru dan konfirmasi tidak cocok" });
+  if (req.body.oldPassword === req.body.newPassword) return res.status(400).json({ error: "Password baru tidak boleh sama dengan password lama" });
+  const username = await UserOwnerModel.changePassword(req.params.id, req.body, req.user.username);
+  return res.status(200).json({ message: "Password changed successfully", data: { username } });
 };
 
 const resetPassword = async (req, res) => {
-  const { email } = req.params;
-
   try {
-    const result = await UserOwnerModel.resetPassword(email);
-
-    // 3. Kirim email password baru ke user
+    const result = await UserOwnerModel.resetPassword(req.params.email);
     try {
-      await EmailService.sendResetPasswordEmail({
-        to: result.email,
-        username: result.username,
-        role: result.role,
-        // newPassword: result.newPassword, --- IGNORE ---
-      });
+      await EmailService.sendResetPasswordEmail({ to: result.email, username: result.username, role: result.role });
     } catch (emailError) {
       console.error("Gagal mengirim email reset password:", emailError.message);
     }
   } catch (error) {
     console.error("Gagal memproses permintaan reset password owner:", error.message);
   }
-
   return sendResetPasswordAccepted(res);
 };
 
-module.exports = {
-  createNewUserOwner,
-  getAllUserOwner,
-  getUserOwnerById,
-  updateUserOwner,
-  deleteUserOwner,
-  restoreUserOwner,
-  resetDeviceId,
-  changePassword,
-  resetPassword,
-};
+module.exports = { createNewUserOwner, getAllUserOwner, getUserOwnerById, updateUserOwner, deleteUserOwner, restoreUserOwner, resetDeviceId, changePassword, resetPassword };
