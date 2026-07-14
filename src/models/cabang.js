@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const { withTransaction } = require("../utils/transaction");
+const { createHttpError } = require("../utils/httpError");
 
 const createNewCabang = async (body) => {
   return withTransaction(async (connection) => {
@@ -7,7 +8,7 @@ const createNewCabang = async (body) => {
     // 1. Validasi Mitra Exist
     const { idMitra, namaCabang, alamatCabang, createdBy } = body;
     const [mitra] = await connection.execute("SELECT id, namaMitra FROM tbl_mitra WHERE id = ? AND statusAktif = TRUE", [idMitra]);
-    if (mitra.length === 0) throw new Error("Mitra tidak ditemukan atau tidak aktif");
+    if (mitra.length === 0) throw createHttpError(400, "Mitra tidak ditemukan atau tidak aktif", "CABANG_MITRA_INVALID");
 
     // 2. Generate Kode Otomatis
     const prefix = `CBG-${idMitra}-`;
@@ -32,7 +33,7 @@ const createNewCabang = async (body) => {
     );
 
     if (existingCabang.length > 0) {
-      throw new Error("Cabang sudah terdaftar");
+      throw createHttpError(400, "Cabang sudah terdaftar", "CABANG_DUPLICATE");
     }
 
     const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -66,7 +67,7 @@ const updateCabang = async (id, body) => {
       [id]
     );
     if (existingCabang.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "CABANG_NOT_FOUND");
     }
 
     // Get current timestamp
@@ -112,7 +113,7 @@ const deleteCabang = async (id, updatedBy) => {
       [id]
     );
     if (existingCabang.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "CABANG_NOT_FOUND");
     }
 
     // Get current timestamp
@@ -138,7 +139,7 @@ const getCabangById = async (id) => {
       [id]
     );
     if (cabang.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "CABANG_NOT_FOUND");
     }
     return cabang[0];
   } catch (error) {
@@ -193,7 +194,7 @@ const restoreCabang = async (id, updatedBy) => {
       [id]
     );
     if (existingCabang.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "CABANG_NOT_FOUND");
     }
 
     // Get current timestamp
@@ -218,7 +219,7 @@ const resetCabang = async (id) => {
     );
 
     if (existingCabang.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "CABANG_NOT_FOUND");
     }
 
     await connection.execute(
