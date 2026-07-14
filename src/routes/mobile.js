@@ -3,6 +3,7 @@ const MobileController = require("../controller/mobile");
 const NotifikasiController = require("../controller/notifikasi");
 const { authenticateMobile } = require("../middleware/authMobile");
 const { publicActivationRateLimiter, publicLoginRateLimiter } = require("../middleware/publicAuthRateLimit");
+const { catchAsync } = require("../utils/catchAsync");
 
 const router = express.Router();
 
@@ -12,9 +13,9 @@ router.post("/activateaccount", publicActivationRateLimiter, MobileController.ac
 router.post("/logout", authenticateMobile, MobileController.logoutUser);
 
 // GET - Get Notifikasi Mobile
-router.get("/notifications", authenticateMobile, NotifikasiController.getNotifikasi);
+router.get("/notifications", authenticateMobile, catchAsync(NotifikasiController.getNotifikasi));
 
 // PUT - Mark as Read Notifikasi
-router.put("/notifications/:id/read", authenticateMobile, NotifikasiController.markAsRead);
+router.put("/notifications/:id/read", authenticateMobile, catchAsync(NotifikasiController.markAsRead));
 
 module.exports = router;

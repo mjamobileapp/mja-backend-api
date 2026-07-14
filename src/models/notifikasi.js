@@ -1,4 +1,5 @@
 const dbPool = require("../config/database");
+const { createHttpError } = require("../utils/httpError");
 
 const getNotifikasi = async (idMitra, cabangId, filterCabangId) => {
   try {
@@ -42,7 +43,7 @@ const markAsRead = async (id, idMitra, cabangId = null) => {
     const [existing] = await dbPool.execute(scopeQuery, scopeParams);
 
     if (existing.length === 0) {
-      throw new Error("Id tidak ditemukan");
+      throw createHttpError(404, "Id tidak ditemukan", "NOTIFICATION_NOT_FOUND");
     }
 
     // 2. Update isRead menjadi 1 (true)
