@@ -2,6 +2,7 @@ const dbPool = require("../config/database");
 const { getDateFilterCondition, getTodayStringYYYYMMDD } = require("../utils/date");
 const { createHttpError } = require("../utils/httpError");
 const { publishAndWaitAck } = require("../utils/mqttClient");
+const { withTransaction } = require("../utils/transaction");
 
 const jenisMesinToLayanan = {
   WASHER: "cuci",
@@ -144,10 +145,7 @@ const reduceStockAndNotify = async (
 
 const createTransaksi = async (data) => {
   const { idMitra, cabangId, idUserMobile, totalBayar, metodePembayaran, items } = data;
-  const connection = await dbPool.getConnection();
-
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     const user = await validateMasterData(connection, idMitra, cabangId, idUserMobile);
     const updatedBy = user.namaLengkap || String(idUserMobile);
@@ -216,8 +214,6 @@ const createTransaksi = async (data) => {
       [orderId]
     );
 
-    await connection.commit();
-
     const order = orderRows[0];
     return {
       id: order.id,
@@ -235,12 +231,7 @@ const createTransaksi = async (data) => {
         subtotal: Number(item.subtotal),
       })),
     };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const insertLogMesin = async (

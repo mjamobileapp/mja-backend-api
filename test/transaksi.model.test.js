@@ -1,19 +1,27 @@
 const assert = require("node:assert/strict");
 const Module = require("node:module");
 const test = require("node:test");
+const { createWithTransaction } = require("../src/utils/transaction");
 
 const databasePath = require.resolve("../src/config/database");
 const transaksiModelPath = require.resolve("../src/models/transaksi");
+const transactionPath = require.resolve("../src/utils/transaction");
 
 const loadTransaksiModel = (dbPool) => {
   const originalDatabaseModule = require.cache[databasePath];
   const originalTransaksiModel = require.cache[transaksiModelPath];
+  const originalTransactionModule = require.cache[transactionPath];
   const databaseModule = new Module(databasePath);
+  const transactionModule = new Module(transactionPath);
 
   databaseModule.filename = databasePath;
   databaseModule.loaded = true;
   databaseModule.exports = dbPool;
   require.cache[databasePath] = databaseModule;
+  transactionModule.filename = transactionPath;
+  transactionModule.loaded = true;
+  transactionModule.exports = { withTransaction: createWithTransaction(dbPool) };
+  require.cache[transactionPath] = transactionModule;
   delete require.cache[transaksiModelPath];
 
   const transaksiModel = require(transaksiModelPath);
@@ -27,6 +35,12 @@ const loadTransaksiModel = (dbPool) => {
         require.cache[databasePath] = originalDatabaseModule;
       } else {
         delete require.cache[databasePath];
+      }
+
+      if (originalTransactionModule) {
+        require.cache[transactionPath] = originalTransactionModule;
+      } else {
+        delete require.cache[transactionPath];
       }
 
       if (originalTransaksiModel) {
