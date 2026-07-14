@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const { withTransaction } = require("../utils/transaction");
+const { createHttpError } = require("../utils/httpError");
 
 const createNewSetting = async (body) => {
   return withTransaction(async (connection) => {
@@ -11,7 +12,7 @@ const createNewSetting = async (body) => {
       [idMitra]
     );
     if (existingMitra.length === 0) {
-      throw new Error("Mitra tidak ditemukan atau tidak aktif");
+      throw createHttpError(400, "Mitra tidak ditemukan atau tidak aktif", "STOCK_MITRA_INVALID");
     }
 
     // 2. Validasi Master Item Exist dan Aktif
@@ -20,7 +21,7 @@ const createNewSetting = async (body) => {
       [itemId]
     );
     if (existingItem.length === 0) {
-      throw new Error("Item tidak ditemukan atau tidak aktif");
+      throw createHttpError(400, "Item tidak ditemukan atau tidak aktif", "STOCK_ITEM_INVALID");
     }
 
     // 3. Hapus data lama filter by idMitra (Sesuai Komentar PR #70)
@@ -60,7 +61,7 @@ const createBulkSettings = async (idMitra, items, createdBy) => {
       [idMitra]
     );
     if (existingMitra.length === 0) {
-      throw new Error("Mitra tidak ditemukan atau tidak aktif");
+      throw createHttpError(400, "Mitra tidak ditemukan atau tidak aktif", "STOCK_MITRA_INVALID");
     }
 
     // 2. Hapus data lama filter by idMitra (Cukup sekali saja)
@@ -81,7 +82,7 @@ const createBulkSettings = async (idMitra, items, createdBy) => {
         [itemId]
       );
       if (existingItem.length === 0) {
-        throw new Error("Item tidak ditemukan atau tidak aktif");
+        throw createHttpError(400, "Item tidak ditemukan atau tidak aktif", "STOCK_ITEM_INVALID");
       }
 
       const SQLQuery = `INSERT INTO tbl_treshold_stok_mitra (
@@ -113,7 +114,7 @@ const updateSetting = async (id, body) => {
       "SELECT id FROM tbl_treshold_stok_mitra WHERE id = ?",
       [id]
     );
-    if (existing.length === 0) throw new Error("data not found");
+    if (existing.length === 0) throw createHttpError(404, "data not found", "STOCK_SETTING_NOT_FOUND");
 
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = `UPDATE tbl_treshold_stok_mitra SET 
