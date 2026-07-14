@@ -124,6 +124,25 @@ test.before(async () => {
     "INSERT INTO tbl_master_item_expense (namaItem, tipeItem, createdBy, statusAktif) VALUES (?, 'stok', ?, 1)",
     [`Item ${suffix}`, "integration-test"]
   );
+  await db.execute(
+    `INSERT INTO tbl_harga_cabang (idMitra, cabangId, jenisLayanan, itemId, harga, createdBy)
+     VALUES (?, ?, 'cuci', NULL, ?, ?), (?, ?, 'kering', NULL, ?, ?), (?, ?, 'addon_barang', ?, ?, ?)`,
+    [
+      mitra.insertId,
+      cabang.insertId,
+      20000,
+      "integration-test",
+      mitra.insertId,
+      cabang.insertId,
+      15000,
+      "integration-test",
+      mitra.insertId,
+      cabang.insertId,
+      item.insertId,
+      5000,
+      "integration-test",
+    ]
+  );
   const [mesinMaster] = await db.execute(
     `INSERT INTO tbl_mesin_master (idMitra, cabangId, espId, namaGroupMesin, createdBy, statusAktif)
      VALUES (?, ?, ?, ?, ?, 1)`,
@@ -184,6 +203,7 @@ test.after(async () => {
   await db.execute("DELETE FROM tbl_pengeluaran WHERE idMitra = ?", [fixture.idMitra]);
   await db.execute("DELETE FROM tbl_notifikasi WHERE idMitra = ?", [fixture.idMitra]);
   await db.execute("DELETE FROM tbl_stok_cabang WHERE idMitra = ?", [fixture.idMitra]);
+  await db.execute("DELETE FROM tbl_harga_cabang WHERE idMitra = ?", [fixture.idMitra]);
   for (const masterId of masterIds) {
     await db.execute("DELETE FROM tbl_mesin_detail WHERE idMesinMaster = ?", [masterId]);
     await db.execute("DELETE FROM tbl_mesin_master WHERE id = ?", [masterId]);
