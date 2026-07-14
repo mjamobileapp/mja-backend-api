@@ -1,11 +1,9 @@
 const dbPool = require("../config/database");
+const { withTransaction } = require("../utils/transaction");
 
 const createNewMesin = async (body, createdBy = null) => {
   const { idMitra, cabangId, espId, washer, dryer } = body;
-  const connection = await dbPool.getConnection();
-
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     // 1. Validasi Mitra Exist
     const [existingMitra] = await connection.execute(
@@ -82,8 +80,6 @@ const createNewMesin = async (body, createdBy = null) => {
       dryerResult = { id: detailDryer.insertId, status: "Ready" };
     }
 
-    await connection.commit();
-
     return {
       idMitra,
       cabangId,
@@ -92,12 +88,7 @@ const createNewMesin = async (body, createdBy = null) => {
       washer: washerResult,
       dryer: dryerResult,
     };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const updateMesin = async (idMesinMaster, body, updatedBy) => {

@@ -1,19 +1,27 @@
 const assert = require("node:assert/strict");
 const Module = require("node:module");
 const test = require("node:test");
+const { createWithTransaction } = require("../src/utils/transaction");
 
 const databasePath = require.resolve("../src/config/database");
 const mesinModelPath = require.resolve("../src/models/mesin");
+const transactionPath = require.resolve("../src/utils/transaction");
 
 const loadMesinModel = (dbPool) => {
   const originalDatabaseModule = require.cache[databasePath];
   const originalMesinModel = require.cache[mesinModelPath];
+  const originalTransactionModule = require.cache[transactionPath];
   const databaseModule = new Module(databasePath);
+  const transactionModule = new Module(transactionPath);
 
   databaseModule.filename = databasePath;
   databaseModule.loaded = true;
   databaseModule.exports = dbPool;
   require.cache[databasePath] = databaseModule;
+  transactionModule.filename = transactionPath;
+  transactionModule.loaded = true;
+  transactionModule.exports = { withTransaction: createWithTransaction(dbPool) };
+  require.cache[transactionPath] = transactionModule;
   delete require.cache[mesinModelPath];
 
   const mesinModel = require(mesinModelPath);
@@ -27,6 +35,12 @@ const loadMesinModel = (dbPool) => {
         require.cache[databasePath] = originalDatabaseModule;
       } else {
         delete require.cache[databasePath];
+      }
+
+      if (originalTransactionModule) {
+        require.cache[transactionPath] = originalTransactionModule;
+      } else {
+        delete require.cache[transactionPath];
       }
 
       if (originalMesinModel) {
