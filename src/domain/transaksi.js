@@ -34,6 +34,16 @@ const sumMoney = (values) => {
   return cents / 100;
 };
 
+const calculateLineSubtotal = (unitPrice, quantity) => {
+  const price = normalizeMoney(unitPrice, "Harga transaksi tidak valid", { positive: true });
+  const jumlah = normalizePositiveInteger(quantity, "jumlah wajib diisi dan harus integer lebih dari 0");
+  const subtotalCents = Math.round(price * 100) * jumlah;
+  if (!Number.isSafeInteger(subtotalCents) || subtotalCents / 100 > MAX_MONEY) {
+    throw createValidationError("Nilai transaksi terlalu besar");
+  }
+  return subtotalCents / 100;
+};
+
 const normalizeTransaksiPayload = (body = {}) => {
   const totalBayar = normalizeMoney(body.totalBayar, "totalBayar wajib diisi dan harus lebih dari 0", { positive: true });
   if (typeof body.metodePembayaran !== "string" || body.metodePembayaran.trim() === "") {
@@ -66,4 +76,4 @@ const normalizeTransaksiPayload = (body = {}) => {
   return { totalBayar, metodePembayaran: body.metodePembayaran.trim(), items };
 };
 
-module.exports = { normalizeMoney, normalizeTransaksiPayload, sumMoney };
+module.exports = { calculateLineSubtotal, normalizeMoney, normalizeTransaksiPayload, sumMoney };

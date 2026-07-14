@@ -119,7 +119,3 @@ test("createTransaksi preserves the legacy controller contract before business-v
     TransaksiModel.createTransaksi = originalCreateTransaksi;
   }
 });
-
-test.skip("Fase 5: rejects a client total that is self-consistent but below tbl_harga_cabang", () => {
-  // Target security behavior. The integration fixture will provide the official branch price.
-});

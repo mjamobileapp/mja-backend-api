@@ -459,6 +459,27 @@ test("core domains complete their HTTP flows on the isolated integration schema"
   });
 
   await t.test("transaksi, pending queue, and history use the authenticated branch and tenant", async () => {
+    const [beforeManipulation] = await db.execute(
+      "SELECT COUNT(*) AS jumlah FROM tbl_order_laundry WHERE idMitra = ? AND cabangId = ?",
+      [fixture.idMitra, fixture.cabangId]
+    );
+    const manipulated = await request(server, {
+      method: "POST",
+      path: "/api/kasir/transaksi",
+      token: mobileToken(),
+      body: { totalBayar: 100, metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 100 }] },
+    });
+    const [afterManipulation] = await db.execute(
+      "SELECT COUNT(*) AS jumlah FROM tbl_order_laundry WHERE idMitra = ? AND cabangId = ?",
+      [fixture.idMitra, fixture.cabangId]
+    );
+    assert.equal(manipulated.statusCode, 409);
+    assert.deepEqual(manipulated.body, {
+      error: "Harga transaksi telah berubah. Muat ulang harga dan coba kembali.",
+      code: "TRANSACTION_PRICE_CHANGED",
+    });
+    assert.equal(afterManipulation[0].jumlah, beforeManipulation[0].jumlah);
+
     const create = await request(server, {
       method: "POST",
       path: "/api/kasir/transaksi",

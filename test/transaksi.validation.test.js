@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { normalizeMoney, normalizeTransaksiPayload, sumMoney } = require("../src/domain/transaksi");
+const { calculateLineSubtotal, normalizeMoney, normalizeTransaksiPayload, sumMoney } = require("../src/domain/transaksi");
 const { validateTransaksiPayload } = require("../src/middleware/validateTransaksi");
 const TransaksiService = require("../src/services/transaksi");
 
@@ -19,6 +19,7 @@ test("transaction domain normalizes compatible numeric strings without mutating 
   });
   assert.equal(input.items[0].itemId, undefined);
   assert.equal(sumMoney([0.1, 0.2]), 0.3);
+  assert.equal(calculateLineSubtotal("20000", 2), 40000);
 });
 
 test("transaction domain rejects unsafe and malformed money before arithmetic", () => {

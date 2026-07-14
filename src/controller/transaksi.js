@@ -166,6 +166,10 @@ const createTransaksi = async (req, res) => {
       data: data,
     });
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ error: error.message, code: error.code });
+    }
+
     if (
       error.message === "Mitra tidak ditemukan" ||
       error.message === "Cabang tidak ditemukan" ||

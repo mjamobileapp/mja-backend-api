@@ -3,6 +3,7 @@ const { getDateFilterCondition, getTodayStringYYYYMMDD } = require("../utils/dat
 const { createHttpError } = require("../utils/httpError");
 const { publishAndWaitAck } = require("../utils/mqttClient");
 const { withTransaction } = require("../utils/transaction");
+const { calculateLineSubtotal, sumMoney } = require("../domain/transaksi");
 
 const jenisMesinToLayanan = {
   WASHER: "cuci",
@@ -150,6 +151,29 @@ const createTransaksi = async (data) => {
     const user = await validateMasterData(connection, idMitra, cabangId, idUserMobile);
     const updatedBy = user.namaLengkap || String(idUserMobile);
     const invoiceNumber = await generateInvoiceNumber(connection, cabangId);
+    const addonItems = new Map();
+    const pricedItems = [];
+
+    for (const item of items) {
+      const itemId = item.jenisLayanan === "addon_barang" ? item.itemId : null;
+      let itemData = null;
+      if (item.jenisLayanan === "addon_barang") {
+        itemData = await validateAddonItem(connection, item.itemId);
+        addonItems.set(item.itemId, itemData);
+      }
+
+      const harga = await getOfficialPrice(connection, { idMitra, cabangId, jenisLayanan: item.jenisLayanan, itemId });
+      pricedItems.push({ ...item, itemId, subtotal: calculateLineSubtotal(harga, item.jumlah) });
+    }
+
+    const serverTotal = sumMoney(pricedItems.map((item) => item.subtotal));
+    if (Number(totalBayar) !== serverTotal) {
+      throw createHttpError(
+        409,
+        "Harga transaksi telah berubah. Muat ulang harga dan coba kembali.",
+        "TRANSACTION_PRICE_CHANGED"
+      );
+    }
 
     const [orderResult] = await connection.execute(
       `INSERT INTO tbl_order_laundry (
@@ -162,20 +186,13 @@ const createTransaksi = async (data) => {
         statusPembayaran,
         waktuOrder
       ) VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
-      [invoiceNumber, idMitra, cabangId, idUserMobile, totalBayar, metodePembayaran, "PAID"]
+      [invoiceNumber, idMitra, cabangId, idUserMobile, serverTotal, metodePembayaran, "PAID"]
     );
 
     const orderId = orderResult.insertId;
-    const addonItems = new Map();
 
-    for (const item of items) {
-      const itemId = item.jenisLayanan === "addon_barang" ? item.itemId : null;
-
-      let itemData = null;
-      if (item.jenisLayanan === "addon_barang") {
-        itemData = await validateAddonItem(connection, item.itemId);
-        addonItems.set(item.itemId, itemData);
-      }
+    for (const item of pricedItems) {
+      const itemId = item.itemId;
 
       await connection.execute(
         `INSERT INTO tbl_detail_order (
@@ -232,6 +249,24 @@ const createTransaksi = async (data) => {
       })),
     };
   });
+};
+
+const getOfficialPrice = async (connection, { idMitra, cabangId, jenisLayanan, itemId }) => {
+  const [rows] = await connection.execute(
+    `SELECT harga
+     FROM tbl_harga_cabang
+     WHERE idMitra = ?
+       AND cabangId = ?
+       AND jenisLayanan = ?
+       AND itemId <=> ?`,
+    [idMitra, cabangId, jenisLayanan, itemId]
+  );
+
+  if (rows.length !== 1) {
+    throw createHttpError(409, "Harga transaksi belum dikonfigurasi untuk cabang ini", "TRANSACTION_PRICE_NOT_CONFIGURED");
+  }
+
+  return Number(rows[0].harga);
 };
 
 const insertLogMesin = async (

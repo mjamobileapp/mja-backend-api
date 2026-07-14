@@ -64,8 +64,9 @@ test("createTransaksi rolls back and releases its connection when detail persist
       if (executeCount === 2) return [[{ id: 2 }]];
       if (executeCount === 3) return [[{ id: 3, namaLengkap: "Kasir Test" }]];
       if (executeCount === 4) return [[]];
-      if (executeCount === 5) return [{ insertId: 10 }];
-      if (executeCount === 6) throw new Error("Detail order gagal dibuat");
+      if (executeCount === 5) return [[{ harga: 20000 }]];
+      if (executeCount === 6) return [{ insertId: 10 }];
+      if (executeCount === 7) throw new Error("Detail order gagal dibuat");
 
       throw new Error("Unexpected query");
     },
