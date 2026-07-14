@@ -20,50 +20,34 @@ const getValidatedRoleId = (req, res) => {
 };
 
 const getAllRoles = async (req, res) => {
-  try {
-    const [data] = await RoleModels.getAllRole();
-    // console.log(data);
-    const mappedData = data.map((item) => ({
-      id: item.id,
-      namaRole: item.namaRole,
-      description: item.description,
-      cretedDate: item.created_date,
-    }));
-    res.json({
-      message: "Get All Role Success",
-      data: mappedData,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error,
-    });
-  }
+  const [data] = await RoleModels.getAllRole();
+  const mappedData = data.map((item) => ({
+    id: item.id,
+    namaRole: item.namaRole,
+    description: item.description,
+    cretedDate: item.created_date,
+  }));
+  return res.json({
+    message: "Get All Role Success",
+    data: mappedData,
+  });
 };
 
 const getRoleById = async (req, res) => {
   const idRole = getValidatedRoleId(req, res);
   if (!idRole) return;
 
-  try {
-    const [data] = await RoleModels.getRoleById(idRole);
-    const dataResult = data[0];
-    // console.log(data);
-    const mappedData = {
-      id: dataResult.id,
-      namaRole: dataResult.namaRole,
-      description: dataResult.description,
-    };
-    res.json({
-      message: "Get by Id Role success",
-      data: mappedData,
-    });
-  } catch (error) {
-    console.error("Error fetching Role:", error);
-    res.status(500).json({
-      message: "Server Error",
-    });
-  }
+  const [data] = await RoleModels.getRoleById(idRole);
+  const dataResult = data[0];
+  const mappedData = {
+    id: dataResult.id,
+    namaRole: dataResult.namaRole,
+    description: dataResult.description,
+  };
+  return res.json({
+    message: "Get by Id Role success",
+    data: mappedData,
+  });
 };
 
 const createNewRole = async (req, res) => {
@@ -86,18 +70,11 @@ const createNewRole = async (req, res) => {
     });
   }
 
-  try {
-    await RoleModels.createNewRole(mapData);
-    res.status(201).json({
-      message: "CREATE new Role success",
-      data: body,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error,
-    });
-  }
+  await RoleModels.createNewRole(mapData);
+  return res.status(201).json({
+    message: "CREATE new Role success",
+    data: body,
+  });
 };
 
 const updateRole = async (req, res) => {
@@ -121,39 +98,25 @@ const updateRole = async (req, res) => {
     });
   }
 
-  try {
-    await RoleModels.updateRole(mapData, idRole);
-    res.json({
-      message: "UPDATE Role success",
-      data: {
-        id: idRole,
-        ...body,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error,
-    });
-  }
+  await RoleModels.updateRole(mapData, idRole);
+  return res.json({
+    message: "UPDATE Role success",
+    data: {
+      id: idRole,
+      ...body,
+    },
+  });
 };
 
 const deleteRole = async (req, res) => {
   const idRole = getValidatedRoleId(req, res);
   if (!idRole) return;
 
-  try {
-    await RoleModels.deleteRole(idRole);
-    res.json({
-      message: "DELETE Role success",
-      data: null,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error,
-    });
-  }
+  await RoleModels.deleteRole(idRole);
+  return res.json({
+    message: "DELETE Role success",
+    data: null,
+  });
 };
 
 module.exports = {
