@@ -1,10 +1,9 @@
 const dbPool = require("../config/database");
 const { getTodayStringYYYYMMDD } = require("../utils/date");
+const { withTransaction } = require("../utils/transaction");
 
 const createNewMitra = async (body) => {
-  const connection = await dbPool.getConnection();
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     // 1. Generate Kode Otomatis
     const todayStr = getTodayStringYYYYMMDD();
@@ -51,15 +50,9 @@ const createNewMitra = async (body) => {
     const values = [kodeMitra, namaMitra, alamatMitra, createdBy, dateNow, true];
 
     await connection.execute(SQLQuery, values);
-    await connection.commit();
 
     return { kodeMitra, ...body, statusAktif: true };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const updateMitra = async (id, body) => {

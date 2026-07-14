@@ -1,9 +1,8 @@
 const dbPool = require("../config/database");
+const { withTransaction } = require("../utils/transaction");
 
 const createNewCabang = async (body) => {
-  const connection = await dbPool.getConnection();
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     // 1. Validasi Mitra Exist
     const { idMitra, namaCabang, alamatCabang, createdBy } = body;
@@ -52,15 +51,9 @@ const createNewCabang = async (body) => {
     const values = [idMitra, kodeCabang, namaCabang, alamatCabang, true, createdBy, dateNow];
 
     await connection.execute(SQLQuery, values);
-    await connection.commit();
 
     return { kodeCabang, ...body, namaMitra: mitra[0].namaMitra, statusAktif: true };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const updateCabang = async (id, body) => {
@@ -217,10 +210,7 @@ const restoreCabang = async (id, updatedBy) => {
 };
 
 const resetCabang = async (id) => {
-  const connection = await dbPool.getConnection();
-
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     const [existingCabang] = await connection.execute(
       "SELECT id FROM tbl_cabang WHERE id = ? AND statusAktif = 1",
@@ -245,15 +235,8 @@ const resetCabang = async (id) => {
     await connection.execute("DELETE FROM tbl_absensi WHERE cabangId = ?", [id]);
     await connection.execute("DELETE FROM tbl_notifikasi WHERE cabangId = ?", [id]);
 
-    await connection.commit();
-
     return true;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 module.exports = {
