@@ -406,7 +406,7 @@ Lanjutkan `ASYNC_ERROR_HANDLING_PLAN.md` Tahap 4 sampai Tahap 7.
 - [x] Tidak ada raw database, MQTT, email, atau stack error pada response 5xx yang dicakup regression test.
 - [x] Tidak ada connection leak pada jalur transaction standar dan machine-control yang diuji.
 - [x] Manipulasi harga client ditolak dan diuji dengan rollback.
-- [x] Dokumentasi dan checklist audit mencatat route catalog 76 request, gate terbaru 124 pass dan 1 skip MQTT, perubahan kontrak aktivasi mobile, serta cleanup catch rethrow-only. Checklist per-file dan DoD di luar scope migrasi tetap terbuka; clean-install sudah terbukti lulus.
+- [x] Dokumentasi dan checklist audit mencatat route catalog 76 request, gate terbaru 124 pass dan 1 skip MQTT, perubahan kontrak aktivasi mobile, serta cleanup catch rethrow-only. Inventory per-file sudah lengkap; DoD di luar scope migrasi tetap terbuka dan clean-install sudah terbukti lulus.
 - [x] Perubahan yang sudah dikirim terbagi menjadi commit kecil dan dapat di-rollback.
 
 ### Status audit implementasi Fase 7

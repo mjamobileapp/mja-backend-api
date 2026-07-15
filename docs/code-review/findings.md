@@ -13,15 +13,15 @@
 
 ## REV-002 - Internal error detail was exposed by controller responses
 
-- Status: Fixed for response transport; controller cleanup remains planned
+- Status: Fixed
 - Prioritas: P1
 - Kategori: Security, API consistency
 - Lokasi: controller responses containing `serverMessage` or `details`; protection in `src/middleware/responseSanitizer.js`.
 - Bukti: many controller 500 responses sent `error.message` to the client.
 - Dampak: SQL, implementation, and infrastructure details could be exposed.
-- Perbaikan: all payloads sent with status >= 500 have `serverMessage`, `details`, and `error` removed; `message` is normalized to `Internal Server Error`. Existing success and 4xx payloads are unchanged.
-- Test: sanitizer unit tests are in `test/app.test.js`.
-- Follow-up: migrate controllers incrementally to shared error handling so deprecated unsafe fields can be removed from source.
+- Perbaikan: controller tidak lagi mengirim direct response 5xx atau detail internal; error boundary global menormalisasi response 5xx menjadi `Internal Server Error`, sementara sanitizer tetap menjadi defense-in-depth untuk payload lama.
+- Test: sanitizer unit tests berada di `test/app.test.js`, dan quality gate menolak direct `res.status(5xx)` di seluruh `src/controller`.
+- Follow-up: tidak ada cleanup controller yang tersisa untuk finding ini; perubahan error contract berikutnya tetap wajib menambah characterization/regression test.
 
 ## REV-003 - Request and user objects were logged without redaction
 
