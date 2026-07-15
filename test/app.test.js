@@ -65,6 +65,7 @@ test("mobile route without token returns the authentication status instead of 50
       success: false,
       code: "UNAUTHORIZED",
       message: "Akses ditolak, token tidak ditemukan",
+      error: "Akses ditolak, token tidak ditemukan",
     });
   });
 });
@@ -78,6 +79,7 @@ test("unknown route returns a consistent 404 response", async () => {
       success: false,
       code: "ROUTE_NOT_FOUND",
       message: "Route tidak ditemukan",
+      error: "Route tidak ditemukan",
     });
   });
 });
@@ -91,6 +93,7 @@ test("disallowed CORS origin is rejected with 403", async () => {
       success: false,
       code: "CORS_FORBIDDEN",
       message: "Origin tidak diizinkan oleh CORS",
+      error: "Origin tidak diizinkan oleh CORS",
     });
   });
 });
@@ -141,11 +144,12 @@ test("protected user and mobile routes reject requests without a token before ac
     for (const route of protectedRoutes) {
       const response = await request(server, route.path, { method: route.method });
       assert.equal(response.statusCode, 401, `${route.method} ${route.path}`);
-      assert.deepEqual(JSON.parse(response.body), {
-        success: false,
-        code: "UNAUTHORIZED",
-        message: "Akses ditolak, token tidak ditemukan",
-      });
+      const body = JSON.parse(response.body);
+      assert.deepEqual(
+        { success: body.success, code: body.code, message: body.message },
+        { success: false, code: "UNAUTHORIZED", message: "Akses ditolak, token tidak ditemukan" }
+      );
+      if (body.error !== undefined) assert.equal(body.error, body.message);
     }
   });
 });

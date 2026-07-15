@@ -47,15 +47,17 @@ test("catchAsync completes successful handlers without calling next", async () =
   assert.equal(nextCalled, false);
 });
 
-test("global error handler preserves typed client errors and sanitizes server errors", () => {
-  const typedResponse = createResponse();
-  errorHandler(createHttpError(404, "data not found", "MASTER_ITEM_NOT_FOUND"), { method: "GET", originalUrl: "/item/404" }, typedResponse, () => {});
-  assert.equal(typedResponse.statusCode, 404);
-  assert.deepEqual(typedResponse.body, {
-    success: false,
-    code: "MASTER_ITEM_NOT_FOUND",
-    message: "data not found",
-  });
+test("global error handler preserves typed 4xx errors with the legacy error alias", () => {
+  for (const [statusCode, code, message] of [
+    [400, "REQUEST_INVALID", "payload invalid"],
+    [404, "MASTER_ITEM_NOT_FOUND", "data not found"],
+    [409, "MASTER_ITEM_DUPLICATE", "already exists"],
+  ]) {
+    const typedResponse = createResponse();
+    errorHandler(createHttpError(statusCode, message, code), { method: "GET", originalUrl: "/item" }, typedResponse, () => {});
+    assert.equal(typedResponse.statusCode, statusCode);
+    assert.deepEqual(typedResponse.body, { success: false, code, message, error: message });
+  }
 
   const serverResponse = createResponse();
   errorHandler(new Error("database secret"), { method: "GET", originalUrl: "/item" }, serverResponse, () => {});

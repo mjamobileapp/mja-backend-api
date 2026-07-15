@@ -29,11 +29,17 @@ const errorHandler = (error, req, res, next) => {
     });
   }
 
-  return res.status(statusCode).json({
+  const response = {
     success: false,
     code: error.code || getDefaultErrorCode(statusCode),
     message: isServerError ? "Internal Server Error" : error.message,
-  });
+  };
+
+  // Keep the legacy client-facing `error` field for 4xx responses only.
+  // Never expose the original server error text on 5xx responses.
+  if (!isServerError) response.error = error.message;
+
+  return res.status(statusCode).json(response);
 };
 
 module.exports = {

@@ -383,12 +383,14 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       success: false,
       code: "MASTER_ITEM_NOT_FOUND",
       message: "data not found",
+      error: "data not found",
     });
     assert.equal(duplicateResponse.statusCode, 409);
     assert.deepEqual(duplicateResponse.body, {
       success: false,
       code: "MASTER_ITEM_DUPLICATE",
       message: "Master Item sudah terdaftar",
+      error: "Master Item sudah terdaftar",
     });
   });
 
