@@ -324,7 +324,7 @@ const createPengeluaran = async (data) => {
          ON DUPLICATE KEY UPDATE
            stokSekarang = stokSekarang + VALUES(stokSekarang),
            updatedBy = VALUES(updatedBy),
-           updatedDate = CURRENT_TIMESTAMP`,
+           updatedDate = UTC_TIMESTAMP()`,
         [idMitra, cabangId, itemId, jumlahBarangValue, createdBy, createdBy]
       );
     }

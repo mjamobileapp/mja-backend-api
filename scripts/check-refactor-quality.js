@@ -52,6 +52,20 @@ if (/error\.message\s*===/.test(mobileController)) {
   violations.push("src/controller/mobile.js contains string-based activation error mapping");
 }
 
+const modelsDir = path.join(__dirname, "..", "src", "models");
+const forbiddenTimestampExpression = /(?<![.\w])(?:NOW|CURDATE|CURRENT_TIMESTAMP)\s*(?:\(\s*\))?/gi;
+for (const file of fs.readdirSync(modelsDir).filter((name) => name.endsWith(".js"))) {
+  const fullPath = path.join(modelsDir, file);
+  const source = fs.readFileSync(fullPath, "utf8");
+  const lines = source.split(/\r?\n/);
+  lines.forEach((line, index) => {
+    if (forbiddenTimestampExpression.test(line)) {
+      violations.push(`${path.join("src", "models", file)}:${index + 1} uses a non-UTC database timestamp function`);
+    }
+    forbiddenTimestampExpression.lastIndex = 0;
+  });
+}
+
 if (violations.length > 0) {
   console.error("Refactor quality gate failed:");
   violations.forEach((violation) => console.error(`- ${violation}`));

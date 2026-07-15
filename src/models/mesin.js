@@ -111,7 +111,7 @@ const updateMesin = async (idMesinMaster, body, updatedBy) => {
 
     // 2. Update cabangId, espId, namaGroupMesin di master
     await connection.execute(
-      `UPDATE tbl_mesin_master SET cabangId = ?, espId = ?, namaGroupMesin = ?, updatedBy = ?, updatedDate = CURRENT_TIMESTAMP WHERE id = ?`,
+      `UPDATE tbl_mesin_master SET cabangId = ?, espId = ?, namaGroupMesin = ?, updatedBy = ?, updatedDate = UTC_TIMESTAMP() WHERE id = ?`,
       [cabangId, espId, namaGroupMesin, updatedBy, idMesinMaster]
     );
 
