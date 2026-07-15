@@ -371,7 +371,7 @@ masterItem / roles / dashboard
 - [x] MQTT diuji menggunakan mock/fake broker sebelum test perangkat nyata.
 - [x] Tidak ditemukan `.env`, `.pem`, `.key`, atau secret file yang ter-track pada audit akhir.
 - [x] Dokumentasi route sesuai dengan code aktual.
-- [x] Perbandingan baseline menyatakan perubahan kontrak yang disengaja dan disetujui; lihat tabel baseline sebelum/sesudah di `docs/REFACTOR_PHASE_0_BASELINE.md`. Angka gate aktual checkout saat ini adalah 110 pass dan 1 skip MQTT.
+- [x] Perbandingan baseline menyatakan perubahan kontrak yang disengaja dan disetujui; lihat tabel baseline sebelum/sesudah di `docs/REFACTOR_PHASE_0_BASELINE.md`. Angka gate aktual checkout saat ini adalah 113 pass dan 1 skip MQTT.
 
 ## Panduan Detail untuk Junior Programmer / AI Model
 
@@ -437,13 +437,13 @@ Jika jawabannya tidak jelas, catat finding terlebih dahulu dan jangan extract.
 
 ## Acceptance Criteria
 
-- [x] Seluruh file dalam scope tercantum dan berstatus di inventory.
+- [ ] Seluruh file dalam scope tercantum dan berstatus review per-file di inventory. Inventory saat ini masih menggunakan beberapa kelompok file; status kelompok dan finding tersedia, tetapi trace per-file belum lengkap.
 - [x] Daftar finding memakai format baku, memiliki bukti/lokasi, dan sudah diprioritaskan.
 - [x] Roadmap menjelaskan urutan, dependency, risiko, ukuran, dan test setiap refactor.
 - [x] Temuan awal PRE-001 sampai PRE-018 sudah diverifikasi dan diubah menjadi finding final, ditolak dengan bukti, atau di-defer dengan alasan.
 - [x] Ada test baseline untuk auth backoffice/mobile, satu CRUD, transaction, serta MQTT flow.
 - [x] Ada command tunggal `npm run check` atau ekuivalen yang menjalankan quality gate.
-- [x] Refactor tidak menyebabkan regression pada contract yang diuji; characterization, controller, authorization, dan integration tests tetap lulus (110 pass, 1 skip MQTT). Klaim ini terbatas pada endpoint dan fixture yang memiliki regression test.
+- [x] Refactor tidak menyebabkan regression pada contract yang diuji; characterization, controller, authorization, dan integration tests tetap lulus (113 pass, 1 skip MQTT). Klaim ini terbatas pada endpoint dan fixture yang memiliki regression test.
 - [x] Error response tidak membocorkan detail internal.
 - [x] Authorization tenant/cabang memiliki negative test.
 - [x] Tidak ada `.env`, `.pem`, `.key`, atau secret file baru yang ter-track; audit akhir tidak menemukan credential file pada repository.

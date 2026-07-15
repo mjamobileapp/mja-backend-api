@@ -406,18 +406,18 @@ Lanjutkan `ASYNC_ERROR_HANDLING_PLAN.md` Tahap 4 sampai Tahap 7.
 - [x] Tidak ada raw database, MQTT, email, atau stack error pada response 5xx yang dicakup regression test.
 - [x] Tidak ada connection leak pada jalur transaction standar dan machine-control yang diuji.
 - [x] Manipulasi harga client ditolak dan diuji dengan rollback.
-- [ ] Dokumentasi dan checklist audit sepenuhnya sinkron. Route catalog sudah 76 request, tetapi setiap perubahan kontrak atau angka gate harus tetap diperbarui pada dokumen terkait.
+- [x] Dokumentasi dan checklist audit sinkron pada checkpoint `4cd00e6`: route catalog 76 request, gate 113 pass dan 1 skip MQTT, serta perubahan kontrak aktivasi mobile sudah dicatat. Checklist per-file dan clean-install tetap terbuka sebagai acceptance gate tersendiri.
 - [x] Perubahan yang sudah dikirim terbagi menjadi commit kecil dan dapat di-rollback.
 
 ### Status audit implementasi Fase 7
 
 Quality gate `scripts/check-refactor-quality.js` sekarang menjadi bagian dari `npm.cmd run check`. Gate ini memverifikasi route/controller async di `src/routes` dan `src/app.js`, arithmetic pricing transaksi, typed-error boundary transaksi, serta melarang `NOW()`, `CURDATE()`, dan `CURRENT_TIMESTAMP` pada model.
 
-Audit akhir juga memastikan controller tidak lagi mengirim detail error internal melalui response 5xx. Error internal transaksi, machine-control, dan aktivasi akun diteruskan sebagai typed 500 dan disanitasi oleh global error handler. Lifecycle `startMesin`/`stopMesin` tetap menjadi pengecualian workflow MQTT yang eksplisit; helper transaksi generik tidak digunakan untuknya.
+Audit akhir juga memastikan controller tidak lagi mengirim detail error internal melalui response 5xx. Error internal transaksi, machine-control, dan aktivasi akun diteruskan sebagai typed 500 dan disanitasi oleh global error handler; token aktivasi yang invalid atau user mobile yang sudah tidak ada dipetakan ke typed 400 `ACCOUNT_ACTIVATION_TOKEN_INVALID`. Lifecycle `startMesin`/`stopMesin` tetap menjadi pengecualian workflow MQTT yang eksplisit; helper transaksi generik tidak digunakan untuknya.
 
-Validasi terakhir pada checkout `fbb737e`: quality gate lulus, `npm.cmd run check` lulus (110 test pass, 1 test MQTT skip), dan `git diff --check` lulus. Angka ini bukan bukti clean-install; validasi dependency dari instalasi bersih masih harus dijalankan bila diperlukan untuk release gate.
+Validasi terakhir pada checkout `4cd00e6`: quality gate lulus, `npm.cmd run check` lulus (113 test pass, 1 test MQTT skip), dan `git diff --check` lulus. Angka ini bukan bukti clean-install; validasi dependency dari instalasi bersih masih harus dijalankan bila diperlukan untuk release gate.
 
-Perbandingan baseline sebelum/sesudah dicatat di `docs/REFACTOR_PHASE_0_BASELINE.md`: baseline Fase 0 mencatat 69 pass/1 skip, sedangkan checkout saat ini mencatat 110 pass/1 skip MQTT. Characterization dan integration suite membuktikan contract yang diuji tetap kompatibel; perubahan yang disengaja (typed error, alias `error` 4xx, penolakan manipulasi harga, dan timestamp database UTC) dicatat di test serta dokumentasi terkait. Baseline historis tidak boleh dibaca sebagai bukti bahwa seluruh debt repository sudah selesai.
+Perbandingan baseline sebelum/sesudah dicatat di `docs/REFACTOR_PHASE_0_BASELINE.md`: baseline Fase 0 mencatat 69 pass/1 skip, sedangkan checkout `4cd00e6` mencatat 113 pass/1 skip MQTT. Characterization dan integration suite membuktikan contract yang diuji tetap kompatibel; perubahan yang disengaja (typed error, alias `error` 4xx, penolakan manipulasi harga, timestamp database UTC, dan pemetaan user aktivasi mobile yang hilang menjadi 400 typed error) dicatat di test serta dokumentasi terkait. Baseline historis tidak boleh dibaca sebagai bukti bahwa seluruh debt repository sudah selesai.
 
 ## Urutan Commit yang Disarankan
 
