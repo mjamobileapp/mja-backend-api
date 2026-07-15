@@ -360,9 +360,9 @@ masterItem / roles / dashboard
 
 ### Tahap 7 - Verifikasi Akhir
 
-- [ ] Semua file dalam inventory memiliki status review per-file. Inventory saat ini masih menggabungkan beberapa kelompok route/controller/model; status kelompok dan finding sudah tersedia, tetapi trace per-file belum lengkap.
+- [x] Semua file dalam inventory memiliki status review per-file. `docs/code-review/inventory.md` sekarang mencatat setiap file scope secara individual, termasuk dependency utama, status, finding terkait, dan alasan `DEFERRED` bila review membutuhkan verifikasi eksternal.
 - [x] Semua finding P0/P1 berstatus fixed, accepted risk dengan alasan, atau memiliki blocker eksplisit.
-- [x] Semua test dan lint lulus dari clean install. `npm.cmd ci` diikuti `npm.cmd run check` lulus dengan 113 pass dan 1 skip MQTT.
+- [x] Semua test dan lint lulus dari clean install. `npm.cmd ci` diikuti `npm.cmd run check` lulus dengan 117 pass dan 1 skip MQTT.
 - [x] Server dapat start dan shutdown dengan benar.
 - [x] Endpoint utama diuji dengan token backoffice, owner, dan kasir.
 - [x] Scope mitra/cabang tidak bocor antar-user; negative authorization dan tenant/cabang integration tests lulus.
@@ -371,7 +371,7 @@ masterItem / roles / dashboard
 - [x] MQTT diuji menggunakan mock/fake broker sebelum test perangkat nyata.
 - [x] Tidak ditemukan `.env`, `.pem`, `.key`, atau secret file yang ter-track pada audit akhir.
 - [x] Dokumentasi route sesuai dengan code aktual.
-- [x] Perbandingan baseline menyatakan perubahan kontrak yang disengaja dan disetujui; lihat tabel baseline sebelum/sesudah di `docs/REFACTOR_PHASE_0_BASELINE.md`. Angka gate aktual checkout saat ini adalah 113 pass dan 1 skip MQTT.
+- [x] Perbandingan baseline menyatakan perubahan kontrak yang disengaja dan disetujui; lihat tabel baseline sebelum/sesudah di `docs/REFACTOR_PHASE_0_BASELINE.md`. Angka gate aktual checkout saat ini adalah 117 pass dan 1 skip MQTT.
 
 ## Panduan Detail untuk Junior Programmer / AI Model
 
@@ -437,13 +437,13 @@ Jika jawabannya tidak jelas, catat finding terlebih dahulu dan jangan extract.
 
 ## Acceptance Criteria
 
-- [ ] Seluruh file dalam scope tercantum dan berstatus review per-file di inventory. Inventory saat ini masih menggunakan beberapa kelompok file; status kelompok dan finding tersedia, tetapi trace per-file belum lengkap.
+- [x] Seluruh file dalam scope tercantum dan berstatus review per-file di inventory. Setiap file source, quality-gate script, file operasional, dokumentasi API, Postman collection, dan kontrak firmware memiliki baris status individual; `.env` dicatat sebagai pengecualian karena isi secret tidak direview.
 - [x] Daftar finding memakai format baku, memiliki bukti/lokasi, dan sudah diprioritaskan.
 - [x] Roadmap menjelaskan urutan, dependency, risiko, ukuran, dan test setiap refactor.
 - [x] Temuan awal PRE-001 sampai PRE-018 sudah diverifikasi dan diubah menjadi finding final, ditolak dengan bukti, atau di-defer dengan alasan.
 - [x] Ada test baseline untuk auth backoffice/mobile, satu CRUD, transaction, serta MQTT flow.
 - [x] Ada command tunggal `npm run check` atau ekuivalen yang menjalankan quality gate.
-- [x] Refactor tidak menyebabkan regression pada contract yang diuji; characterization, controller, authorization, dan integration tests tetap lulus (113 pass, 1 skip MQTT). Klaim ini terbatas pada endpoint dan fixture yang memiliki regression test.
+- [x] Refactor tidak menyebabkan regression pada contract yang diuji; characterization, controller, authorization, dan integration tests tetap lulus (117 pass, 1 skip MQTT). Klaim ini terbatas pada endpoint dan fixture yang memiliki regression test.
 - [x] Error response tidak membocorkan detail internal.
 - [x] Authorization tenant/cabang memiliki negative test.
 - [x] Tidak ada `.env`, `.pem`, `.key`, atau secret file baru yang ter-track; audit akhir tidak menemukan credential file pada repository.
