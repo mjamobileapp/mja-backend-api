@@ -87,18 +87,14 @@ test("machine-control controller requires backoffice scope and rejects owner ten
       invoiceNumber: null,
     });
 
-    const ownerResponse = createResponse();
-    await TransaksiController.startMesin(
-      {
+    await assert.rejects(
+      TransaksiController.startMesin({
         body: { mesinId: 3, invoiceNumber: "INV-SPOOF", idMitra: 8, cabangId: 9 },
         user: { id: 11, idMitra: 7, username: "owner-test" },
         machineControlActor: { type: "owner", id: 11, username: "owner-test" },
-      },
-      ownerResponse
+      }, createResponse()),
+      (error) => error.statusCode === 403 && error.code === "BRANCH_SCOPE_FORBIDDEN"
     );
-
-    assert.equal(ownerResponse.statusCode, 403);
-    assert.match(ownerResponse.body.error, /mitra sendiri/);
   } finally {
     TransaksiModel.isActiveCabangForMitra = original.isActiveCabangForMitra;
     TransaksiModel.stopMesin = original.stopMesin;

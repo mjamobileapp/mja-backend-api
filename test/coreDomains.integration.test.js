@@ -477,7 +477,9 @@ test("core domains complete their HTTP flows on the isolated integration schema"
     );
     assert.equal(manipulated.statusCode, 409);
     assert.deepEqual(manipulated.body, {
+      success: false,
       error: "Harga transaksi telah berubah. Muat ulang harga dan coba kembali.",
+      message: "Harga transaksi telah berubah. Muat ulang harga dan coba kembali.",
       code: "TRANSACTION_PRICE_CHANGED",
     });
     assert.equal(afterManipulation[0].jumlah, beforeManipulation[0].jumlah);

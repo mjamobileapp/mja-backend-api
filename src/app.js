@@ -6,6 +6,7 @@ const { authenticate } = require("./middleware/auth");
 const { getAllowedOrigins, getTrustProxy } = require("./config/environment");
 const { errorHandler, notFoundHandler, createHttpError } = require("./middleware/errorHandler");
 const { sanitizeServerErrorResponse } = require("./middleware/responseSanitizer");
+const { catchAsync } = require("./utils/catchAsync");
 
 const usersRoutes = require("./routes/users");
 const loginRoutes = require("./routes/login");
@@ -59,7 +60,7 @@ const createApp = ({ environment = process.env } = {}) => {
   app.use("/api/backoffice/login", loginRoutes);
   app.use("/api/backoffice/roles", roleRoutes);
   app.use("/api/backoffice/menus", menuRoutes);
-  app.get("/api/backoffice/getMenuHeader", authenticate, getMenuHeader);
+  app.get("/api/backoffice/getMenuHeader", authenticate, catchAsync(getMenuHeader));
   app.use("/api/backoffice/akses", aksesRoutes);
   app.use("/api/backoffice/mitra", mitraRoutes);
   app.use("/api/backoffice/cabang", cabangRoutes);

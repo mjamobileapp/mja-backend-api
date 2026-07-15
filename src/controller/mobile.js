@@ -139,7 +139,7 @@ const activateAccount = async (req, res) => {
       if (isBackoffice) {
         const [rows] = await UsersModel.getUserByUsername(username);
         user = rows[0];
-        if (!user) throw new Error("data not found");
+        if (!user) throw createHttpError(400, "Token tidak valid atau sudah kedaluwarsa", "ACCOUNT_ACTIVATION_TOKEN_INVALID");
       } else {
         user = await UserMobileModel.getUserByUsernameWithoutStatusFilter(username);
       }
@@ -213,25 +213,15 @@ const activateAccount = async (req, res) => {
         data: activatedUser,
       });
     } catch (error) {
-      // Handle error spesifik
-      if (error.message === "data not found") {
-        return res.status(400).json({
-          error: "Token tidak valid atau sudah kedaluwarsa",
-        });
-      }
-
       if (error.name === "TokenExpiredError") {
-        return res.status(400).json({
-          error: "Token sudah kedaluwarsa",
-        });
+        throw createHttpError(400, "Token sudah kedaluwarsa", "ACCOUNT_ACTIVATION_TOKEN_EXPIRED");
       }
 
       if (error.name === "JsonWebTokenError") {
-        return res.status(400).json({
-          error: "Token tidak valid",
-        });
+        throw createHttpError(400, "Token tidak valid", "ACCOUNT_ACTIVATION_TOKEN_INVALID");
       }
 
+      if (error.statusCode) throw error;
       throw createHttpError(500, "Internal account activation error", "ACCOUNT_ACTIVATION_INTERNAL_ERROR");
     }
 };

@@ -1,9 +1,12 @@
 const assert = require("node:assert/strict");
 const http = require("node:http");
+const jwt = require("jsonwebtoken");
 const test = require("node:test");
 const { createApp } = require("../src/app");
 const { getMissingServerEnv } = require("../src/config/environment");
 const { sanitizeServerErrorPayload, sanitizeServerErrorResponse } = require("../src/middleware/responseSanitizer");
+const dbPool = require("../src/config/database");
+const MasterMenuModel = require("../src/models/menus");
 
 const request = (server, path, { method = "GET", headers = {} } = {}) =>
   new Promise((resolve, reject) => {
@@ -82,6 +85,41 @@ test("unknown route returns a consistent 404 response", async () => {
       error: "Route tidak ditemukan",
     });
   });
+});
+
+test("menu header model rejection reaches the global error handler", async () => {
+  const originalSecret = process.env.JWT_SECRET;
+  const originalExecute = dbPool.execute;
+  const originalGetMenuHeader = MasterMenuModel.getMenuHeader;
+  process.env.JWT_SECRET = "app-test-secret";
+  dbPool.execute = async () => [[{ id: 1, role: 1, username: "admin", statusAktif: 1 }]];
+  MasterMenuModel.getMenuHeader = async () => {
+    const error = new Error("database unavailable");
+    error.statusCode = 503;
+    error.code = "MENU_STORAGE_UNAVAILABLE";
+    throw error;
+  };
+
+  try {
+    const token = jwt.sign({ id: 1, username: "admin", role: 1, tokenType: "backoffice" }, process.env.JWT_SECRET);
+    await withServer(async (server) => {
+      const response = await request(server, "/api/backoffice/getMenuHeader", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      assert.equal(response.statusCode, 503);
+      assert.deepEqual(JSON.parse(response.body), {
+        success: false,
+        code: "MENU_STORAGE_UNAVAILABLE",
+        message: "Internal Server Error",
+      });
+    });
+  } finally {
+    MasterMenuModel.getMenuHeader = originalGetMenuHeader;
+    dbPool.execute = originalExecute;
+    if (originalSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = originalSecret;
+  }
 });
 
 test("disallowed CORS origin is rejected with 403", async () => {

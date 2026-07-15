@@ -4,6 +4,25 @@ const path = require("node:path");
 const routesDir = path.join(__dirname, "..", "src", "routes");
 const violations = [];
 
+const appSource = fs.readFileSync(path.join(__dirname, "..", "src", "app.js"), "utf8");
+const controllerHandlers = new Set();
+for (const match of appSource.matchAll(/const\s*\{([^}]+)\}\s*=\s*require\(["']\.\/controller\/[^"']+["']\)/g)) {
+  match[1]
+    .split(",")
+    .map((handler) => handler.trim().split(/\s+as\s+/i).pop())
+    .filter(Boolean)
+    .forEach((handler) => controllerHandlers.add(handler));
+}
+
+for (const match of appSource.matchAll(/app\.(?:get|post|put|patch|delete)\s*\(([\s\S]*?)\);/g)) {
+  for (const handler of controllerHandlers) {
+    if (new RegExp(`\\b${handler}\\b`).test(match[1]) && !match[1].includes("catchAsync(")) {
+      const line = appSource.slice(0, match.index).split(/\r?\n/).length;
+      violations.push(`${path.join("src", "app.js")}:${line} async controller is not wrapped with catchAsync`);
+    }
+  }
+}
+
 for (const file of fs.readdirSync(routesDir).filter((name) => name.endsWith(".js"))) {
   const fullPath = path.join(routesDir, file);
   const lines = fs.readFileSync(fullPath, "utf8").split(/\r?\n/);
@@ -17,6 +36,20 @@ for (const file of fs.readdirSync(routesDir).filter((name) => name.endsWith(".js
 const transaksiController = fs.readFileSync(path.join(__dirname, "..", "src", "controller", "transaksi.js"), "utf8");
 if (/\b(?:subtotal|totalHarga|hargaSatuan|jumlahHarga)\b/.test(transaksiController)) {
   violations.push("src/controller/transaksi.js contains transaction pricing arithmetic");
+}
+
+if (/error\.message\s*===|context\.error/.test(transaksiController)) {
+  violations.push("src/controller/transaksi.js contains string-based or object-based HTTP error mapping");
+}
+
+const transaksiModel = fs.readFileSync(path.join(__dirname, "..", "src", "models", "transaksi.js"), "utf8");
+if (/throw\s+new\s+Error\s*\(/.test(transaksiModel)) {
+  violations.push("src/models/transaksi.js contains untyped transaction errors");
+}
+
+const mobileController = fs.readFileSync(path.join(__dirname, "..", "src", "controller", "mobile.js"), "utf8");
+if (/error\.message\s*===/.test(mobileController)) {
+  violations.push("src/controller/mobile.js contains string-based activation error mapping");
 }
 
 if (violations.length > 0) {

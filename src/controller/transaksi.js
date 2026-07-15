@@ -17,7 +17,7 @@ const getMachineControlContext = async (req) => {
     cabangId = Number(req.body.cabangId);
 
     if (req.body.idMitra !== undefined && Number(req.body.idMitra) !== idMitra) {
-      return { statusCode: 403, error: "Owner hanya dapat mengontrol mesin mitra sendiri" };
+      throw createHttpError(403, "Owner hanya dapat mengontrol mesin mitra sendiri", "BRANCH_SCOPE_FORBIDDEN");
     }
   } else if (actor?.type === "backoffice") {
     idMitra = Number(req.body.idMitra);
@@ -28,12 +28,16 @@ const getMachineControlContext = async (req) => {
   }
 
   if (!isPositiveInteger(idMitra) || !isPositiveInteger(cabangId)) {
-    return { statusCode: 400, error: "idMitra dan cabangId wajib diisi dan harus integer lebih dari 0" };
+    throw createHttpError(
+      400,
+      "idMitra dan cabangId wajib diisi dan harus integer lebih dari 0",
+      "MACHINE_CONTROL_VALIDATION_ERROR"
+    );
   }
 
   const cabangValid = await TransaksiModel.isActiveCabangForMitra(idMitra, cabangId);
   if (!cabangValid) {
-    return { statusCode: 403, error: "Cabang tidak sesuai dengan mitra atau tidak aktif" };
+    throw createHttpError(403, "Cabang tidak sesuai dengan mitra atau tidak aktif", "BRANCH_SCOPE_FORBIDDEN");
   }
 
   const resolvedActor = actor || {
@@ -43,7 +47,7 @@ const getMachineControlContext = async (req) => {
   };
 
   if (!isPositiveInteger(resolvedActor.id)) {
-    return { statusCode: 401, error: "Token tidak valid" };
+    throw createHttpError(401, "Token tidak valid", "UNAUTHORIZED");
   }
 
   return {
@@ -131,46 +135,17 @@ const createTransaksi = async (req, res) => {
     });
   }
 
-  try {
-    const data = await TransaksiService.createTransaksi({
-      idMitra,
-      cabangId,
-      idUserMobile,
-      payload,
-    });
+  const data = await TransaksiService.createTransaksi({
+    idMitra,
+    cabangId,
+    idUserMobile,
+    payload,
+  });
 
-    res.status(201).json({
-      success: "Create Data Transaksi Success",
-      data: data,
-    });
-  } catch (error) {
-    if (error.statusCode) {
-      return res.status(error.statusCode).json({ error: error.message, code: error.code });
-    }
-
-    if (
-      error.message === "Mitra tidak ditemukan" ||
-      error.message === "Cabang tidak ditemukan" ||
-      error.message === "User tidak ditemukan" ||
-      error.message === "Item tidak ditemukan"
-    ) {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-
-    if (
-      error.message === "Item addon harus bertipe stok" ||
-      error.message === "Stok cabang tidak ditemukan" ||
-      error.message === "Stok tidak mencukupi"
-    ) {
-      return res.status(400).json({
-        error: error.message,
-      });
-    }
-
-    throw createHttpError(500, "Internal transaction error", "TRANSACTION_INTERNAL_ERROR");
-  }
+  res.status(201).json({
+    success: "Create Data Transaksi Success",
+    data: data,
+  });
 };
 
 const startMesin = async (req, res) => {
@@ -188,32 +163,17 @@ const startMesin = async (req, res) => {
     });
   }
 
-  try {
-    const context = await getMachineControlContext(req);
-    if (context.error) {
-      return res.status(context.statusCode).json({ error: context.error });
-    }
+  const context = await getMachineControlContext(req);
+  await TransaksiModel.startMesin({
+    ...context,
+    mesinId: Number(mesinId),
+    invoiceNumber: invoiceNumber.trim(),
+  });
 
-    await TransaksiModel.startMesin({
-      ...context,
-      mesinId: Number(mesinId),
-      invoiceNumber: invoiceNumber.trim(),
-    });
-
-    return res.status(200).json({
-      success: "Start Mesin Success",
-      data: null,
-    });
-  } catch (error) {
-    if (error.statusCode) {
-      return res.status(error.statusCode).json({
-        error: error.message,
-      });
-    }
-
-    console.error("Error Start Mesin:", error);
-    throw createHttpError(500, "Internal machine-control error", "MACHINE_CONTROL_INTERNAL_ERROR");
-  }
+  return res.status(200).json({
+    success: "Start Mesin Success",
+    data: null,
+  });
 };
 
 const stopMesin = async (req, res) => {
@@ -231,32 +191,17 @@ const stopMesin = async (req, res) => {
     });
   }
 
-  try {
-    const context = await getMachineControlContext(req);
-    if (context.error) {
-      return res.status(context.statusCode).json({ error: context.error });
-    }
+  const context = await getMachineControlContext(req);
+  await TransaksiModel.stopMesin({
+    ...context,
+    mesinId: Number(mesinId),
+    invoiceNumber: invoiceNumber ? invoiceNumber.trim() : null,
+  });
 
-    await TransaksiModel.stopMesin({
-      ...context,
-      mesinId: Number(mesinId),
-      invoiceNumber: invoiceNumber ? invoiceNumber.trim() : null,
-    });
-
-    return res.status(200).json({
-      success: "Stop Mesin Success",
-      data: null,
-    });
-  } catch (error) {
-    if (error.statusCode) {
-      return res.status(error.statusCode).json({
-        error: error.message,
-      });
-    }
-
-    console.error("Error Stop Mesin:", error);
-    throw createHttpError(500, "Internal machine-control error", "MACHINE_CONTROL_INTERNAL_ERROR");
-  }
+  return res.status(200).json({
+    success: "Stop Mesin Success",
+    data: null,
+  });
 };
 
 module.exports = {

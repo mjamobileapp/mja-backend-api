@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const TransaksiController = require("../src/controller/transaksi");
 const TransaksiModel = require("../src/models/transaksi");
+const { createHttpError } = require("../src/utils/httpError");
 
 const createResponse = () => ({
   statusCode: null,
@@ -27,7 +28,7 @@ const validRequest = (body = validPayload()) => ({
   user: { id: 11, idMitra: 21, cabangId: 31 },
 });
 
-test("createTransaksi preserves the legacy controller contract before business-validation refactor", async (t) => {
+test("createTransaksi preserves the controller contract with typed business errors", async (t) => {
   const originalCreateTransaksi = TransaksiModel.createTransaksi;
   const calls = [];
 
@@ -90,29 +91,30 @@ test("createTransaksi preserves the legacy controller contract before business-v
       assert.equal(calls.length, callsBefore);
     });
 
-    await t.test("maps current known model errors and preserves the unknown-error transport shape", async () => {
-      const response404 = createResponse();
-      TransaksiModel.createTransaksi = async () => {
-        throw new Error("Item tidak ditemukan");
-      };
-      await TransaksiController.createTransaksi(validRequest(), response404);
-      assert.deepEqual(response404.body, { error: "Item tidak ditemukan" });
-      assert.equal(response404.statusCode, 404);
+    await t.test("forwards typed model errors without string-based HTTP mapping", async () => {
+      const typedErrors = [
+        createHttpError(404, "Item tidak ditemukan", "TRANSACTION_ITEM_NOT_FOUND"),
+        createHttpError(400, "Stok tidak mencukupi", "TRANSACTION_STOCK_INSUFFICIENT"),
+      ];
 
-      const response400 = createResponse();
-      TransaksiModel.createTransaksi = async () => {
-        throw new Error("Stok tidak mencukupi");
-      };
-      await TransaksiController.createTransaksi(validRequest(), response400);
-      assert.deepEqual(response400.body, { error: "Stok tidak mencukupi" });
-      assert.equal(response400.statusCode, 400);
+      for (const expectedError of typedErrors) {
+        TransaksiModel.createTransaksi = async () => {
+          throw expectedError;
+        };
 
+        await assert.rejects(
+          TransaksiController.createTransaksi(validRequest(), createResponse()),
+          (error) => error === expectedError
+        );
+      }
+
+      const unknownError = new Error("database failure");
       TransaksiModel.createTransaksi = async () => {
-        throw new Error("database baseline failure");
+        throw unknownError;
       };
       await assert.rejects(
         TransaksiController.createTransaksi(validRequest(), createResponse()),
-        (error) => error.statusCode === 500 && error.code === "TRANSACTION_INTERNAL_ERROR"
+        (error) => error === unknownError
       );
     });
   } finally {

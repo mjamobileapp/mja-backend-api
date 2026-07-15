@@ -44,7 +44,7 @@ const validateMasterData = async (connection, idMitra, cabangId, idUserMobile) =
     [idMitra]
   );
   if (mitraCheck.length === 0) {
-    throw new Error("Mitra tidak ditemukan");
+    throw createHttpError(404, "Mitra tidak ditemukan", "TRANSACTION_MITRA_NOT_FOUND");
   }
 
   const [cabangCheck] = await connection.execute(
@@ -52,7 +52,7 @@ const validateMasterData = async (connection, idMitra, cabangId, idUserMobile) =
     [cabangId, idMitra]
   );
   if (cabangCheck.length === 0) {
-    throw new Error("Cabang tidak ditemukan");
+    throw createHttpError(404, "Cabang tidak ditemukan", "TRANSACTION_CABANG_NOT_FOUND");
   }
 
   const [userCheck] = await connection.execute(
@@ -60,7 +60,7 @@ const validateMasterData = async (connection, idMitra, cabangId, idUserMobile) =
     [idUserMobile]
   );
   if (userCheck.length === 0) {
-    throw new Error("User tidak ditemukan");
+    throw createHttpError(404, "User tidak ditemukan", "TRANSACTION_USER_NOT_FOUND");
   }
 
   return userCheck[0];
@@ -75,11 +75,11 @@ const validateAddonItem = async (connection, itemId) => {
   );
 
   if (itemCheck.length === 0) {
-    throw new Error("Item tidak ditemukan");
+    throw createHttpError(404, "Item tidak ditemukan", "TRANSACTION_ITEM_NOT_FOUND");
   }
 
   if (itemCheck[0].tipeItem !== "stok") {
-    throw new Error("Item addon harus bertipe stok");
+    throw createHttpError(400, "Item addon harus bertipe stok", "TRANSACTION_ITEM_TYPE_INVALID");
   }
 
   return itemCheck[0];
@@ -98,14 +98,14 @@ const reduceStockAndNotify = async (
   );
 
   if (stockRows.length === 0) {
-    throw new Error("Stok cabang tidak ditemukan");
+    throw createHttpError(400, "Stok cabang tidak ditemukan", "TRANSACTION_STOCK_NOT_CONFIGURED");
   }
 
   const currentStock = Number(stockRows[0].stokSekarang);
   const jumlah = Number(item.jumlah);
 
   if (currentStock < jumlah) {
-    throw new Error("Stok tidak mencukupi");
+    throw createHttpError(400, "Stok tidak mencukupi", "TRANSACTION_STOCK_INSUFFICIENT");
   }
 
   await connection.execute(
