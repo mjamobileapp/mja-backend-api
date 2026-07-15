@@ -162,7 +162,6 @@ const updateMesin = async (idMesinMaster, body, updatedBy) => {
 };
 
 const deleteMesin = async (id, updatedBy) => {
-  try {
     // 1. Cek apakah mesin eksis dan aktif
     const [existingMesin] = await dbPool.execute(
       `SELECT m.id AS masterId,
@@ -193,13 +192,9 @@ const deleteMesin = async (id, updatedBy) => {
     const [result] = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, existingMesin[0].masterId]);
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getMesinById = async (id) => {
-  try {
     const [rows] = await dbPool.execute(
       `SELECT 
         m.idMitra, 
@@ -231,13 +226,9 @@ const getMesinById = async (id) => {
       washer: hasWasher,
       dryer: hasDryer
     };
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getAllMesin = async (status) => {
-  try {
     let SQLQuery = `
       SELECT 
         d.id, d.jenisMesin AS tipeMesin, d.status, d.waktuPingTerakhir,
@@ -261,13 +252,9 @@ const getAllMesin = async (status) => {
 
     const [mesins] = await dbPool.execute(SQLQuery);
     return mesins;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getMesinByIdMitra = async (idMitra) => {
-  try {
     const [rows] = await dbPool.execute(
       `SELECT 
         m.id AS masterId,
@@ -314,13 +301,9 @@ const getMesinByIdMitra = async (idMitra) => {
     });
 
     return Object.values(groupedData);
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getMesinByIdCabang = async (cabangId) => {
-  try {
     const [rows] = await dbPool.execute(
       `SELECT 
         m.id AS masterId,
@@ -367,13 +350,9 @@ const getMesinByIdCabang = async (cabangId) => {
     });
 
     return Object.values(groupedData);
-  } catch (error) {
-    throw error;
-  }
 };
 
 const restoreMesin = async (id, updatedBy) => {
-  try {
     // Check if mesin exists and is currently inactive
     const [existingMesin] = await dbPool.execute(
       `SELECT m.id AS masterId
@@ -393,13 +372,9 @@ const restoreMesin = async (id, updatedBy) => {
     const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, existingMesin[0].masterId]);
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getMesinByEspId = async (espId) => {
-  try {
     const [mesins] = await dbPool.execute(
       `SELECT 
         d.id, d.jenisMesin AS tipeMesin, d.status, d.waktuSelesai, d.waktuPingTerakhir,
@@ -439,13 +414,9 @@ const getMesinByEspId = async (espId) => {
       washer: hasWasher,
       dryer: hasDryer,
     };
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getListMesinMobile = async (cabangId, idMitra, filter) => {
-  try {
     const normalizedFilter = filter ? String(filter).toLowerCase() : null;
 
     const [rows] = await dbPool.execute(
@@ -507,9 +478,6 @@ const getListMesinMobile = async (cabangId, idMitra, filter) => {
 
     // Ubah objek (dictionary) kembali menjadi Array
     return Object.values(groupedData);
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getMitraIdByCabangId = async (cabangId) => {
@@ -526,7 +494,6 @@ const getMitraIdByCabangId = async (cabangId) => {
 };
 
 const getAllMasterMesin = async () => {
-  try {
     const [rows] = await dbPool.execute(
       `SELECT 
         m.id,
@@ -579,13 +546,9 @@ const getAllMasterMesin = async () => {
     });
 
     return Object.values(groupedData);
-  } catch (error) {
-    throw error;
-  }
 };
 
 const setMaintenance = async (idMesinDetail, updatedBy) => {
-  try {
     // Cek apakah mesin detail eksis dan aktif (via master)
     const [existingDetail] = await dbPool.execute(
       `SELECT d.id, d.jenisMesin, d.status FROM tbl_mesin_detail d
@@ -610,13 +573,9 @@ const setMaintenance = async (idMesinDetail, updatedBy) => {
       jenisMesin: existingDetail[0].jenisMesin,
       status: "OFFLINE",
     };
-  } catch (error) {
-    throw error;
-  }
 };
 
 const setReady = async (idMesinDetail, updatedBy) => {
-  try {
     // Cek apakah mesin detail eksis dan aktif (via master)
     const [existingDetail] = await dbPool.execute(
       `SELECT d.id, d.jenisMesin, d.status FROM tbl_mesin_detail d
@@ -640,9 +599,6 @@ const setReady = async (idMesinDetail, updatedBy) => {
       jenisMesin: existingDetail[0].jenisMesin,
       status: "READY",
     };
-  } catch (error) {
-    throw error;
-  }
 };
 
 module.exports = {

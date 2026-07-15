@@ -10,4 +10,16 @@ const findDirectServerErrorResponses = (source, filePath) => {
   return violations;
 };
 
-module.exports = { findDirectServerErrorResponses };
+const findRethrowOnlyCatches = (source, filePath) => {
+  const violations = [];
+  const rethrowOnlyExpression = /catch\s*\(error\)\s*\{\s*throw error;\s*\}/g;
+
+  for (const match of source.matchAll(rethrowOnlyExpression)) {
+    const line = source.slice(0, match.index).split(/\r?\n/).length;
+    violations.push(`${filePath}:${line} contains a rethrow-only catch`);
+  }
+
+  return violations;
+};
+
+module.exports = { findDirectServerErrorResponses, findRethrowOnlyCatches };

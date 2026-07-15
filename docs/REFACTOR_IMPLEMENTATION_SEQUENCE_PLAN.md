@@ -371,9 +371,9 @@ Lanjutkan `ASYNC_ERROR_HANDLING_PLAN.md` Tahap 4 sampai Tahap 7.
 ### Exit gate
 
 - [x] Seluruh async route controller yang terdaftar pada `src/routes` dan `src/app.js` memakai `catchAsync` atau mempunyai alasan tertulis jika dikecualikan.
-- [x] Tidak ada direct response 5xx pada controller yang dimigrasikan; audit ulang lintas repository untuk seluruh pola legacy masih menjadi follow-up.
+- [x] Tidak ada direct response 5xx pada controller; quality gate memindai seluruh `src/controller`.
 - [ ] Known errors repository-wide mempertahankan status dan `code` yang disepakati. Scope transaksi, machine-control, mobile activation, dan modul yang sudah dimigrasikan sudah typed; plain error di modul lain masih tercatat sebagai debt.
-- [ ] Catch repository-wide seluruhnya mempunyai fungsi recovery/cleanup/fallback yang nyata. Catch rethrow-only di luar scope migrasi masih deferred.
+- [x] Tidak ada catch exact rethrow-only (`catch (error) { throw error; }`) di `src`; quality gate menolak pola tersebut bila muncul kembali. Catch recovery/cleanup/fallback tetap dipertahankan.
 - [x] Tenant, cabang, role, dan actor scope tetap terlindungi oleh test.
 - [x] MQTT failure tidak menyebabkan state mesin keliru.
 
@@ -402,22 +402,22 @@ Lanjutkan `ASYNC_ERROR_HANDLING_PLAN.md` Tahap 4 sampai Tahap 7.
 
 - [ ] Semua Definition of Done pada ketiga dokumen sumber terpenuhi secara repository-wide. DoD yang sudah terbukti berlaku pada scope migrasi; standardisasi error/validation dan cleanup model di luar scope tersebut masih deferred.
 - [x] Seluruh unit dan integration test lulus pada environment checkout saat ini.
-- [x] Quality gate baru masuk ke `npm.cmd run check`, termasuk pemeriksaan handler `src/app.js`, batas pricing, typed-error transaksi, dan timestamp SQL non-UTC.
+- [x] Quality gate baru masuk ke `npm.cmd run check`, termasuk pemeriksaan handler `src/app.js`, batas pricing, typed-error transaksi, timestamp SQL non-UTC, dan catch rethrow-only repository-wide.
 - [x] Tidak ada raw database, MQTT, email, atau stack error pada response 5xx yang dicakup regression test.
 - [x] Tidak ada connection leak pada jalur transaction standar dan machine-control yang diuji.
 - [x] Manipulasi harga client ditolak dan diuji dengan rollback.
-- [x] Dokumentasi dan checklist audit sinkron pada checkpoint `4cd00e6`: route catalog 76 request, gate 113 pass dan 1 skip MQTT, serta perubahan kontrak aktivasi mobile sudah dicatat. Checklist per-file masih terbuka; clean-install sudah terbukti lulus.
+- [x] Dokumentasi dan checklist audit mencatat route catalog 76 request, gate terbaru 117 pass dan 1 skip MQTT, perubahan kontrak aktivasi mobile, serta cleanup catch rethrow-only. Checklist per-file dan DoD di luar scope migrasi tetap terbuka; clean-install sudah terbukti lulus.
 - [x] Perubahan yang sudah dikirim terbagi menjadi commit kecil dan dapat di-rollback.
 
 ### Status audit implementasi Fase 7
 
-Quality gate `scripts/check-refactor-quality.js` sekarang menjadi bagian dari `npm.cmd run check`. Gate ini memverifikasi route/controller async di `src/routes` dan `src/app.js`, melarang direct `res.status(5xx)` di seluruh `src/controller`, memeriksa arithmetic pricing transaksi dan typed-error boundary transaksi, serta melarang `NOW()`, `CURDATE()`, dan `CURRENT_TIMESTAMP` pada model.
+Quality gate `scripts/check-refactor-quality.js` sekarang menjadi bagian dari `npm.cmd run check`. Gate ini memverifikasi route/controller async di `src/routes` dan `src/app.js`, melarang direct `res.status(5xx)` di seluruh `src/controller`, memeriksa arithmetic pricing transaksi dan typed-error boundary transaksi, melarang `NOW()`, `CURDATE()`, dan `CURRENT_TIMESTAMP` pada model, serta menolak catch exact rethrow-only di seluruh `src`.
 
 Audit akhir juga memastikan controller tidak lagi mengirim detail error internal melalui response 5xx. Error internal transaksi, machine-control, dan aktivasi akun diteruskan sebagai typed 500 dan disanitasi oleh global error handler; token aktivasi yang invalid atau user mobile yang sudah tidak ada dipetakan ke typed 400 `ACCOUNT_ACTIVATION_TOKEN_INVALID`. Lifecycle `startMesin`/`stopMesin` tetap menjadi pengecualian workflow MQTT yang eksplisit; helper transaksi generik tidak digunakan untuknya.
 
-Validasi terakhir pada checkout `4cd00e6`: `npm.cmd ci` dan quality gate lulus, `npm.cmd run check` lulus (113 test pass, 1 test MQTT skip), serta `git diff --check` lulus. Clean-install gate ini membuktikan dependency sesuai lockfile pada environment checkout saat ini.
+Validasi terakhir: `npm.cmd ci` dan quality gate lulus, `npm.cmd run check` lulus (117 test pass, 1 test MQTT skip), serta `git diff --check` lulus. Clean-install gate ini membuktikan dependency sesuai lockfile pada environment checkout saat ini.
 
-Perbandingan baseline sebelum/sesudah dicatat di `docs/REFACTOR_PHASE_0_BASELINE.md`: baseline Fase 0 mencatat 69 pass/1 skip, sedangkan checkout `4cd00e6` mencatat 113 pass/1 skip MQTT. Characterization dan integration suite membuktikan contract yang diuji tetap kompatibel; perubahan yang disengaja (typed error, alias `error` 4xx, penolakan manipulasi harga, timestamp database UTC, dan pemetaan user aktivasi mobile yang hilang menjadi 400 typed error) dicatat di test serta dokumentasi terkait. Baseline historis tidak boleh dibaca sebagai bukti bahwa seluruh debt repository sudah selesai.
+Perbandingan baseline sebelum/sesudah dicatat di `docs/REFACTOR_PHASE_0_BASELINE.md`: baseline Fase 0 mencatat 69 pass/1 skip, sedangkan validasi terakhir mencatat 117 pass/1 skip MQTT. Characterization dan integration suite membuktikan contract yang diuji tetap kompatibel; perubahan yang disengaja (typed error, alias `error` 4xx, penolakan manipulasi harga, timestamp database UTC, pemetaan user aktivasi mobile yang hilang menjadi 400 typed error, dan penghapusan catch rethrow-only) dicatat di test serta dokumentasi terkait. Baseline historis tidak boleh dibaca sebagai bukti bahwa seluruh debt repository sudah selesai.
 
 ## Urutan Commit yang Disarankan
 

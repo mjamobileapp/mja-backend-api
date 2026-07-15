@@ -1,6 +1,9 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { findDirectServerErrorResponses } = require("./refactor-quality-rules");
+const {
+  findDirectServerErrorResponses,
+  findRethrowOnlyCatches,
+} = require("./refactor-quality-rules");
 
 const routesDir = path.join(__dirname, "..", "src", "routes");
 const violations = [];
@@ -74,10 +77,29 @@ for (const file of fs.readdirSync(modelsDir).filter((name) => name.endsWith(".js
   });
 }
 
+const srcDir = path.join(__dirname, "..", "src");
+const getJavaScriptFiles = (directory) => {
+  const files = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...getJavaScriptFiles(fullPath));
+    } else if (entry.isFile() && entry.name.endsWith(".js")) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+};
+
+for (const fullPath of getJavaScriptFiles(srcDir)) {
+  const relativePath = path.relative(path.join(__dirname, ".."), fullPath);
+  violations.push(...findRethrowOnlyCatches(fs.readFileSync(fullPath, "utf8"), relativePath));
+}
+
 if (violations.length > 0) {
   console.error("Refactor quality gate failed:");
   violations.forEach((violation) => console.error(`- ${violation}`));
   process.exitCode = 1;
 } else {
-  console.log("Refactor quality gate passed: async routes, 5xx response boundaries, and transaction arithmetic boundaries are intact.");
+  console.log("Refactor quality gate passed: async routes, error boundaries, and transaction arithmetic boundaries are intact.");
 }

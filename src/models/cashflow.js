@@ -33,7 +33,6 @@ CROSS JOIN
 };
 
 const getPendapatan = async (cabangId, idMitra, filter) => {
-  try {
     const dateFilter = getDateFilterCondition("o.waktuOrder", filter);
     const [rows] = await dbPool.execute(
       `SELECT 
@@ -89,13 +88,9 @@ const getPendapatan = async (cabangId, idMitra, filter) => {
     });
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getPengeluaran = async (cabangId, idMitra, filter) => {
-  try {
     const dateFilter = getDateFilterCondition("p.waktuPengeluaran", filter);
     const [rows] = await dbPool.execute(
       `SELECT 
@@ -154,13 +149,9 @@ const getPengeluaran = async (cabangId, idMitra, filter) => {
     });
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getListPengeluaran = async (cabangId, idMitra, filter) => {
-  try {
     const dateFilter = getDateFilterCondition("p.waktuPengeluaran", filter);
     const [rows] = await dbPool.execute(
       `SELECT 
@@ -195,9 +186,6 @@ const getListPengeluaran = async (cabangId, idMitra, filter) => {
     }));
 
     return formattedData;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const isCabangOwnedByMitra = async (cabangId, idMitra) => {
@@ -210,7 +198,6 @@ const isCabangOwnedByMitra = async (cabangId, idMitra) => {
 };
 
 const getPengeluaranById = async (id, idMitra, filter, cabangId = null) => {
-  try {
     const dateFilter = getDateFilterCondition("p.waktuPengeluaran", filter);
     const cabangFilter = cabangId ? " AND p.cabangId = ?" : "";
     const values = [id, idMitra];
@@ -261,9 +248,6 @@ const getPengeluaranById = async (id, idMitra, filter, cabangId = null) => {
       waktuPengeluaran: row.waktuPengeluaran ? new Date(row.waktuPengeluaran).toISOString() : "",
       createdDate: row.createdDate ? new Date(row.createdDate).toISOString() : "",
     };
-  } catch (error) {
-    throw error;
-  }
 };
 
 const createPengeluaran = async (data) => {
@@ -357,7 +341,6 @@ const createPengeluaran = async (data) => {
 };
 
 const updatePengeluaran = async (body, id, idMitra, cabangId = null) => {
-  try {
     const { itemId, jumlahBarang, nominal } = body;
     const cabangFilter = cabangId ? " AND cabangId = ?" : "";
     const scopedValues = [id, idMitra];
@@ -407,13 +390,9 @@ const updatePengeluaran = async (body, id, idMitra, cabangId = null) => {
       waktuPengeluaran: row.waktuPengeluaran ? new Date(row.waktuPengeluaran).toISOString() : "",
       createdDate: row.createdDate ? new Date(row.createdDate).toISOString() : "",
     };
-  } catch (error) {
-    throw error;
-  }
 };
 
 const deletePengeluaran = async (id, idMitra, cabangId = null) => {
-  try {
     const cabangFilter = cabangId ? " AND cabangId = ?" : "";
     const scopedValues = [id, idMitra];
     if (cabangId) scopedValues.push(cabangId);
@@ -428,9 +407,6 @@ const deletePengeluaran = async (id, idMitra, cabangId = null) => {
 
     const SQLQuery = `UPDATE tbl_pengeluaran SET statusAktif = 0 WHERE id = ? AND idMitra = ?${cabangFilter}`;
     return dbPool.execute(SQLQuery, scopedValues);
-  } catch (error) {
-    throw error;
-  }
 };
 
 module.exports = {
