@@ -362,7 +362,7 @@ masterItem / roles / dashboard
 
 - [ ] Semua file dalam inventory memiliki status review per-file. Inventory saat ini masih menggabungkan beberapa kelompok route/controller/model; status kelompok dan finding sudah tersedia, tetapi trace per-file belum lengkap.
 - [x] Semua finding P0/P1 berstatus fixed, accepted risk dengan alasan, atau memiliki blocker eksplisit.
-- [ ] Semua test dan lint lulus dari clean install. Checkout saat ini lulus `npm.cmd run check`, tetapi `npm ci`/clean-install gate belum dijalankan pada audit ini.
+- [x] Semua test dan lint lulus dari clean install. `npm.cmd ci` diikuti `npm.cmd run check` lulus dengan 113 pass dan 1 skip MQTT.
 - [x] Server dapat start dan shutdown dengan benar.
 - [x] Endpoint utama diuji dengan token backoffice, owner, dan kasir.
 - [x] Scope mitra/cabang tidak bocor antar-user; negative authorization dan tenant/cabang integration tests lulus.
