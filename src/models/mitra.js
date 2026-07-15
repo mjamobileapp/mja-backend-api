@@ -57,7 +57,6 @@ const createNewMitra = async (body) => {
 };
 
 const updateMitra = async (id, body) => {
-  try {
     const { namaMitra, alamatMitra, updatedBy } = body;
 
     // Check if mitra exists
@@ -96,13 +95,9 @@ const updateMitra = async (id, body) => {
     result.updatedDate = updatedDate;
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const deleteMitra = async (id, updatedBy) => {
-  try {
     // Check if mitra exists
     const [existingMitra] = await dbPool.execute(
       "SELECT kodeMitra FROM tbl_mitra WHERE id = ? AND statusAktif = 1",
@@ -120,13 +115,9 @@ const deleteMitra = async (id, updatedBy) => {
     const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getMitraById = async (id) => {
-  try {
     const [mitra] = await dbPool.execute(
       "SELECT * FROM tbl_mitra WHERE id = ?",
       [id]
@@ -135,13 +126,9 @@ const getMitraById = async (id) => {
       throw createHttpError(404, "data not found", "MITRA_NOT_FOUND");
     }
     return mitra[0];
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getAllMitra = async (status) => {
-  try {
     let SQLQuery = "SELECT * FROM tbl_mitra";
 
     if (status === "all") {
@@ -156,13 +143,9 @@ const getAllMitra = async (status) => {
 
     const [mitras] = await dbPool.execute(SQLQuery);
     return mitras;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const restoreMitra = async (id, updatedBy) => {
-  try {
     // Check if mitra exists and is currently inactive (statusAktif = 0)
     const [existingMitra] = await dbPool.execute(
       "SELECT id FROM tbl_mitra WHERE id = ? AND statusAktif = 0",
@@ -180,9 +163,6 @@ const restoreMitra = async (id, updatedBy) => {
     const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 module.exports = {

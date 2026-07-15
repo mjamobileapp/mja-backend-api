@@ -58,7 +58,6 @@ const createNewCabang = async (body) => {
 };
 
 const updateCabang = async (id, body) => {
-  try {
     const {namaCabang, alamatCabang, updatedBy } = body;
 
     // Check if cabang exists
@@ -100,13 +99,9 @@ const updateCabang = async (id, body) => {
     result.updatedDate = updatedDate;
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const deleteCabang = async (id, updatedBy) => {
-  try {
     // Check if cabang exists
     const [existingCabang] = await dbPool.execute(
       "SELECT kodeCabang FROM tbl_cabang WHERE id = ? AND statusAktif = 1",
@@ -124,13 +119,9 @@ const deleteCabang = async (id, updatedBy) => {
     const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getCabangById = async (id) => {
-  try {
     const [cabang] = await dbPool.execute(
       `SELECT c.*, m.namaMitra 
        FROM tbl_cabang c
@@ -142,13 +133,9 @@ const getCabangById = async (id) => {
       throw createHttpError(404, "data not found", "CABANG_NOT_FOUND");
     }
     return cabang[0];
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getAllCabang = async (status) => {
-  try {
     let SQLQuery = `
       SELECT c.*, m.namaMitra 
       FROM tbl_cabang c
@@ -166,13 +153,9 @@ const getAllCabang = async (status) => {
 
     const [cabangs] = await dbPool.execute(SQLQuery);
     return cabangs;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getCabangByIdMitra = async (idMitra) => {
-  try {
     const [cabangs] = await dbPool.execute(
       `SELECT c.*, m.namaMitra 
        FROM tbl_cabang c
@@ -181,13 +164,9 @@ const getCabangByIdMitra = async (idMitra) => {
       [idMitra]
     );
     return cabangs;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const restoreCabang = async (id, updatedBy) => {
-  try {
     // Check if cabang exists and is currently inactive
     const [existingCabang] = await dbPool.execute(
       "SELECT id FROM tbl_cabang WHERE id = ? AND statusAktif = 0",
@@ -205,9 +184,6 @@ const restoreCabang = async (id, updatedBy) => {
     const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const resetCabang = async (id) => {

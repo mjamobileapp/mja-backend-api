@@ -55,7 +55,6 @@ const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
 };
 
 const getSettingHarga = async (idMitra, cabangId) => {
-  try {
     // 1. Validasi idMitra
     const [mitraCheck] = await dbPool.execute(
       "SELECT id FROM tbl_mitra WHERE id = ? AND statusAktif = 1",
@@ -111,9 +110,6 @@ ORDER BY
     }
 
     return rows;
-  } catch (error) {
-    throw error;
-  }
 };
 
 module.exports = {

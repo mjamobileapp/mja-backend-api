@@ -107,7 +107,6 @@ const createBulkSettings = async (idMitra, items, createdBy) => {
 };
 
 const updateSetting = async (id, body) => {
-  try {
     const { batasMinimum, updatedBy } = body;
 
     const [existing] = await dbPool.execute(
@@ -131,25 +130,17 @@ const updateSetting = async (id, body) => {
        WHERE s.id = ?`, [id]
     );
     return result[0];
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getSettingById = async (id) => {
-  try {
     const [rows] = await dbPool.execute(
       "SELECT * FROM tbl_treshold_stok_mitra WHERE id = ?",
       [id]
     );
     return rows[0];
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getAllSettings = async (idMitra) => {
-  try {
     let SQLQuery = `
       select
         i.*,
@@ -170,13 +161,9 @@ const getAllSettings = async (idMitra) => {
 
     const [rows] = await dbPool.execute(SQLQuery, [idMitra]);
     return rows;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getSettingByIdMitra = async (idMitra) => {
-  try {
     const [rows] = await dbPool.execute(
       `SELECT s.*, m.namaMitra, i.namaItem 
        FROM tbl_treshold_stok_mitra s
@@ -186,9 +173,6 @@ const getSettingByIdMitra = async (idMitra) => {
       [idMitra]
     );
     return rows;
-  } catch (error) {
-    throw error;
-  }
 };
 
 module.exports = {
