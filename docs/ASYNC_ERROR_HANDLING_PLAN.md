@@ -225,8 +225,8 @@ Perbaiki seluruh pemanggilan agar konsisten dengan `src/utils/httpError.js`.
 | scope tenant/role salah | 403 | `FORBIDDEN` |
 | data tidak ditemukan | 404 | `<DOMAIN>_NOT_FOUND` |
 | duplikat atau state conflict | 409 | `<DOMAIN>_CONFLICT` |
-| email provider gagal | 503 | `EMAIL_DELIVERY_FAILED` |
-| MQTT upstream gagal | 502/504 | `MQTT_COMMAND_FAILED` / `MQTT_ACK_TIMEOUT` |
+| email provider gagal yang memang diekspos sebagai HTTP error | 503 | `EMAIL_DELIVERY_FAILED` |
+| MQTT upstream gagal yang memang diekspos sebagai HTTP error | 502/504 | `MQTT_COMMAND_FAILED` / `MQTT_ACK_TIMEOUT` |
 
 Gunakan code yang spesifik jika client perlu membedakan penyebab. Jangan memakai pesan manusia sebagai identifier programatik.
 
@@ -340,8 +340,8 @@ Route terkait:
 - Error duplicate harus menjadi 409 jika memang conflict, bukan 500.
 - Error data tidak ditemukan harus 404.
 - Error permission harus tetap 403 dan ditangani middleware authorization.
-- Reset-password yang gagal mengirim email harus tetap 503 `EMAIL_DELIVERY_FAILED`.
-- Catch internal yang mengubah kegagalan email menjadi typed 503 boleh dipertahankan atau dipindahkan ke email service, tetapi jangan mengembalikan sukses palsu.
+- Kegagalan pengiriman email reset-password boleh dipertahankan sebagai fallback internal/response generik yang sudah ada; tidak wajib dipaksakan menjadi typed HTTP 503.
+- Jika provider email atau MQTT memang dipetakan ke HTTP response, gunakan typed error dan sanitasi detail provider. Jika tidak, pertahankan fallback/recovery internal tanpa membocorkan detail.
 
 ### Test minimum per modul
 
@@ -461,7 +461,7 @@ Contoh file yang perlu perhatian:
 - `src/middleware/authCombined.js`: fallback backoffice/mobile.
 - `src/controller/akses.js`: transaction masih berada di controller.
 - `src/controller/kasir.js`: email credential best-effort.
-- `src/controller/users.js`, `userOwner.js`, dan `kasir.js`: reset-password email harus menjadi typed 503.
+- `src/controller/users.js`, `userOwner.js`, dan `kasir.js`: reset-password email memiliki fallback internal; typed 503 hanya diperlukan bila kontrak endpoint memang mengekspos kegagalan provider.
 - `src/models/transaksi.js`: rollback, MQTT failure logging, dan state transition.
 
 ## Quality Gate Setelah Migrasi
@@ -560,7 +560,7 @@ Pekerjaan dianggap selesai hanya jika:
 
 - seluruh async controller route telah dibungkus `catchAsync`;
 - tidak ada direct 5xx response di `src/controller`;
-- seluruh known error menggunakan typed error dengan status dan code;
+- seluruh known HTTP error yang mencapai request boundary menggunakan typed error dengan status dan code; error provider/internal seperti email, MQTT, dan fallback reset-password boleh tetap plain selama tidak dipetakan sebagai kontrak HTTP dan tidak membocorkan detail internal;
 - seluruh pemanggilan `createHttpError` memakai urutan argument yang benar;
 - catch tersisa memiliki alasan recovery/rollback/fallback yang jelas;
 - success response endpoint tidak berubah;

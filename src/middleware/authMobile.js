@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const dbPool = require("../config/database");
 const { TOKEN_TYPES } = require("../utils/jwt");
+const { createHttpError } = require("../utils/httpError");
 
 /**
  * Memverifikasi token JWT mobile dan memvalidasi keaktifan user, mitra (tenant),
@@ -14,9 +15,7 @@ const verifyMobileToken = async (req) => {
 
   // 1. Validasi keberadaan format Bearer Token
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    const error = new Error("Akses ditolak, token tidak ditemukan");
-    error.statusCode = 401;
-    throw error;
+    throw createHttpError(401, "Akses ditolak, token tidak ditemukan", "UNAUTHORIZED");
   }
 
   const token = authHeader.split(" ")[1];
@@ -26,29 +25,22 @@ const verifyMobileToken = async (req) => {
     // 2. Decode JWT secara matematis (Verifikasi signature)
     decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch (err) {
-    const error = new Error(
+    const message =
       err.name === "TokenExpiredError" 
         ? "Sesi Anda telah berakhir, silakan login kembali" 
-        : "Token tidak valid atau telah kedaluwarsa"
-    );
-    error.statusCode = 401;
-    error.code = err.name === "TokenExpiredError" ? "TOKEN_EXPIRED" : "INVALID_TOKEN";
-    throw error;
+        : "Token tidak valid atau telah kedaluwarsa";
+    const code = err.name === "TokenExpiredError" ? "TOKEN_EXPIRED" : "INVALID_TOKEN";
+    throw createHttpError(401, message, code);
   }
 
   // 3. Token backoffice atau token JWT lain tidak boleh digunakan sebagai token mobile.
   if (decoded.tokenType !== TOKEN_TYPES.MOBILE) {
-    const error = new Error("Token tidak valid untuk akses mobile");
-    error.statusCode = 401;
-    error.code = "INVALID_TOKEN_TYPE";
-    throw error;
+    throw createHttpError(401, "Token tidak valid untuk akses mobile", "INVALID_TOKEN_TYPE");
   }
 
   // 4. Validasi struktur dasar token mobile
   if (!decoded.id || !decoded.idMitra) {
-    const error = new Error("Token tidak valid untuk akses mobile");
-    error.statusCode = 401;
-    throw error;
+    throw createHttpError(401, "Token tidak valid untuk akses mobile", "INVALID_TOKEN");
   }
 
   // 5. Validasi real-time status User, Mitra, & Cabang (1 Single Query dengan JOIN)
@@ -73,36 +65,28 @@ const verifyMobileToken = async (req) => {
 
   // Jika user/mitra tidak ditemukan di database
   if (users.length === 0) {
-    const error = new Error("Akses Ditolak: Akun atau Mitra tidak terdaftar di sistem");
-    error.statusCode = 403;
-    error.code = "ACCOUNT_NOT_FOUND";
-    throw error;
+    throw createHttpError(
+      403,
+      "Akses Ditolak: Akun atau Mitra tidak terdaftar di sistem",
+      "ACCOUNT_NOT_FOUND"
+    );
   }
 
   const currentUser = users[0];
 
   // 6. Validasi Keaktifan Perusahaan/Mitra (SaaS Tenant Security)
   if (!currentUser.mitraAktif) {
-    const error = new Error("Akses Ditolak: Mitra telah dinonaktifkan");
-    error.statusCode = 403;
-    error.code = "TENANT_DEACTIVATED";
-    throw error;
+    throw createHttpError(403, "Akses Ditolak: Mitra telah dinonaktifkan", "TENANT_DEACTIVATED");
   }
 
   // 7. Validasi Keaktifan Cabang (Khusus untuk user yang memiliki cabangId seperti KASIR)
   if (currentUser.cabangId && currentUser.cabangAktif === 0) {
-    const error = new Error("Akses Ditolak: Cabang telah dinonaktifkan");
-    error.statusCode = 403;
-    error.code = "BRANCH_DEACTIVATED";
-    throw error;
+    throw createHttpError(403, "Akses Ditolak: Cabang telah dinonaktifkan", "BRANCH_DEACTIVATED");
   }
 
   // 8. Validasi Keaktifan Akun Kasir/Owner individu
   if (!currentUser.userAktif) {
-    const error = new Error("Akses Ditolak: Akun Anda telah dinonaktifkan");
-    error.statusCode = 403;
-    error.code = "USER_DEACTIVATED";
-    throw error;
+    throw createHttpError(403, "Akses Ditolak: Akun Anda telah dinonaktifkan", "USER_DEACTIVATED");
   }
 
   return currentUser;
