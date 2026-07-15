@@ -411,7 +411,7 @@ Lanjutkan `ASYNC_ERROR_HANDLING_PLAN.md` Tahap 4 sampai Tahap 7.
 
 ### Status audit implementasi Fase 7
 
-Quality gate `scripts/check-refactor-quality.js` sekarang menjadi bagian dari `npm.cmd run check`. Gate ini memverifikasi route/controller async di `src/routes` dan `src/app.js`, arithmetic pricing transaksi, typed-error boundary transaksi, serta melarang `NOW()`, `CURDATE()`, dan `CURRENT_TIMESTAMP` pada model.
+Quality gate `scripts/check-refactor-quality.js` sekarang menjadi bagian dari `npm.cmd run check`. Gate ini memverifikasi route/controller async di `src/routes` dan `src/app.js`, melarang direct `res.status(5xx)` di seluruh `src/controller`, memeriksa arithmetic pricing transaksi dan typed-error boundary transaksi, serta melarang `NOW()`, `CURDATE()`, dan `CURRENT_TIMESTAMP` pada model.
 
 Audit akhir juga memastikan controller tidak lagi mengirim detail error internal melalui response 5xx. Error internal transaksi, machine-control, dan aktivasi akun diteruskan sebagai typed 500 dan disanitasi oleh global error handler; token aktivasi yang invalid atau user mobile yang sudah tidak ada dipetakan ke typed 400 `ACCOUNT_ACTIVATION_TOKEN_INVALID`. Lifecycle `startMesin`/`stopMesin` tetap menjadi pengecualian workflow MQTT yang eksplisit; helper transaksi generik tidak digunakan untuknya.
 

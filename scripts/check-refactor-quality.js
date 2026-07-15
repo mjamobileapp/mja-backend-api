@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const { findDirectServerErrorResponses } = require("./refactor-quality-rules");
 
 const routesDir = path.join(__dirname, "..", "src", "routes");
 const violations = [];
@@ -31,6 +32,13 @@ for (const file of fs.readdirSync(routesDir).filter((name) => name.endsWith(".js
       violations.push(`${path.join("src", "routes", file)}:${index + 1} async controller is not wrapped with catchAsync`);
     }
   });
+}
+
+const controllersDir = path.join(__dirname, "..", "src", "controller");
+for (const file of fs.readdirSync(controllersDir).filter((name) => name.endsWith(".js"))) {
+  const fullPath = path.join(controllersDir, file);
+  const relativePath = path.join("src", "controller", file);
+  violations.push(...findDirectServerErrorResponses(fs.readFileSync(fullPath, "utf8"), relativePath));
 }
 
 const transaksiController = fs.readFileSync(path.join(__dirname, "..", "src", "controller", "transaksi.js"), "utf8");
@@ -71,5 +79,5 @@ if (violations.length > 0) {
   violations.forEach((violation) => console.error(`- ${violation}`));
   process.exitCode = 1;
 } else {
-  console.log("Refactor quality gate passed: async routes and transaction arithmetic boundaries are intact.");
+  console.log("Refactor quality gate passed: async routes, 5xx response boundaries, and transaction arithmetic boundaries are intact.");
 }

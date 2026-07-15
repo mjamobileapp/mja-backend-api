@@ -12,7 +12,7 @@ Status pada dokumen ini menyatakan kedalaman review saat implementasi awal. `INV
 | Utilities | `email.js`, `publicAuth.js`, `mqttClient.js`, `mqttStatusListener.js`, `password.js` | External integration, credentials, public reset response, ACK/status lifecycle, and listener cleanup | REVIEWED - HAS FINDING (REV-003, REV-015, REV-019, REV-022, REV-025) |
 | Domain | `src/domain/transaksi.js` | Pure transaction money normalization and business validation rules | REVIEWED - FINDINGS CLOSED (TRANSACTION_BUSINESS_VALIDATION_PLAN, quality gate) |
 | Services | `src/services/transaksi.js` | Transaction use-case orchestration without Express objects | REVIEWED - FINDINGS CLOSED (TRANSACTION_BUSINESS_VALIDATION_PLAN, quality gate) |
-| Quality gates | `scripts/check-syntax.js`, `scripts/check-postman-collection.js`, `scripts/check-refactor-quality.js` | Syntax, Postman route catalog, async-route, and transaction-pricing regression checks | REVIEWED - FINDINGS CLOSED (REV-007, REV-018) |
+| Quality gates | `scripts/check-syntax.js`, `scripts/check-postman-collection.js`, `scripts/check-refactor-quality.js`, `scripts/refactor-quality-rules.js` | Syntax, Postman route catalog, async-route, direct-5xx, and transaction-pricing regression checks | REVIEWED - FINDINGS CLOSED (REV-007, REV-018) |
 | Routes | seluruh `src/routes/*.js` | HTTP path, auth middleware, controller binding | REVIEWED - HAS FINDING (REV-009, REV-012) |
 | Controllers | `masterItem.js` | Pilot CRUD backoffice | REVIEWED - HAS FINDING (REV-004, REV-005) |
 | Models | `masterItem.js` | Pilot query CRUD dan soft delete | REVIEWED - HAS FINDING (REV-005) |
