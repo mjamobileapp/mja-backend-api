@@ -7,17 +7,25 @@ const { getMissingServerEnv } = require("../src/config/environment");
 const { sanitizeServerErrorPayload, sanitizeServerErrorResponse } = require("../src/middleware/responseSanitizer");
 const dbPool = require("../src/config/database");
 const MasterMenuModel = require("../src/models/menus");
+const UserMobileModel = require("../src/models/userMobile");
+const { createHttpError } = require("../src/utils/httpError");
 
-const request = (server, path, { method = "GET", headers = {} } = {}) =>
+const request = (server, path, { method = "GET", headers = {}, body } = {}) =>
   new Promise((resolve, reject) => {
     const address = server.address();
+    const serializedBody = body === undefined ? null : JSON.stringify(body);
+    const requestHeaders = { ...headers };
+    if (serializedBody !== null) {
+      requestHeaders["content-type"] = requestHeaders["content-type"] || "application/json";
+      requestHeaders["content-length"] = Buffer.byteLength(serializedBody);
+    }
     const req = http.request(
       {
         host: "127.0.0.1",
         port: address.port,
         path,
         method,
-        headers,
+        headers: requestHeaders,
       },
       (res) => {
         let body = "";
@@ -30,7 +38,7 @@ const request = (server, path, { method = "GET", headers = {} } = {}) =>
     );
 
     req.on("error", reject);
-    req.end();
+    req.end(serializedBody);
   });
 
 const withServer = async (callback, environment) => {
@@ -117,6 +125,42 @@ test("menu header model rejection reaches the global error handler", async () =>
   } finally {
     MasterMenuModel.getMenuHeader = originalGetMenuHeader;
     dbPool.execute = originalExecute;
+    if (originalSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = originalSecret;
+  }
+});
+
+test("mobile activation maps missing owner and kasir users to a typed 400 response", async () => {
+  const originalSecret = process.env.JWT_SECRET;
+  const originalGetUser = UserMobileModel.getUserByUsernameWithoutStatusFilter;
+  process.env.JWT_SECRET = "app-test-secret";
+  UserMobileModel.getUserByUsernameWithoutStatusFilter = async () => {
+    throw createHttpError(404, "data not found", "MOBILE_USER_NOT_FOUND");
+  };
+
+  try {
+    await withServer(async (server) => {
+      for (const role of ["owner", "kasir"]) {
+        const token = jwt.sign(
+          { username: `missing-${role}`, role, type: "activation" },
+          process.env.JWT_SECRET
+        );
+        const response = await request(server, "/api/mobile/activateaccount", {
+          method: "POST",
+          body: { token, password: "secret123", confirmPassword: "secret123" },
+        });
+
+        assert.equal(response.statusCode, 400);
+        assert.deepEqual(JSON.parse(response.body), {
+          success: false,
+          code: "ACCOUNT_ACTIVATION_TOKEN_INVALID",
+          message: "Token tidak valid atau sudah kedaluwarsa",
+          error: "Token tidak valid atau sudah kedaluwarsa",
+        });
+      }
+    });
+  } finally {
+    UserMobileModel.getUserByUsernameWithoutStatusFilter = originalGetUser;
     if (originalSecret === undefined) delete process.env.JWT_SECRET;
     else process.env.JWT_SECRET = originalSecret;
   }

@@ -221,6 +221,14 @@ const activateAccount = async (req, res) => {
         throw createHttpError(400, "Token tidak valid", "ACCOUNT_ACTIVATION_TOKEN_INVALID");
       }
 
+      if (error.code === "MOBILE_USER_NOT_FOUND") {
+        throw createHttpError(
+          400,
+          "Token tidak valid atau sudah kedaluwarsa",
+          "ACCOUNT_ACTIVATION_TOKEN_INVALID"
+        );
+      }
+
       if (error.statusCode) throw error;
       throw createHttpError(500, "Internal account activation error", "ACCOUNT_ACTIVATION_INTERNAL_ERROR");
     }

@@ -1,5 +1,9 @@
 const bcrypt = require("bcrypt");
 const dbPool = require("../config/database");
+const { createHttpError } = require("../utils/httpError");
+
+const mobileUserNotFoundError = () =>
+  createHttpError(404, "data not found", "MOBILE_USER_NOT_FOUND");
 
 const getUserByUsername = async (username) => {
   const [rows] = await dbPool.execute(
@@ -54,7 +58,7 @@ const updateStatusAktifByUsername = async (username) => {
     );
 
     if (result.affectedRows === 0) {
-      throw new Error("data not found");
+      throw mobileUserNotFoundError();
     }
 
     return result;
@@ -71,7 +75,7 @@ const updatePasswordByUsername = async (username, hashedPassword) => {
     );
 
     if (result.affectedRows === 0) {
-      throw new Error("data not found");
+      throw mobileUserNotFoundError();
     }
 
     return result;
@@ -87,7 +91,7 @@ const getUserByUsernameWithoutStatusFilter = async (username) => {
       [username]
     );
 
-    if (rows.length === 0) throw new Error("data not found");
+    if (rows.length === 0) throw mobileUserNotFoundError();
 
     delete rows[0].password;
     delete rows[0].deviceId;

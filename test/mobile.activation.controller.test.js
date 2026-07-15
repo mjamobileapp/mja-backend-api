@@ -3,6 +3,8 @@ const jwt = require("jsonwebtoken");
 const test = require("node:test");
 const MobileController = require("../src/controller/mobile");
 const UsersModel = require("../src/models/users");
+const UserMobileModel = require("../src/models/userMobile");
+const { createHttpError } = require("../src/utils/httpError");
 
 const createResponse = () => ({
   statusCode: null,
@@ -63,3 +65,28 @@ test("account activation uses a typed error when the token user is missing", asy
     else process.env.JWT_SECRET = originalSecret;
   }
 });
+
+for (const role of ["owner", "kasir"]) {
+  test(`account activation maps a missing ${role} user to an invalid-token error`, async () => {
+    const originalVerify = jwt.verify;
+    const originalGetUser = UserMobileModel.getUserByUsernameWithoutStatusFilter;
+    const originalSecret = process.env.JWT_SECRET;
+    process.env.JWT_SECRET = "activation-test-secret";
+    jwt.verify = () => ({ username: `missing-${role}`, role, type: "activation" });
+    UserMobileModel.getUserByUsernameWithoutStatusFilter = async () => {
+      throw createHttpError(404, "data not found", "MOBILE_USER_NOT_FOUND");
+    };
+
+    try {
+      await assert.rejects(
+        MobileController.activateAccount(validRequest(), createResponse()),
+        (error) => error.statusCode === 400 && error.code === "ACCOUNT_ACTIVATION_TOKEN_INVALID"
+      );
+    } finally {
+      jwt.verify = originalVerify;
+      UserMobileModel.getUserByUsernameWithoutStatusFilter = originalGetUser;
+      if (originalSecret === undefined) delete process.env.JWT_SECRET;
+      else process.env.JWT_SECRET = originalSecret;
+    }
+  });
+}
