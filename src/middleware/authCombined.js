@@ -1,12 +1,21 @@
 const { verifyBackofficeToken } = require("./auth");
 const { verifyMobileToken } = require("./authMobile");
+const { isTypedHttpError } = require("../utils/httpError");
 
-const sendAuthError = (res, error) => {
-  const statusCode = error.statusCode || 401;
+const selectAuthError = (backofficeError, mobileError) => {
+  if (!isTypedHttpError(backofficeError)) return backofficeError;
+  if (!isTypedHttpError(mobileError)) return mobileError;
+  return mobileError;
+};
 
-  return res.status(statusCode).json({
+const sendAuthError = (res, error, next) => {
+  if (!isTypedHttpError(error) || Number(error.statusCode) >= 500) {
+    return next(error);
+  }
+
+  return res.status(error.statusCode).json({
     success: false,
-    code: error.code || "UNAUTHORIZED",
+    code: error.code,
     message: error.message,
   });
 };
@@ -42,8 +51,7 @@ const authenticateBackofficeOrOwner = (options = {}) => {
         req.user = user;
         return next();
       } catch (mobileError) {
-        const error = mobileError.statusCode ? mobileError : backofficeError;
-        return sendAuthError(res, error);
+        return sendAuthError(res, selectAuthError(backofficeError, mobileError), next);
       }
     }
   };
@@ -81,8 +89,7 @@ const authenticateBackofficeOrOwnerKasirCabang = (options = {}) => {
         req.user = user;
         return next();
       } catch (mobileError) {
-        const error = mobileError.statusCode ? mobileError : backofficeError;
-        return sendAuthError(res, error);
+        return sendAuthError(res, selectAuthError(backofficeError, mobileError), next);
       }
     }
   };
@@ -109,8 +116,7 @@ const authenticateBackofficeOrOwnerKasir = () => {
         req.user = user;
         return next();
       } catch (mobileError) {
-        const error = mobileError.statusCode ? mobileError : backofficeError;
-        return sendAuthError(res, error);
+        return sendAuthError(res, selectAuthError(backofficeError, mobileError), next);
       }
     }
   };
@@ -147,8 +153,7 @@ const authenticateBackofficeOrOwnerMachineControl = () => {
         };
         return next();
       } catch (mobileError) {
-        const error = mobileError.statusCode ? mobileError : backofficeError;
-        return sendAuthError(res, error);
+        return sendAuthError(res, selectAuthError(backofficeError, mobileError), next);
       }
     }
   };

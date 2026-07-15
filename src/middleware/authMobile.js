@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const dbPool = require("../config/database");
 const { TOKEN_TYPES } = require("../utils/jwt");
-const { createHttpError } = require("../utils/httpError");
+const { createHttpError, isTypedHttpError } = require("../utils/httpError");
 
 /**
  * Memverifikasi token JWT mobile dan memvalidasi keaktifan user, mitra (tenant),
@@ -114,10 +114,13 @@ const authenticateMobileWithErrorResponse = async (req, res, next) => {
     req.user = await verifyMobileToken(req);
     next();
   } catch (err) {
-    const statusCode = err.statusCode || 401;
-    return res.status(statusCode).json({
+    if (!isTypedHttpError(err) || Number(err.statusCode) >= 500) {
+      return next(err);
+    }
+
+    return res.status(err.statusCode).json({
       success: false,
-      code: err.code || "UNAUTHORIZED",
+      code: err.code,
       message: err.message,
     });
   }

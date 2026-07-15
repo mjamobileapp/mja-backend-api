@@ -3,10 +3,24 @@ const jwt = require("jsonwebtoken");
 const test = require("node:test");
 
 const dbPool = require("../src/config/database");
-const { verifyBackofficeToken } = require("../src/middleware/auth");
-const { verifyMobileToken } = require("../src/middleware/authMobile");
+const { authenticate, verifyBackofficeToken } = require("../src/middleware/auth");
+const { authenticateMobileWithErrorResponse, verifyMobileToken } = require("../src/middleware/authMobile");
+const { authenticateBackofficeOrOwner } = require("../src/middleware/authCombined");
 
 const secret = "auth-middleware-test-secret";
+
+const createResponse = () => ({
+  statusCode: null,
+  body: null,
+  status(statusCode) {
+    this.statusCode = statusCode;
+    return this;
+  },
+  json(body) {
+    this.body = body;
+    return this;
+  },
+});
 
 test("backoffice authentication errors are typed", async () => {
   await assert.rejects(
@@ -71,5 +85,54 @@ test("mobile authentication errors are typed", async () => {
     }
   } finally {
     process.env.JWT_SECRET = originalSecret;
+  }
+});
+
+test("authentication middleware forwards unknown storage errors to the global handler", async () => {
+  const originalSecret = process.env.JWT_SECRET;
+  const originalExecute = dbPool.execute;
+  const storageError = new Error("database connection secret");
+  process.env.JWT_SECRET = secret;
+  dbPool.execute = async () => { throw storageError; };
+
+  try {
+    const backofficeToken = jwt.sign(
+      { id: 1, username: "admin", role: 1, tokenType: "backoffice" },
+      secret
+    );
+    const backofficeResponse = createResponse();
+    let backofficeError;
+    await authenticate(
+      { headers: { authorization: `Bearer ${backofficeToken}` } },
+      backofficeResponse,
+      (error) => { backofficeError = error; }
+    );
+    assert.equal(backofficeError, storageError);
+    assert.equal(backofficeResponse.statusCode, null);
+
+    const mobileToken = jwt.sign({ id: 1, idMitra: 2, tokenType: "mobile" }, secret);
+    const mobileResponse = createResponse();
+    let mobileError;
+    await authenticateMobileWithErrorResponse(
+      { headers: { authorization: `Bearer ${mobileToken}` } },
+      mobileResponse,
+      (error) => { mobileError = error; }
+    );
+    assert.equal(mobileError, storageError);
+    assert.equal(mobileResponse.statusCode, null);
+
+    const combinedResponse = createResponse();
+    let combinedError;
+    await authenticateBackofficeOrOwner()(
+      { headers: { authorization: `Bearer ${backofficeToken}` }, params: { idMitra: "2" } },
+      combinedResponse,
+      (error) => { combinedError = error; }
+    );
+    assert.equal(combinedError, storageError);
+    assert.equal(combinedResponse.statusCode, null);
+  } finally {
+    dbPool.execute = originalExecute;
+    if (originalSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = originalSecret;
   }
 });

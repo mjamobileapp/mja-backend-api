@@ -130,6 +130,36 @@ test("menu header model rejection reaches the global error handler", async () =>
   }
 });
 
+test("backoffice authentication storage failure becomes a sanitized 500", async () => {
+  const originalSecret = process.env.JWT_SECRET;
+  const originalExecute = dbPool.execute;
+  process.env.JWT_SECRET = "app-test-secret";
+  dbPool.execute = async () => { throw new Error("database connection secret"); };
+
+  try {
+    const token = jwt.sign(
+      { id: 1, username: "admin", role: 1, tokenType: "backoffice" },
+      process.env.JWT_SECRET
+    );
+    await withServer(async (server) => {
+      const response = await request(server, "/api/backoffice/dashboard/getmitra", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      assert.equal(response.statusCode, 500);
+      assert.deepEqual(JSON.parse(response.body), {
+        success: false,
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Internal Server Error",
+      });
+    });
+  } finally {
+    dbPool.execute = originalExecute;
+    if (originalSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = originalSecret;
+  }
+});
+
 test("mobile activation maps missing owner and kasir users to a typed 400 response", async () => {
   const originalSecret = process.env.JWT_SECRET;
   const originalGetUser = UserMobileModel.getUserByUsernameWithoutStatusFilter;

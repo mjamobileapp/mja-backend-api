@@ -5,4 +5,9 @@ const createHttpError = (statusCode, message, code) => {
   return error;
 };
 
-module.exports = { createHttpError };
+const isTypedHttpError = (error) => {
+  const statusCode = Number(error?.statusCode);
+  return Number.isInteger(statusCode) && statusCode >= 400 && statusCode < 600 && typeof error?.code === "string";
+};
+
+module.exports = { createHttpError, isTypedHttpError };

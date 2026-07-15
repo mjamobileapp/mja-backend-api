@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const dbPool = require("../config/database");
 const { TOKEN_TYPES } = require("../utils/jwt");
-const { createHttpError } = require("../utils/httpError");
+const { createHttpError, isTypedHttpError } = require("../utils/httpError");
 
 /**
  * Memverifikasi token JWT backoffice dan memvalidasi keaktifan user secara real-time.
@@ -90,18 +90,13 @@ const authenticate = async (req, res, next) => {
     req.user = await verifyBackofficeToken(req);
     next();
   } catch (err) {
-    const statusCode = err.statusCode || 401;
-
-    if (statusCode >= 500) {
-      console.error("Authentication Error:", {
-        code: err.code || "UNAUTHORIZED",
-        message: err.message,
-      });
+    if (!isTypedHttpError(err) || Number(err.statusCode) >= 500) {
+      return next(err);
     }
 
-    return res.status(statusCode).json({
+    return res.status(err.statusCode).json({
       success: false,
-      code: err.code || "UNAUTHORIZED",
+      code: err.code,
       message: err.message,
     });
   }
