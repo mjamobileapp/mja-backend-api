@@ -175,7 +175,7 @@
 - Prioritas: P2
 - Kategori: Tooling, Documentation
 - Lokasi: `eslint.config.js`, `package.json`, `README.md`, `docs/API_LIST.md`, Postman collection.
-- Perbaikan: ESLint is part of `npm run check`; `googleapis` yang tidak dipakai dihapus setelah audit source; Postman memisahkan 63 request route catalog tersinkron dari 13 request verified core dengan bukti test. Katalog memakai variable role-specific, tidak lagi menyimpan ID/email contoh lama, dan seluruh raw body JSON valid.
+- Perbaikan: ESLint is part of `npm run check`; `googleapis` dipertahankan karena masih digunakan oleh `generateRefreshToken.js`; Postman memisahkan 76 request route catalog tersinkron dari 13 request verified core dengan bukti test. Katalog memakai variable role-specific, tidak lagi menyimpan ID/email contoh lama, dan seluruh raw body JSON valid.
 - Test: `npm run check`, `npm audit --omit=dev`, dan `npm run check:postman`.
 
 ## REV-019 - MQTT and server lifecycle had no graceful cleanup
@@ -269,15 +269,15 @@
 | PRE-004 | Fixed for confirmed sensitive logs | REV-003; structured logging deferred |
 | PRE-005 | Fixed | REV-002 |
 | PRE-006 | Fixed | REV-007, REV-018 |
-| PRE-007 | Fixed for pilot; deferred repository-wide | REV-005 |
-| PRE-008 | Fixed for pilot; deferred repository-wide | REV-005 |
+| PRE-007 | Fixed for async-handler migration; remaining DRY/error cleanup is deferred | REV-005, Fase 6 quality gate |
+| PRE-008 | Fixed for async-handler migration; response-contract normalization remains deferred | REV-005, Fase 6 quality gate |
 | PRE-009 | Deferred | Large-model decomposition needs contract capture |
 | PRE-010 | Deferred | Response/token contract normalization is not repository-wide |
 | PRE-011 | Fixed | REV-024 |
 | PRE-012 | Deferred | Explicit-column migration needs response snapshots |
 | PRE-013 | Accepted | Both machine-control paths remain supported aliases; role and tenant contract is covered by REV-026 |
 | PRE-014 | Fixed | Configured CORS and startup validation in REV-006 |
-| PRE-015 | Fixed | npm is standardized; unused direct dependency `googleapis` and its transitive lockfile entries were removed after source audit |
+| PRE-015 | Fixed | npm is standardized; `googleapis` remains declared because `generateRefreshToken.js` imports it |
 | PRE-016 | Fixed baseline; device parity deferred | REV-015, REV-019 |
 | PRE-017 | Fixed baseline | README and quality instructions updated |
 | PRE-018 | Deferred | Operational logs/comments require domain-by-domain review |
