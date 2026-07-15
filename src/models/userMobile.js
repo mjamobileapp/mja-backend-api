@@ -51,55 +51,43 @@ const createNotifikasi = async (idMitra, cabangId, tipe, judul, pesan) => {
 };
 
 const updateStatusAktifByUsername = async (username) => {
-  try {
-    const [result] = await dbPool.execute(
-      "UPDATE tbl_users_mobile SET statusAktif = 1 WHERE username = ?",
-      [username]
-    );
+  const [result] = await dbPool.execute(
+    "UPDATE tbl_users_mobile SET statusAktif = 1 WHERE username = ?",
+    [username]
+  );
 
-    if (result.affectedRows === 0) {
-      throw mobileUserNotFoundError();
-    }
-
-    return result;
-  } catch (error) {
-    throw error;
+  if (result.affectedRows === 0) {
+    throw mobileUserNotFoundError();
   }
+
+  return result;
 };
 
 const updatePasswordByUsername = async (username, hashedPassword) => {
-  try {
-    const [result] = await dbPool.execute(
-      "UPDATE tbl_users_mobile SET password = ? WHERE username = ?",
-      [hashedPassword, username]
-    );
+  const [result] = await dbPool.execute(
+    "UPDATE tbl_users_mobile SET password = ? WHERE username = ?",
+    [hashedPassword, username]
+  );
 
-    if (result.affectedRows === 0) {
-      throw mobileUserNotFoundError();
-    }
-
-    return result;
-  } catch (error) {
-    throw error;
+  if (result.affectedRows === 0) {
+    throw mobileUserNotFoundError();
   }
+
+  return result;
 };
 
 const getUserByUsernameWithoutStatusFilter = async (username) => {
-  try {
-    const [rows] = await dbPool.execute(
-      "SELECT * FROM tbl_users_mobile WHERE username = ?",
-      [username]
-    );
+  const [rows] = await dbPool.execute(
+    "SELECT * FROM tbl_users_mobile WHERE username = ?",
+    [username]
+  );
 
-    if (rows.length === 0) throw mobileUserNotFoundError();
+  if (rows.length === 0) throw mobileUserNotFoundError();
 
-    delete rows[0].password;
-    delete rows[0].deviceId;
-    delete rows[0].deviceName;
-    return rows[0];
-  } catch (error) {
-    throw error;
-  }
+  delete rows[0].password;
+  delete rows[0].deviceId;
+  delete rows[0].deviceName;
+  return rows[0];
 };
 
 module.exports = {

@@ -5,7 +5,6 @@ const { generateAndHashPassword } = require("../utils/password");
 const { getJakartaSqlDate, getJakartaSqlTime } = require("../utils/date");
 
 const createNewUserKasir = async (body) => {
-  try {
     const {
       username,
       idMitra,
@@ -122,13 +121,9 @@ const createNewUserKasir = async (body) => {
       createdBy,
       statusAktif: true,
     };
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getAllUserKasir = async (status, idMitra) => {
-  try {
     let SQLQuery = "SELECT * FROM tbl_users_mobile WHERE role = 'kasir' AND idMitra = ?";
     let conditions = [];
     let values = [idMitra];
@@ -153,13 +148,9 @@ const getAllUserKasir = async (status, idMitra) => {
       delete user.deviceName;
       return user;
     });
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getUserKasirById = async (id, idMitra) => {
-  try {
     const [user] = await dbPool.execute(
       "SELECT * FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir'",
       [id, idMitra]
@@ -169,13 +160,9 @@ const getUserKasirById = async (id, idMitra) => {
     delete user[0].deviceId;
     delete user[0].deviceName;
     return user[0];
-  } catch (error) {
-    throw error;
-  }
 };
 
 const updateUserKasir = async (id, body, idMitra) => {
-  try {
     const { namaLengkap, noTelp, email, cabangId, updatedBy } = body;
 
     // 0. Validasi Format Email
@@ -232,13 +219,9 @@ const updateUserKasir = async (id, body, idMitra) => {
     delete user.deviceId;
     delete user.deviceName;
     return user;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const deleteUserKasir = async (id, updatedBy, idMitra) => {
-  try {
     const [existing] = await dbPool.execute(
       "SELECT id FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 1",
       [id, idMitra]
@@ -249,13 +232,9 @@ const deleteUserKasir = async (id, updatedBy, idMitra) => {
     const SQLQuery = "UPDATE tbl_users_mobile SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
     
     return await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
-  } catch (error) {
-    throw error;
-  }
 };
 
 const restoreUserKasir = async (id, updatedBy, idMitra) => {
-  try {
     const [existing] = await dbPool.execute(
       "SELECT id FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 0",
       [id, idMitra]
@@ -266,13 +245,9 @@ const restoreUserKasir = async (id, updatedBy, idMitra) => {
     const SQLQuery = "UPDATE tbl_users_mobile SET statusAktif = 1, updatedBy = ?, updatedDate = ? WHERE id = ?";
     
     return await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
-  } catch (error) {
-    throw error;
-  }
 };
 
 const resetDeviceId = async (id, body, updatedBy, idMitra) => {
-  try {
     // 1. Validasi eksistensi berdasarkan id dan mitra
     const [existing] = await dbPool.execute(
       "SELECT username FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 1",
@@ -286,13 +261,9 @@ const resetDeviceId = async (id, body, updatedBy, idMitra) => {
 
     await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
     return existing[0].username;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const changePassword = async (id, body, updatedBy, idMitra) => {
-  try {
     const { oldPassword, newPassword } = body;
 
     // 1. Ambil data user termasuk password hashed
@@ -320,13 +291,9 @@ const changePassword = async (id, body, updatedBy, idMitra) => {
     await dbPool.execute(SQLQuery, [hashedPassword, updatedBy, updatedDate, id]);
 
     return user.username;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const resetPassword = async (email) => {
-  try {
     // 1. Validasi eksistensi email
     const [rows] = await dbPool.execute(
       "SELECT username, email FROM tbl_users_mobile WHERE email = ? AND role = 'kasir' AND statusAktif = 1",
@@ -336,9 +303,6 @@ const resetPassword = async (email) => {
     if (rows.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     return { username: rows[0].username, email: rows[0].email };
-  } catch (error) {
-    throw error;
-  }
 };
 
 const isCabangOwnedByMitra = async (cabangId, idMitra) => {

@@ -4,7 +4,6 @@ const { createHttpError } = require("../utils/httpError");
 const { generateAndHashPassword } = require("../utils/password");
 
 const createNewUserOwner = async (body) => {
-  try {
     const {
       username,
       idMitra,
@@ -102,13 +101,9 @@ const createNewUserOwner = async (body) => {
       createdBy,
       statusAktif: true,
     };
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getAllUserOwner = async (idMitra, status) => {
-  try {
     let SQLQuery = "SELECT * FROM tbl_users_mobile";
     let conditions = [];
     let values = [];
@@ -137,25 +132,17 @@ const getAllUserOwner = async (idMitra, status) => {
       delete user.cabangId;
       return user;
     });
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getUserOwnerById = async (id) => {
-  try {
     const [user] = await dbPool.execute("SELECT * FROM tbl_users_mobile WHERE id = ?", [id]);
     if (user.length === 0) throw createHttpError(404, "data not found", "OWNER_NOT_FOUND");
     delete user[0].password;
     delete user[0].cabangId;
     return user[0];
-  } catch (error) {
-    throw error;
-  }
 };
 
 const updateUserOwner = async (id, body) => {
-  try {
     const { namaLengkap, noTelp, email, updatedBy } = body;
 
     // 0. Validasi Format Email
@@ -193,13 +180,9 @@ const updateUserOwner = async (id, body) => {
     delete user.password;
     delete user.cabangId;
     return user;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const deleteUserOwner = async (id, updatedBy) => {
-  try {
     const [existing] = await dbPool.execute("SELECT id FROM tbl_users_mobile WHERE id = ? AND statusAktif = 1", [id]);
     if (existing.length === 0) throw createHttpError(404, "data not found", "OWNER_NOT_FOUND");
 
@@ -207,13 +190,9 @@ const deleteUserOwner = async (id, updatedBy) => {
     const SQLQuery = "UPDATE tbl_users_mobile SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
     
     return await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
-  } catch (error) {
-    throw error;
-  }
 };
 
 const restoreUserOwner = async (id, updatedBy) => {
-  try {
     const [existing] = await dbPool.execute("SELECT id FROM tbl_users_mobile WHERE id = ? AND statusAktif = 0", [id]);
     if (existing.length === 0) throw createHttpError(404, "data not found", "OWNER_NOT_FOUND");
 
@@ -221,13 +200,9 @@ const restoreUserOwner = async (id, updatedBy) => {
     const SQLQuery = "UPDATE tbl_users_mobile SET statusAktif = 1, updatedBy = ?, updatedDate = ? WHERE id = ?";
     
     return await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
-  } catch (error) {
-    throw error;
-  }
 };
 
 const resetDeviceId = async (id, body, updatedBy) => {
-  try {
     const { deviceId, deviceName } = body;
 
     // 1. Validasi eksistensi berdasarkan id dan device info yang lama
@@ -243,13 +218,9 @@ const resetDeviceId = async (id, body, updatedBy) => {
 
     await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
     return existing[0].username;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const changePassword = async (id, body, updatedBy) => {
-  try {
     const { oldPassword, newPassword } = body;
 
     // 1. Ambil data user termasuk password hashed
@@ -277,13 +248,9 @@ const changePassword = async (id, body, updatedBy) => {
     await dbPool.execute(SQLQuery, [hashedPassword, updatedBy, updatedDate, id]);
 
     return user.username;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const resetPassword = async (email) => {
-  try {
     // 1. Validasi eksistensi email
     const [rows] = await dbPool.execute(
       "SELECT username, email FROM tbl_users_mobile WHERE email = ? AND role = 'owner' AND statusAktif = 1",
@@ -293,9 +260,6 @@ const resetPassword = async (email) => {
     if (rows.length === 0) throw createHttpError(404, "data not found", "OWNER_NOT_FOUND");
 
     return { username: rows[0].username, email: rows[0].email, role: "owner" };
-  } catch (error) {
-    throw error;
-  }
 };
 
 module.exports = {
