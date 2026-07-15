@@ -102,7 +102,7 @@ Perbandingan ini mengikat baseline Fase 0 dengan bukti checkpoint setelah seluru
 
 | Aspek | Sebelum refactor | Sesudah refactor | Bukti akhir |
 |---|---|---|---|
-| Quality gate | Baseline commit `e82f218`, `npm.cmd run check`: 69 pass, 1 skip | Checkpoint implementasi `bf07ad5`, `npm.cmd run check`: 107 pass, 1 skip MQTT | Syntax, ESLint, Postman, quality gate, dan test penuh lulus |
+| Quality gate | Baseline commit `e82f218`, `npm.cmd run check`: 69 pass, 1 skip | Checkout `fbb737e`, `npm.cmd run check`: 110 pass, 1 skip MQTT | Syntax, ESLint, Postman, quality gate, dan test penuh lulus; clean-install belum menjadi bukti pada checkpoint ini |
 | Error handling | Pilot/manual handling dan response error belum seragam | Route controller async memakai `catchAsync`; typed 4xx dan generic 5xx diuji | `scripts/check-refactor-quality.js`, `test/catchAsync.test.js`, `test/app.test.js` |
 | Transaction lifecycle | Site transaction masih beragam dan perlu klasifikasi | Transaction standar memakai helper teruji; `startMesin`/`stopMesin` tetap lifecycle MQTT khusus | `test/standardTransactions.model.test.js`, `test/transaction.utils.test.js`, `test/coreDomains.integration.test.js` |
 | Pricing | Nilai harga/subtotal dapat berasal dari payload client | Harga server-authoritative dan manipulasi harga ditolak dengan rollback | `test/transaksi.create.controller.test.js`, `test/coreDomains.integration.test.js`, quality gate |

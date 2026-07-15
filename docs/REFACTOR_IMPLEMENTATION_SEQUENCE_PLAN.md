@@ -370,10 +370,10 @@ Lanjutkan `ASYNC_ERROR_HANDLING_PLAN.md` Tahap 4 sampai Tahap 7.
 
 ### Exit gate
 
-- [x] Seluruh async route controller memakai `catchAsync` atau mempunyai alasan tertulis jika dikecualikan.
-- [x] Tidak ada direct response 5xx di controller.
-- [x] Known errors mempertahankan status dan `code` yang disepakati.
-- [x] Catch yang tersisa mempunyai fungsi recovery/cleanup/fallback yang nyata.
+- [x] Seluruh async route controller yang terdaftar pada `src/routes` dan `src/app.js` memakai `catchAsync` atau mempunyai alasan tertulis jika dikecualikan.
+- [x] Tidak ada direct response 5xx pada controller yang dimigrasikan; audit ulang lintas repository untuk seluruh pola legacy masih menjadi follow-up.
+- [ ] Known errors repository-wide mempertahankan status dan `code` yang disepakati. Scope transaksi, machine-control, mobile activation, dan modul yang sudah dimigrasikan sudah typed; plain error di modul lain masih tercatat sebagai debt.
+- [ ] Catch repository-wide seluruhnya mempunyai fungsi recovery/cleanup/fallback yang nyata. Catch rethrow-only di luar scope migrasi masih deferred.
 - [x] Tenant, cabang, role, dan actor scope tetap terlindungi oleh test.
 - [x] MQTT failure tidak menyebabkan state mesin keliru.
 
@@ -400,24 +400,24 @@ Lanjutkan `ASYNC_ERROR_HANDLING_PLAN.md` Tahap 4 sampai Tahap 7.
 
 ### Exit gate final
 
-- [x] Semua Definition of Done pada ketiga dokumen sumber terpenuhi.
-- [x] Seluruh unit dan integration test lulus.
-- [x] Quality gate baru masuk ke `npm.cmd run check`.
-- [x] Tidak ada raw database, MQTT, email, atau stack error pada response 5xx.
-- [x] Tidak ada connection leak pada jalur yang dimigrasikan.
-- [x] Manipulasi harga client ditolak.
-- [x] Dokumentasi dan Postman sesuai route serta kontrak terbaru.
-- [x] Perubahan terbagi menjadi commit yang kecil dan dapat di-rollback.
+- [ ] Semua Definition of Done pada ketiga dokumen sumber terpenuhi secara repository-wide. DoD yang sudah terbukti berlaku pada scope migrasi; standardisasi error/validation dan cleanup model di luar scope tersebut masih deferred.
+- [x] Seluruh unit dan integration test lulus pada environment checkout saat ini.
+- [x] Quality gate baru masuk ke `npm.cmd run check`, termasuk pemeriksaan handler `src/app.js`, batas pricing, typed-error transaksi, dan timestamp SQL non-UTC.
+- [x] Tidak ada raw database, MQTT, email, atau stack error pada response 5xx yang dicakup regression test.
+- [x] Tidak ada connection leak pada jalur transaction standar dan machine-control yang diuji.
+- [x] Manipulasi harga client ditolak dan diuji dengan rollback.
+- [ ] Dokumentasi dan checklist audit sepenuhnya sinkron. Route catalog sudah 76 request, tetapi setiap perubahan kontrak atau angka gate harus tetap diperbarui pada dokumen terkait.
+- [x] Perubahan yang sudah dikirim terbagi menjadi commit kecil dan dapat di-rollback.
 
 ### Status audit implementasi Fase 7
 
-Quality gate `scripts/check-refactor-quality.js` sekarang menjadi bagian dari `npm.cmd run check`. Gate ini memverifikasi bahwa seluruh route yang memanggil controller async dibungkus `catchAsync` dan arithmetic pricing transaksi tetap berada di domain/service/model, bukan di controller.
+Quality gate `scripts/check-refactor-quality.js` sekarang menjadi bagian dari `npm.cmd run check`. Gate ini memverifikasi route/controller async di `src/routes` dan `src/app.js`, arithmetic pricing transaksi, typed-error boundary transaksi, serta melarang `NOW()`, `CURDATE()`, dan `CURRENT_TIMESTAMP` pada model.
 
 Audit akhir juga memastikan controller tidak lagi mengirim detail error internal melalui response 5xx. Error internal transaksi, machine-control, dan aktivasi akun diteruskan sebagai typed 500 dan disanitasi oleh global error handler. Lifecycle `startMesin`/`stopMesin` tetap menjadi pengecualian workflow MQTT yang eksplisit; helper transaksi generik tidak digunakan untuknya.
 
-Validasi terakhir: quality gate lulus, `npm.cmd run check` lulus (107 test pass, 1 test MQTT skip), dan `git diff --check` lulus.
+Validasi terakhir pada checkout `fbb737e`: quality gate lulus, `npm.cmd run check` lulus (110 test pass, 1 test MQTT skip), dan `git diff --check` lulus. Angka ini bukan bukti clean-install; validasi dependency dari instalasi bersih masih harus dijalankan bila diperlukan untuk release gate.
 
-Perbandingan baseline sebelum/sesudah dicatat di `docs/REFACTOR_PHASE_0_BASELINE.md`: baseline Fase 0 mencatat 69 pass/1 skip, sedangkan checkpoint implementasi mencatat 107 pass/1 skip MQTT. Characterization dan integration suite membuktikan contract yang tidak dimaksudkan berubah tetap kompatibel; perubahan yang disengaja (typed error, alias `error` 4xx, dan penolakan manipulasi harga) dicatat di test serta dokumentasi API.
+Perbandingan baseline sebelum/sesudah dicatat di `docs/REFACTOR_PHASE_0_BASELINE.md`: baseline Fase 0 mencatat 69 pass/1 skip, sedangkan checkout saat ini mencatat 110 pass/1 skip MQTT. Characterization dan integration suite membuktikan contract yang diuji tetap kompatibel; perubahan yang disengaja (typed error, alias `error` 4xx, penolakan manipulasi harga, dan timestamp database UTC) dicatat di test serta dokumentasi terkait. Baseline historis tidak boleh dibaca sebagai bukti bahwa seluruh debt repository sudah selesai.
 
 ## Urutan Commit yang Disarankan
 

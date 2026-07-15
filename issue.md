@@ -278,7 +278,7 @@ Minimal test baseline:
 - [ ] Gunakan transaction untuk operasi multi-table; selalu `commit`, `rollback`, dan `release` pada jalur yang benar.
 - [ ] Cari pola N+1 query dan query berulang dalam loop.
 - [ ] Gunakan `affectedRows`, unique constraint, foreign key, dan index yang sesuai. Perubahan schema harus menjadi task/migration terpisah.
-- [ ] Jangan mengubah timezone/timestamp sebelum kebijakan waktu disetujui dan diuji.
+- [x] Kebijakan timestamp database UTC sudah disetujui, `CURRENT_TIMESTAMP` pada model yang diaudit sudah diganti dengan `UTC_TIMESTAMP()`, dan quality gate mencegah `NOW()`, `CURDATE()`, atau `CURRENT_TIMESTAMP` kembali dipakai.
 
 #### 3E. Integrasi eksternal dan utilitas
 
@@ -360,9 +360,9 @@ masterItem / roles / dashboard
 
 ### Tahap 7 - Verifikasi Akhir
 
-- [x] Semua file dalam inventory memiliki status review.
+- [ ] Semua file dalam inventory memiliki status review per-file. Inventory saat ini masih menggabungkan beberapa kelompok route/controller/model; status kelompok dan finding sudah tersedia, tetapi trace per-file belum lengkap.
 - [x] Semua finding P0/P1 berstatus fixed, accepted risk dengan alasan, atau memiliki blocker eksplisit.
-- [x] Semua test dan lint lulus dari clean install.
+- [ ] Semua test dan lint lulus dari clean install. Checkout saat ini lulus `npm.cmd run check`, tetapi `npm ci`/clean-install gate belum dijalankan pada audit ini.
 - [x] Server dapat start dan shutdown dengan benar.
 - [x] Endpoint utama diuji dengan token backoffice, owner, dan kasir.
 - [x] Scope mitra/cabang tidak bocor antar-user; negative authorization dan tenant/cabang integration tests lulus.
@@ -371,7 +371,7 @@ masterItem / roles / dashboard
 - [x] MQTT diuji menggunakan mock/fake broker sebelum test perangkat nyata.
 - [x] Tidak ditemukan `.env`, `.pem`, `.key`, atau secret file yang ter-track pada audit akhir.
 - [x] Dokumentasi route sesuai dengan code aktual.
-- [x] Perbandingan baseline menyatakan perubahan kontrak yang disengaja dan disetujui; lihat tabel baseline sebelum/sesudah di `docs/REFACTOR_PHASE_0_BASELINE.md`.
+- [x] Perbandingan baseline menyatakan perubahan kontrak yang disengaja dan disetujui; lihat tabel baseline sebelum/sesudah di `docs/REFACTOR_PHASE_0_BASELINE.md`. Angka gate aktual checkout saat ini adalah 110 pass dan 1 skip MQTT.
 
 ## Panduan Detail untuk Junior Programmer / AI Model
 
@@ -443,7 +443,7 @@ Jika jawabannya tidak jelas, catat finding terlebih dahulu dan jangan extract.
 - [x] Temuan awal PRE-001 sampai PRE-018 sudah diverifikasi dan diubah menjadi finding final, ditolak dengan bukti, atau di-defer dengan alasan.
 - [x] Ada test baseline untuk auth backoffice/mobile, satu CRUD, transaction, serta MQTT flow.
 - [x] Ada command tunggal `npm run check` atau ekuivalen yang menjalankan quality gate.
-- [x] Refactor tidak menyebabkan regression pada contract yang tidak dimaksudkan berubah; characterization, controller, authorization, dan integration tests tetap lulus (107 pass, 1 skip MQTT).
+- [x] Refactor tidak menyebabkan regression pada contract yang diuji; characterization, controller, authorization, dan integration tests tetap lulus (110 pass, 1 skip MQTT). Klaim ini terbatas pada endpoint dan fixture yang memiliki regression test.
 - [x] Error response tidak membocorkan detail internal.
 - [x] Authorization tenant/cabang memiliki negative test.
 - [x] Tidak ada `.env`, `.pem`, `.key`, atau secret file baru yang ter-track; audit akhir tidak menemukan credential file pada repository.
