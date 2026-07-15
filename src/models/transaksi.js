@@ -262,11 +262,12 @@ const getOfficialPrice = async (connection, { idMitra, cabangId, jenisLayanan, i
     [idMitra, cabangId, jenisLayanan, itemId]
   );
 
-  if (rows.length !== 1) {
+  const officialPrice = rows.length === 1 ? Number(rows[0].harga) : NaN;
+  if (!Number.isFinite(officialPrice) || officialPrice <= 0) {
     throw createHttpError(409, "Harga transaksi belum dikonfigurasi untuk cabang ini", "TRANSACTION_PRICE_NOT_CONFIGURED");
   }
 
-  return Number(rows[0].harga);
+  return officialPrice;
 };
 
 const insertLogMesin = async (

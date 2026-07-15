@@ -29,9 +29,13 @@ const loadModelWithTransaction = (modelRelativePath, connection) => {
   };
 };
 
-const createConnection = (calls, execute) => ({
+const createConnection = (calls, execute, queries = null) => ({
   async beginTransaction() { calls.push("begin"); },
-  async execute(sql, values) { calls.push("execute"); return execute(sql, values); },
+  async execute(sql, values) {
+    calls.push("execute");
+    queries?.push({ sql, values });
+    return execute(sql, values);
+  },
   async commit() { calls.push("commit"); },
   async rollback() { calls.push("rollback"); },
   release() { calls.push("release"); },
@@ -78,16 +82,18 @@ test("createNewCabang and resetCabang use one standard transaction lifecycle", a
 
 test("price and cashflow writes use a single standard transaction lifecycle", async () => {
   const hargaCalls = [];
+  const hargaQueries = [];
   let hargaExecuteCount = 0;
   const harga = loadModelWithTransaction("../src/models/hargaCabang", createConnection(hargaCalls, async () => {
     hargaExecuteCount += 1;
     if (hargaExecuteCount <= 2) return [[{ id: hargaExecuteCount }]];
     if (hargaExecuteCount === 4) return [{ insertId: 9 }];
     return [[]];
-  }));
+  }, hargaQueries));
   try {
     const result = await harga.model.createSettingHarga(1, 2, [{ jenisLayanan: "cuci", itemId: null, harga: 20000 }], "admin");
     assert.equal(result[0].id, 9);
+    assert.match(hargaQueries[1].sql, /FOR UPDATE/);
     assert.deepEqual(hargaCalls.slice(-2), ["commit", "release"]);
   } finally { harga.restore(); }
 
@@ -137,4 +143,54 @@ test("stock settings read their response before commit and roll back a failed re
     );
     assert.deepEqual(failureCalls.slice(-2), ["rollback", "release"]);
   } finally { failure.restore(); }
+});
+
+test("branch price model rejects duplicate keys before opening a transaction", async () => {
+  let getConnectionCalls = 0;
+  const harga = loadModelWithTransaction("../src/models/hargaCabang", {
+    async getConnection() {
+      getConnectionCalls += 1;
+      throw new Error("transaction should not start");
+    },
+  });
+
+  try {
+    await assert.rejects(
+      harga.model.createSettingHarga(
+        1,
+        2,
+        [
+          { jenisLayanan: "cuci", itemId: null, harga: 20000 },
+          { jenisLayanan: "cuci", itemId: null, harga: 25000 },
+        ],
+        "admin"
+      ),
+      (error) => error.statusCode === 400 && error.code === "BRANCH_PRICE_DUPLICATE"
+    );
+    assert.equal(getConnectionCalls, 0);
+  } finally {
+    harga.restore();
+  }
+});
+
+test("branch price model rejects non-positive prices before opening a transaction", async () => {
+  let getConnectionCalls = 0;
+  const harga = loadModelWithTransaction("../src/models/hargaCabang", {
+    async getConnection() {
+      getConnectionCalls += 1;
+      throw new Error("transaction should not start");
+    },
+  });
+
+  try {
+    for (const price of [0, -1, true]) {
+      await assert.rejects(
+        harga.model.createSettingHarga(1, 2, [{ jenisLayanan: "cuci", itemId: null, harga: price }], "admin"),
+        (error) => error.statusCode === 400 && error.code === "BRANCH_PRICE_INVALID"
+      );
+    }
+    assert.equal(getConnectionCalls, 0);
+  } finally {
+    harga.restore();
+  }
 });

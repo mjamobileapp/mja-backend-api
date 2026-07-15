@@ -2,7 +2,71 @@ const dbPool = require("../config/database");
 const { withTransaction } = require("../utils/transaction");
 const { createHttpError } = require("../utils/httpError");
 
+const SUPPORTED_SERVICE_TYPES = new Set(["cuci", "kering", "addon_barang"]);
+
+const getLogicalPriceKey = ({ jenisLayanan, itemId }) =>
+  `${jenisLayanan}:${jenisLayanan === "addon_barang" ? Number(itemId) : "null"}`;
+
+const validatePriceItems = (items) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw createHttpError(400, "item harus berupa array dan tidak boleh kosong", "BRANCH_PRICE_INVALID");
+  }
+
+  const seenKeys = new Set();
+
+  items.forEach((item, index) => {
+    const itemNumber = index + 1;
+    if (!item || !SUPPORTED_SERVICE_TYPES.has(item.jenisLayanan)) {
+      throw createHttpError(
+        400,
+        `jenisLayanan tidak valid untuk item ke-${itemNumber}`,
+        "BRANCH_PRICE_INVALID"
+      );
+    }
+
+    if (item.jenisLayanan === "addon_barang") {
+      const rawItemId = item.itemId;
+      const itemId = Number(rawItemId);
+      const validItemIdType =
+        (typeof rawItemId === "number" || typeof rawItemId === "string") &&
+        String(rawItemId).trim() !== "";
+      if (!validItemIdType || !Number.isSafeInteger(itemId) || itemId <= 0) {
+        throw createHttpError(
+          400,
+          `itemId wajib berupa integer positif untuk item ke-${itemNumber}`,
+          "BRANCH_PRICE_INVALID"
+        );
+      }
+    }
+
+    const rawHarga = item.harga;
+    const harga = Number(rawHarga);
+    const validHargaType =
+      (typeof rawHarga === "number" || typeof rawHarga === "string") &&
+      String(rawHarga).trim() !== "";
+    if (!validHargaType || !Number.isFinite(harga) || harga <= 0) {
+      throw createHttpError(
+        400,
+        `harga wajib berupa angka lebih dari 0 untuk item ke-${itemNumber}`,
+        "BRANCH_PRICE_INVALID"
+      );
+    }
+
+    const key = getLogicalPriceKey(item);
+    if (seenKeys.has(key)) {
+      throw createHttpError(
+        400,
+        `Kombinasi harga duplikat: ${key}`,
+        "BRANCH_PRICE_DUPLICATE"
+      );
+    }
+    seenKeys.add(key);
+  });
+};
+
 const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
+  validatePriceItems(items);
+
   return withTransaction(async (connection) => {
     // 1. Validasi idMitra
     const [mitraCheck] = await connection.execute(
@@ -15,7 +79,7 @@ const createSettingHarga = async (idMitra, cabangId, items, createdBy) => {
 
     // 2. Validasi cabangId
     const [cabangCheck] = await connection.execute(
-      "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ? AND statusAktif = 1",
+      "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ? AND statusAktif = 1 FOR UPDATE",
       [cabangId, idMitra]
     );
     if (cabangCheck.length === 0) {
@@ -115,4 +179,6 @@ ORDER BY
 module.exports = {
   createSettingHarga,
   getSettingHarga,
+  getLogicalPriceKey,
+  validatePriceItems,
 };

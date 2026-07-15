@@ -103,3 +103,55 @@ test("createTransaksi rolls back and releases its connection when detail persist
     restore();
   }
 });
+
+test("createTransaksi maps a non-positive official price to a typed 409", async () => {
+  const calls = [];
+  let executeCount = 0;
+  const connection = {
+    async beginTransaction() {
+      calls.push("beginTransaction");
+    },
+    async execute() {
+      executeCount += 1;
+      if (executeCount === 1) return [[{ id: 1 }]];
+      if (executeCount === 2) return [[{ id: 2 }]];
+      if (executeCount === 3) return [[{ id: 3, namaLengkap: "Kasir Test" }]];
+      if (executeCount === 4) return [[{ invoiceNumber: "INV-2-20260715-0001" }]];
+      if (executeCount === 5) return [[{ harga: 0 }]];
+      throw new Error("Unexpected query after invalid official price");
+    },
+    async commit() {
+      calls.push("commit");
+    },
+    async rollback() {
+      calls.push("rollback");
+    },
+    release() {
+      calls.push("release");
+    },
+  };
+  const { transaksiModel, restore } = loadTransaksiModel({
+    async getConnection() {
+      return connection;
+    },
+  });
+
+  try {
+    await assert.rejects(
+      transaksiModel.createTransaksi({
+        idMitra: 1,
+        cabangId: 2,
+        idUserMobile: 3,
+        totalBayar: 20000,
+        metodePembayaran: "CASH",
+        items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 20000 }],
+      }),
+      (error) =>
+        error.statusCode === 409 &&
+        error.code === "TRANSACTION_PRICE_NOT_CONFIGURED"
+    );
+    assert.deepEqual(calls, ["beginTransaction", "rollback", "release"]);
+  } finally {
+    restore();
+  }
+});

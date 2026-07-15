@@ -1,4 +1,5 @@
 const HargaCabangModel = require("../models/hargaCabang");
+const { validatePriceItems } = HargaCabangModel;
 
 const createSettingHarga = async (req, res) => {
   const { cabangId, item } = req.body;
@@ -46,6 +47,12 @@ const createSettingHarga = async (req, res) => {
         message: `harga wajib diisi untuk item ke-${i + 1}`,
       });
     }
+  }
+
+  try {
+    validatePriceItems(item);
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ message: error.message });
   }
 
   const data = await HargaCabangModel.createSettingHarga(idMitra, cabangId, item, createdBy);

@@ -40,3 +40,62 @@ test("branch price controller keeps request validation response", async () => {
   assert.deepEqual(response.body, { message: "cabangId tidak ditemukan di query params" });
   assert.equal(response.statusCode, 400);
 });
+
+test("branch price controller rejects empty, zero, and negative prices", async () => {
+  const original = HargaCabangModel.createSettingHarga;
+  let modelCalled = false;
+  HargaCabangModel.createSettingHarga = async () => {
+    modelCalled = true;
+  };
+
+  try {
+    for (const harga of ["", 0, -1, true]) {
+      const response = createResponse();
+      await HargaCabangController.createSettingHarga(
+        {
+          body: { cabangId: 2, item: [{ jenisLayanan: "cuci", itemId: null, harga }] },
+          user: { idMitra: 1, username: "owner" },
+        },
+        response
+      );
+
+      assert.equal(response.statusCode, 400);
+      assert.match(response.body.message, /harga/i);
+    }
+
+    assert.equal(modelCalled, false);
+  } finally {
+    HargaCabangModel.createSettingHarga = original;
+  }
+});
+
+test("branch price controller rejects duplicate logical price keys", async () => {
+  const original = HargaCabangModel.createSettingHarga;
+  let modelCalled = false;
+  HargaCabangModel.createSettingHarga = async () => {
+    modelCalled = true;
+  };
+
+  try {
+    const response = createResponse();
+    await HargaCabangController.createSettingHarga(
+      {
+        body: {
+          cabangId: 2,
+          item: [
+            { jenisLayanan: "cuci", itemId: null, harga: 20000 },
+            { jenisLayanan: "cuci", itemId: null, harga: 25000 },
+          ],
+        },
+        user: { idMitra: 1, username: "owner" },
+      },
+      response
+    );
+
+    assert.equal(response.statusCode, 400);
+    assert.match(response.body.message, /duplikat/i);
+    assert.equal(modelCalled, false);
+  } finally {
+    HargaCabangModel.createSettingHarga = original;
+  }
+});
