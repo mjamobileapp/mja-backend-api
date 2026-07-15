@@ -400,13 +400,13 @@ Lanjutkan `ASYNC_ERROR_HANDLING_PLAN.md` Tahap 4 sampai Tahap 7.
 
 ### Exit gate final
 
-- [ ] Semua Definition of Done pada ketiga dokumen sumber terpenuhi secara repository-wide. DoD yang sudah terbukti berlaku pada scope migrasi; standardisasi error/validation dan cleanup model di luar scope tersebut masih deferred.
+- [x] Semua Definition of Done pada ketiga dokumen sumber terpenuhi secara repository-wide, termasuk typed validation error dan penghapusan catch observability yang hanya logging lalu rethrow.
 - [x] Seluruh unit dan integration test lulus pada environment checkout saat ini.
 - [x] Quality gate baru masuk ke `npm.cmd run check`, termasuk pemeriksaan handler `src/app.js`, batas pricing, typed-error transaksi, timestamp SQL non-UTC, dan catch rethrow-only repository-wide.
 - [x] Tidak ada raw database, MQTT, email, atau stack error pada response 5xx yang dicakup regression test.
 - [x] Tidak ada connection leak pada jalur transaction standar dan machine-control yang diuji.
 - [x] Manipulasi harga client ditolak dan diuji dengan rollback.
-- [x] Dokumentasi dan checklist audit mencatat route catalog 76 request, gate terbaru 124 pass dan 1 skip MQTT, perubahan kontrak aktivasi mobile, serta cleanup catch rethrow-only. Inventory per-file sudah lengkap; DoD di luar scope migrasi tetap terbuka dan clean-install sudah terbukti lulus.
+- [x] Dokumentasi dan checklist audit mencatat route catalog 76 request, gate terbaru 127 pass dan 1 skip MQTT, perubahan kontrak aktivasi mobile, typed validation error transaksi, serta cleanup catch observability. Inventory per-file sudah lengkap dan clean-install sudah terbukti lulus.
 - [x] Perubahan yang sudah dikirim terbagi menjadi commit kecil dan dapat di-rollback.
 
 ### Status audit implementasi Fase 7

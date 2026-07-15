@@ -1,10 +1,10 @@
+const { createHttpError } = require("../utils/httpError");
+
 const validJenisLayanan = new Set(["cuci", "kering", "addon_barang"]);
 const MAX_MONEY = 9999999999.99;
 
 const createValidationError = (message) => {
-  const error = new Error(message);
-  error.code = "TRANSACTION_VALIDATION_ERROR";
-  return error;
+  return createHttpError(400, message, "TRANSACTION_VALIDATION_ERROR");
 };
 
 const normalizeMoney = (value, message, { positive = false } = {}) => {

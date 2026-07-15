@@ -32,6 +32,18 @@ test("transaction domain rejects unsafe and malformed money before arithmetic", 
   );
 });
 
+test("transaction validation errors expose the typed HTTP contract", () => {
+  assert.throws(
+    () => normalizeMoney("invalid", "Harga transaksi tidak valid"),
+    (error) => {
+      assert.equal(error.statusCode, 400);
+      assert.equal(error.code, "TRANSACTION_VALIDATION_ERROR");
+      assert.equal(error.message, "Harga transaksi tidak valid");
+      return true;
+    }
+  );
+});
+
 test("transaction validation middleware stores a DTO without overwriting req.body", () => {
   const req = { body: { totalBayar: "1", metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: "1", subtotal: "1" }] } };
   const res = { statusCode: null, body: null, status(statusCode) { this.statusCode = statusCode; return this; }, json(body) { this.body = body; return this; } };
