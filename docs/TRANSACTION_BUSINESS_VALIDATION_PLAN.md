@@ -689,7 +689,8 @@ Server menjadi satu-satunya sumber subtotal dan total.
 
 - Jangan menghapus field lama sebelum versi mobile aktif terverifikasi.
 - Jika backend dan mobile tidak dapat dirilis bersamaan, pertahankan field lama sebagai confirmation-only.
-- Dokumentasikan respons 409 agar mobile memuat ulang harga ketika harga berubah.
+- Dokumentasikan respons 409 `TRANSACTION_PRICE_CHANGED` dan `TRANSACTION_PRICE_NOT_CONFIGURED`. Untuk `TRANSACTION_PRICE_CHANGED`, mobile wajib membatalkan payload lama, memuat ulang harga, menampilkan total terbaru, lalu meminta konfirmasi sebelum submit ulang; `TRANSACTION_PRICE_NOT_CONFIGURED` harus menghentikan submit tanpa fallback ke subtotal client.
+- Source mobile tidak berada di repository backend ini. Bukti bahwa mobile menjalankan refresh harga harus berasal dari repository mobile atau QA dan menjadi dependency deployment sebelum enforcement pricing dirilis ke production.
 
 ## Tahap 9 — Integrasi dengan `withTransaction`
 
@@ -844,7 +845,7 @@ Pekerjaan dianggap selesai jika:
 - nilai uang memakai integer aman atau decimal strategy yang terdokumentasi;
 - order, detail, stok, dan notifikasi tetap atomic;
 - response sukses, invoice, history, dan cashflow tetap kompatibel;
-- mobile menangani `TRANSACTION_PRICE_CHANGED`;
+- mobile menangani `TRANSACTION_PRICE_CHANGED` dan `TRANSACTION_PRICE_NOT_CONFIGURED`; bukti kompatibilitas berasal dari repository mobile/QA sebagai dependency deployment;
 - Postman dan `API_LIST.md` diperbarui;
 - seluruh unit/integration test dan `npm.cmd run check` lulus;
 - perubahan dibagi dalam commit kecil yang dapat di-review dan di-rollback.

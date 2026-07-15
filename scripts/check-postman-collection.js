@@ -293,6 +293,12 @@ const assertPostmanCollection = (collection) => {
   assert(verified, `Folder ${verifiedName} tidak ditemukan.`);
   assert(getLeafRequests(verified.item).length === 13, "Verified core API contract harus berisi tepat 13 request.");
 
+  const pricingRequest = getLeafRequests(verified.item).find(({ item }) => item.name === "Kasir - Create transaksi");
+  assert(pricingRequest, "Request pricing transaksi belum ada di Verified core API contract.");
+  const pricingResponses = new Set((pricingRequest.item.response || []).map((response) => response.name));
+  assert(pricingResponses.has("409 - TRANSACTION_PRICE_CHANGED"), "Response pricing TRANSACTION_PRICE_CHANGED belum terdokumentasi di Postman.");
+  assert(pricingResponses.has("409 - TRANSACTION_PRICE_NOT_CONFIGURED"), "Response pricing TRANSACTION_PRICE_NOT_CONFIGURED belum terdokumentasi di Postman.");
+
   const variableKeys = new Set((collection.variable || []).map((entry) => entry.key));
   for (const [key] of requiredVariables) assert(variableKeys.has(key), `Variable ${key} belum ada.`);
 

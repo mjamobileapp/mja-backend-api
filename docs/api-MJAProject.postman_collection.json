@@ -6213,6 +6213,7 @@
         },
         {
           "name": "Kasir - Create transaksi",
+          "description": "Harga dihitung server-side. HTTP 409 TRANSACTION_PRICE_CHANGED mengharuskan mobile memuat ulang harga lalu meminta konfirmasi sebelum submit ulang; TRANSACTION_PRICE_NOT_CONFIGURED menghentikan submit sampai harga cabang dilengkapi.",
           "request": {
             "method": "POST",
             "header": [
@@ -6237,7 +6238,22 @@
               ]
             }
           },
-          "response": []
+          "response": [
+            {
+              "name": "409 - TRANSACTION_PRICE_CHANGED",
+              "status": "Conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"TRANSACTION_PRICE_CHANGED\",\n  \"message\": \"Harga transaksi telah berubah. Muat ulang harga dan coba kembali.\",\n  \"error\": \"Harga transaksi telah berubah. Muat ulang harga dan coba kembali.\"\n}"
+            },
+            {
+              "name": "409 - TRANSACTION_PRICE_NOT_CONFIGURED",
+              "status": "Conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"TRANSACTION_PRICE_NOT_CONFIGURED\",\n  \"message\": \"Harga transaksi belum dikonfigurasi untuk cabang ini\",\n  \"error\": \"Harga transaksi belum dikonfigurasi untuk cabang ini\"\n}"
+            }
+          ]
         },
         {
           "name": "Kasir - Pending transaksi",

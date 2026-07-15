@@ -35,3 +35,25 @@ Base URL: `http://localhost:9090`. Semua endpoint selain yang ditandai **public*
 | Harga cabang owner | `/api/owner/settingharga` | `GET /`, `POST /` (owner) |
 
 Payload dan response detail harus mengikuti controller masing-masing. Koleksi Postman memiliki `Backoffice route catalog` berisi 76 request yang disinkronkan terhadap route aktif, variable auth/ID, dan body JSON valid. Folder `Verified core API contract` memuat 13 request dengan bukti integration atau controller test, termasuk reset password publik yang selalu merespons HTTP 202 secara generik. Route catalog tidak menyatakan bahwa setiap request telah smoke-tested satu per satu.
+
+## Kontrak harga resmi transaksi
+
+`POST /api/kasir/transaksi` memakai harga resmi cabang dari server. Jika request ditolak dengan HTTP 409, client harus membaca `code` (bukan mencocokkan `message`):
+
+| Code | Makna | Tindakan mobile |
+|---|---|---|
+| `TRANSACTION_PRICE_CHANGED` | Harga resmi berubah setelah layar transaksi dibuka atau harga pada payload tidak lagi sama dengan server. | Batalkan submit lama, muat ulang harga cabang, tampilkan total terbaru, lalu minta kasir mengonfirmasi dan mengirim ulang transaksi baru. Jangan retry otomatis dengan payload lama. |
+| `TRANSACTION_PRICE_NOT_CONFIGURED` | Harga resmi untuk layanan/cabang belum tersedia atau tidak valid. | Jangan fallback ke subtotal client dan jangan retry otomatis. Tampilkan konfigurasi harga belum tersedia; operasional harus melengkapi harga cabang terlebih dahulu. |
+
+Bentuk payload 409 kompatibel dengan client lama dan baru:
+
+```json
+{
+  "success": false,
+  "code": "TRANSACTION_PRICE_CHANGED",
+  "message": "Harga transaksi telah berubah. Muat ulang harga dan coba kembali.",
+  "error": "Harga transaksi telah berubah. Muat ulang harga dan coba kembali."
+}
+```
+
+Backend memiliki regression test HTTP untuk kedua code dan contoh response tersebut tercatat pada request `Kasir - Create transaksi` di koleksi Postman. Source mobile tidak berada di repository ini; implementasi refresh harga harus diverifikasi pada repository mobile/QA sebelum deployment. Dengan demikian kompatibilitas client merupakan dependency deployment: rilis backend yang mengaktifkan enforcement harga wajib dipasangkan dengan bukti bahwa mobile menangani kedua response 409 sesuai tabel di atas.

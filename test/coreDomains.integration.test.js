@@ -484,6 +484,29 @@ test("core domains complete their HTTP flows on the isolated integration schema"
     });
     assert.equal(afterManipulation[0].jumlah, beforeManipulation[0].jumlah);
 
+    await db.execute(
+      "DELETE FROM tbl_harga_cabang WHERE idMitra = ? AND cabangId = ? AND jenisLayanan = 'cuci' AND itemId IS NULL",
+      [fixture.idMitra, fixture.cabangId]
+    );
+    const notConfigured = await request(server, {
+      method: "POST",
+      path: "/api/kasir/transaksi",
+      token: mobileToken(),
+      body: { totalBayar: 20000, metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 20000 }] },
+    });
+    assert.equal(notConfigured.statusCode, 409);
+    assert.deepEqual(notConfigured.body, {
+      success: false,
+      error: "Harga transaksi belum dikonfigurasi untuk cabang ini",
+      message: "Harga transaksi belum dikonfigurasi untuk cabang ini",
+      code: "TRANSACTION_PRICE_NOT_CONFIGURED",
+    });
+    await db.execute(
+      `INSERT INTO tbl_harga_cabang (idMitra, cabangId, jenisLayanan, itemId, harga, createdBy)
+       VALUES (?, ?, 'cuci', NULL, ?, ?)`,
+      [fixture.idMitra, fixture.cabangId, 20000, "integration-test"]
+    );
+
     const create = await request(server, {
       method: "POST",
       path: "/api/kasir/transaksi",
