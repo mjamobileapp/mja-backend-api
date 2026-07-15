@@ -118,12 +118,12 @@ Merekam perilaku saat ini sebelum refactor. Fase ini mencegah implementer mengan
 
 ### Exit gate
 
-- [ ] Baseline test tercatat dan kegagalan lama dibedakan dari regresi baru.
-- [ ] Status dan bentuk error endpoint yang akan disentuh sudah diketahui.
-- [ ] Semua transaction site sudah dikategorikan.
-- [ ] Kontrak uang, numeric string, pembulatan, dan arti `totalBayar` sudah diputuskan.
-- [ ] Characterization test `createTransaksi` melindungi happy path, validation, authorization, dan rollback utama.
-- [ ] Test manipulasi harga sudah tersedia sebagai target perilaku baru.
+- [x] Baseline test tercatat dan kegagalan lama dibedakan dari regresi baru.
+- [x] Status dan bentuk error endpoint yang akan disentuh sudah diketahui.
+- [x] Semua transaction site sudah dikategorikan.
+- [x] Kontrak uang, numeric string, pembulatan, dan arti `totalBayar` sudah diputuskan.
+- [x] Characterization test `createTransaksi` melindungi happy path, validation, authorization, dan rollback utama.
+- [x] Test manipulasi harga sudah tersedia sebagai target perilaku baru.
 
 ## Fase 1 — Fondasi `catchAsync` dan Typed Error
 
@@ -149,12 +149,12 @@ Kerjakan `ASYNC_ERROR_HANDLING_PLAN.md` Tahap 1, Tahap 2, dan Tahap 3 saja.
 
 ### Exit gate
 
-- [ ] Unit test `catchAsync` lulus.
-- [ ] Unknown error menjadi 500 generik tanpa detail internal.
-- [ ] Typed 4xx mempertahankan status, `code`, dan pesan yang disepakati.
-- [ ] Tidak ada pemanggilan `createHttpError` dengan urutan argument yang salah pada area yang akan dimigrasikan.
-- [ ] Pilot `masterItem` lulus unit dan integration test.
-- [ ] Tidak ada perubahan response sukses.
+- [x] Unit test `catchAsync` lulus.
+- [x] Unknown error menjadi 500 generik tanpa detail internal.
+- [x] Typed 4xx mempertahankan status, `code`, dan pesan yang disepakati.
+- [x] Tidak ada pemanggilan `createHttpError` dengan urutan argument yang salah pada area yang akan dimigrasikan.
+- [x] Pilot `masterItem` lulus unit dan integration test.
+- [x] Tidak ada perubahan response sukses.
 
 ## Fase 2 — Fondasi `withTransaction` dan Pilot Non-Transaksi Penjualan
 
@@ -189,11 +189,11 @@ Kerjakan `DATABASE_TRANSACTION_HELPER_PLAN.md` Tahap 1 sampai Tahap 4.
 
 ### Exit gate
 
-- [ ] Semua cabang lifecycle helper mempunyai unit test.
-- [ ] `createNewMesin` membuktikan commit, rollback, dan release yang benar.
-- [ ] Transaksi standar yang dimigrasikan tetap memakai connection callback, bukan pool global.
-- [ ] Read setelah commit tidak lagi dianggap bagian dari transaction secara keliru.
-- [ ] Test fokus dan suite penuh lulus.
+- [x] Semua cabang lifecycle helper mempunyai unit test.
+- [x] `createNewMesin` membuktikan commit, rollback, dan release yang benar.
+- [x] Transaksi standar yang dimigrasikan tetap memakai connection callback, bukan pool global.
+- [x] Read setelah commit tidak lagi dianggap bagian dari transaction secara keliru.
+- [x] Test fokus dan suite penuh lulus.
 
 ## Fase 3 — Migrasi Lifecycle `createTransaksi` dan Akses
 
@@ -229,12 +229,12 @@ Kerjakan `DATABASE_TRANSACTION_HELPER_PLAN.md` Tahap 5 dan Tahap 6. Catat keputu
 
 ### Exit gate
 
-- [ ] `createTransaksi` memakai `withTransaction` tanpa perubahan behavior.
-- [ ] Failure pada salah satu detail/stok/notifikasi me-rollback seluruh write sebelumnya.
-- [ ] Connection selalu dilepas.
-- [ ] `saveAksesRole` tidak lagi membuka transaction di controller.
-- [ ] Access matrix tetap atomic.
-- [ ] `startMesin` dan `stopMesin` tetap menggunakan lifecycle khususnya.
+- [x] `createTransaksi` memakai `withTransaction` tanpa perubahan behavior.
+- [x] Failure pada salah satu detail/stok/notifikasi me-rollback seluruh write sebelumnya.
+- [x] Connection selalu dilepas.
+- [x] `saveAksesRole` tidak lagi membuka transaction di controller.
+- [x] Access matrix tetap atomic.
+- [x] `startMesin` dan `stopMesin` tetap menggunakan lifecycle khususnya.
 
 ## Fase 4 — Pemisahan Validasi Bisnis Transaksi Tanpa Perubahan Harga
 
@@ -270,13 +270,13 @@ Kerjakan `TRANSACTION_BUSINESS_VALIDATION_PLAN.md` Tahap 2 sampai Tahap 5. Tahap
 
 ### Exit gate
 
-- [ ] Controller tidak melakukan loop validasi item atau arithmetic uang.
-- [ ] Middleware hanya memvalidasi kontrak HTTP dan tidak query database.
-- [ ] Domain function dapat diuji tanpa Express dan database.
-- [ ] Service tidak menerima object Express.
-- [ ] Identity mitra, cabang, dan user hanya berasal dari token.
-- [ ] Semua characterization test lama tetap lulus.
-- [ ] Refactor-only mempunyai commit terpisah yang dapat di-rollback.
+- [x] Controller tidak melakukan loop validasi item atau arithmetic uang.
+- [x] Middleware hanya memvalidasi kontrak HTTP dan tidak query database.
+- [x] Domain function dapat diuji tanpa Express dan database.
+- [x] Service tidak menerima object Express.
+- [x] Identity mitra, cabang, dan user hanya berasal dari token.
+- [x] Semua characterization test lama tetap lulus.
+- [x] Refactor-only mempunyai commit terpisah yang dapat di-rollback.
 
 ## Fase 5 — Server-Authoritative Pricing
 
@@ -309,12 +309,12 @@ Kerjakan `TRANSACTION_BUSINESS_VALIDATION_PLAN.md` Tahap 6 sampai Tahap 10.
 
 ### Exit gate
 
-- [ ] Test manipulasi harga yang dibuat di Fase 0 sekarang lulus.
-- [ ] Harga, order, detail, stok, dan notifikasi memakai transaction connection yang sama.
-- [ ] Missing atau stale price tidak membuat data parsial.
-- [ ] Nilai yang tersimpan berasal dari perhitungan server.
-- [ ] Mobile tetap kompatibel atau perubahan kontraknya sudah dikoordinasikan.
-- [ ] History dan cashflow membaca total server yang benar.
+- [x] Test manipulasi harga yang dibuat di Fase 0 sekarang lulus.
+- [x] Harga, order, detail, stok, dan notifikasi memakai transaction connection yang sama.
+- [x] Missing atau stale price tidak membuat data parsial.
+- [x] Nilai yang tersimpan berasal dari perhitungan server.
+- [x] Mobile tetap kompatibel atau perubahan kontraknya sudah dikoordinasikan.
+- [x] History dan cashflow membaca total server yang benar.
 
 ## Fase 6 — Migrasi Controller Lain ke `catchAsync`
 
@@ -370,12 +370,12 @@ Lanjutkan `ASYNC_ERROR_HANDLING_PLAN.md` Tahap 4 sampai Tahap 7.
 
 ### Exit gate
 
-- [ ] Seluruh async route controller memakai `catchAsync` atau mempunyai alasan tertulis jika dikecualikan.
-- [ ] Tidak ada direct response 5xx di controller.
-- [ ] Known errors mempertahankan status dan `code` yang disepakati.
-- [ ] Catch yang tersisa mempunyai fungsi recovery/cleanup/fallback yang nyata.
-- [ ] Tenant, cabang, role, dan actor scope tetap terlindungi oleh test.
-- [ ] MQTT failure tidak menyebabkan state mesin keliru.
+- [x] Seluruh async route controller memakai `catchAsync` atau mempunyai alasan tertulis jika dikecualikan.
+- [x] Tidak ada direct response 5xx di controller.
+- [x] Known errors mempertahankan status dan `code` yang disepakati.
+- [x] Catch yang tersisa mempunyai fungsi recovery/cleanup/fallback yang nyata.
+- [x] Tenant, cabang, role, dan actor scope tetap terlindungi oleh test.
+- [x] MQTT failure tidak menyebabkan state mesin keliru.
 
 ## Fase 7 — Quality Gate dan Final Regression
 
@@ -400,14 +400,14 @@ Lanjutkan `ASYNC_ERROR_HANDLING_PLAN.md` Tahap 4 sampai Tahap 7.
 
 ### Exit gate final
 
-- [ ] Semua Definition of Done pada ketiga dokumen sumber terpenuhi.
-- [ ] Seluruh unit dan integration test lulus.
-- [ ] Quality gate baru masuk ke `npm.cmd run check`.
-- [ ] Tidak ada raw database, MQTT, email, atau stack error pada response 5xx.
-- [ ] Tidak ada connection leak pada jalur yang dimigrasikan.
-- [ ] Manipulasi harga client ditolak.
-- [ ] Dokumentasi dan Postman sesuai route serta kontrak terbaru.
-- [ ] Perubahan terbagi menjadi commit yang kecil dan dapat di-rollback.
+- [x] Semua Definition of Done pada ketiga dokumen sumber terpenuhi.
+- [x] Seluruh unit dan integration test lulus.
+- [x] Quality gate baru masuk ke `npm.cmd run check`.
+- [x] Tidak ada raw database, MQTT, email, atau stack error pada response 5xx.
+- [x] Tidak ada connection leak pada jalur yang dimigrasikan.
+- [x] Manipulasi harga client ditolak.
+- [x] Dokumentasi dan Postman sesuai route serta kontrak terbaru.
+- [x] Perubahan terbagi menjadi commit yang kecil dan dapat di-rollback.
 
 ### Status audit implementasi Fase 7
 
@@ -416,6 +416,8 @@ Quality gate `scripts/check-refactor-quality.js` sekarang menjadi bagian dari `n
 Audit akhir juga memastikan controller tidak lagi mengirim detail error internal melalui response 5xx. Error internal transaksi, machine-control, dan aktivasi akun diteruskan sebagai typed 500 dan disanitasi oleh global error handler. Lifecycle `startMesin`/`stopMesin` tetap menjadi pengecualian workflow MQTT yang eksplisit; helper transaksi generik tidak digunakan untuknya.
 
 Validasi terakhir: quality gate lulus, `npm.cmd run check` lulus (107 test pass, 1 test MQTT skip), dan `git diff --check` lulus.
+
+Perbandingan baseline sebelum/sesudah dicatat di `docs/REFACTOR_PHASE_0_BASELINE.md`: baseline Fase 0 mencatat 69 pass/1 skip, sedangkan checkpoint implementasi mencatat 107 pass/1 skip MQTT. Characterization dan integration suite membuktikan contract yang tidak dimaksudkan berubah tetap kompatibel; perubahan yang disengaja (typed error, alias `error` 4xx, dan penolakan manipulasi harga) dicatat di test serta dokumentasi API.
 
 ## Urutan Commit yang Disarankan
 

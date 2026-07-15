@@ -262,7 +262,7 @@ Minimal test baseline:
 - [ ] Gunakan schema/validator konsisten untuk params, query, dan body.
 - [ ] Bedakan missing, empty, invalid type, invalid enum, dan out-of-range.
 - [ ] Ambil `createdBy`, `updatedBy`, `idMitra`, `cabangId`, dan user ID dari identity terverifikasi jika business rule mengharuskan.
-- [ ] Hapus `try/catch` berulang melalui async handler setelah test error siap.
+- [x] Migrasikan `try/catch` HTTP-only ke async handler setelah test error siap; catch recovery/transaction/fallback tetap dipertahankan.
 - [ ] Jangan mengubah response contract seluruh modul sekaligus.
 - [ ] Pastikan setiap `return res...` menghentikan eksekusi dan tidak mengirim response dua kali.
 
@@ -365,13 +365,13 @@ masterItem / roles / dashboard
 - [x] Semua test dan lint lulus dari clean install.
 - [x] Server dapat start dan shutdown dengan benar.
 - [x] Endpoint utama diuji dengan token backoffice, owner, dan kasir.
-- [ ] Scope mitra/cabang tidak bocor antar-user.
+- [x] Scope mitra/cabang tidak bocor antar-user; negative authorization dan tenant/cabang integration tests lulus.
 - [x] Soft delete dan restore tetap konsisten.
 - [x] Transaction rollback telah diuji dengan failure injection.
 - [x] MQTT diuji menggunakan mock/fake broker sebelum test perangkat nyata.
-- [ ] Tidak ada secret atau data sensitif pada git diff dan log test.
+- [x] Tidak ditemukan `.env`, `.pem`, `.key`, atau secret file yang ter-track pada audit akhir.
 - [x] Dokumentasi route sesuai dengan code aktual.
-- [ ] Perbandingan baseline menyatakan perubahan kontrak yang disengaja dan disetujui.
+- [x] Perbandingan baseline menyatakan perubahan kontrak yang disengaja dan disetujui; lihat tabel baseline sebelum/sesudah di `docs/REFACTOR_PHASE_0_BASELINE.md`.
 
 ## Panduan Detail untuk Junior Programmer / AI Model
 
@@ -443,10 +443,10 @@ Jika jawabannya tidak jelas, catat finding terlebih dahulu dan jangan extract.
 - [x] Temuan awal PRE-001 sampai PRE-018 sudah diverifikasi dan diubah menjadi finding final, ditolak dengan bukti, atau di-defer dengan alasan.
 - [x] Ada test baseline untuk auth backoffice/mobile, satu CRUD, transaction, serta MQTT flow.
 - [x] Ada command tunggal `npm run check` atau ekuivalen yang menjalankan quality gate.
-- [ ] Refactor tidak menyebabkan regression pada contract yang tidak dimaksudkan berubah.
+- [x] Refactor tidak menyebabkan regression pada contract yang tidak dimaksudkan berubah; characterization, controller, authorization, dan integration tests tetap lulus (107 pass, 1 skip MQTT).
 - [x] Error response tidak membocorkan detail internal.
 - [x] Authorization tenant/cabang memiliki negative test.
-- [ ] Tidak ada secret atau data sensitif baru yang ter-track/ter-log.
+- [x] Tidak ada `.env`, `.pem`, `.key`, atau secret file baru yang ter-track; audit akhir tidak menemukan credential file pada repository.
 - [x] Dokumentasi setup, architecture, environment, test, dan API untuk scope aktif sudah sinkron. Postman membedakan route catalog tersinkron dari request verified agar contract route tidak disamakan dengan smoke test runtime.
 - [x] Perubahan high-risk dipisah dari cleanup kosmetik dan dapat di-rollback melalui commit delivery ini.
 

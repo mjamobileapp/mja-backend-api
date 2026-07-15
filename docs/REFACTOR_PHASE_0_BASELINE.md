@@ -96,6 +96,21 @@ Hanya endpoint yang akan dimigrasikan sebelum Fase 6 dicatat di sini. Modul lain
 - [x] Characterization test melindungi happy path, validation, authorization, dan rollback utama `createTransaksi`.
 - [x] Target test manipulasi harga tersedia dalam status skipped sampai Fase 5.
 
+## Sinkronisasi Baseline Sebelum/Sesudah
+
+Perbandingan ini mengikat baseline Fase 0 dengan bukti checkpoint setelah seluruh fase refactor. Angka test adalah gate repository, sedangkan kontrak endpoint yang sengaja berubah harus tetap dibaca bersama characterization dan integration test terkait.
+
+| Aspek | Sebelum refactor | Sesudah refactor | Bukti akhir |
+|---|---|---|---|
+| Quality gate | Baseline commit `e82f218`, `npm.cmd run check`: 69 pass, 1 skip | Checkpoint implementasi `bf07ad5`, `npm.cmd run check`: 107 pass, 1 skip MQTT | Syntax, ESLint, Postman, quality gate, dan test penuh lulus |
+| Error handling | Pilot/manual handling dan response error belum seragam | Route controller async memakai `catchAsync`; typed 4xx dan generic 5xx diuji | `scripts/check-refactor-quality.js`, `test/catchAsync.test.js`, `test/app.test.js` |
+| Transaction lifecycle | Site transaction masih beragam dan perlu klasifikasi | Transaction standar memakai helper teruji; `startMesin`/`stopMesin` tetap lifecycle MQTT khusus | `test/standardTransactions.model.test.js`, `test/transaction.utils.test.js`, `test/coreDomains.integration.test.js` |
+| Pricing | Nilai harga/subtotal dapat berasal dari payload client | Harga server-authoritative dan manipulasi harga ditolak dengan rollback | `test/transaksi.create.controller.test.js`, `test/coreDomains.integration.test.js`, quality gate |
+| Contract compatibility | Kontrak legacy menjadi acuan characterization | Contract lama dipertahankan kecuali perubahan yang disetujui: typed error, alias `error` 4xx, dan penolakan harga client | Characterization, controller, authorization, dan integration suite lulus |
+| Secret tracking | Audit awal menjadi baseline hygiene | Tidak ditemukan `.env`, `.pem`, `.key`, atau secret file yang ter-track | Audit akhir `git status`/tracked files |
+
+Kesimpulan: tidak ada regression pada contract yang tidak dimaksudkan berubah. Perubahan contract yang disengaja tercatat di test dan dokumentasi API/compatibility.
+
 ## Blocker Sebelum Fase 5
 
 Lengkapi harga `cuci` dan `kering` untuk cabang aktif yang memang menjual layanan tersebut. Jangan fallback ke subtotal dari client.
