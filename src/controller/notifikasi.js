@@ -1,7 +1,8 @@
 const NotifikasiModel = require("../models/notifikasi");
+const { MOBILE_ROLES, normalizeMobileRole } = require("../domain/auth");
 
 const getNotifikasi = async (req, res) => {
-  const userRole = req.user.role;
+  const userRole = normalizeMobileRole(req.user.role);
   const idMitra = req.user.idMitra || req.user.mitra_id;
   const userCabangId = req.user.cabang_id || req.user.cabangId;
   const { filterCabangId } = req.query;
@@ -13,7 +14,7 @@ const getNotifikasi = async (req, res) => {
   }
 
   let cabangId = null;
-  if (userRole === "kasir") {
+  if (userRole === MOBILE_ROLES.KASIR) {
     cabangId = userCabangId;
   }
 
@@ -47,8 +48,8 @@ const getNotifikasi = async (req, res) => {
 const markAsRead = async (req, res) => {
   const { id } = req.params;
   const idMitra = req.user.idMitra || req.user.mitra_id;
-  const role = String(req.user.role || "").toLowerCase();
-  const cabangId = role === "kasir" ? req.user.cabang_id || req.user.cabangId : null;
+  const role = normalizeMobileRole(req.user.role);
+  const cabangId = role === MOBILE_ROLES.KASIR ? req.user.cabang_id || req.user.cabangId : null;
 
   if (!idMitra) {
     return res.status(400).json({

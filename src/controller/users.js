@@ -4,6 +4,7 @@ const { generateToken, TOKEN_TYPES } = require("../utils/jwt");
 const EmailService = require("../utils/email");
 const { sendResetPasswordAccepted } = require("../utils/publicAuth");
 const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
+const { ACCOUNT_TYPES } = require("../domain/auth");
 
 const getAllUsers = async (req, res) => {
   const [data] = await UsersModel.getAllUser(req.query.status);
@@ -70,7 +71,7 @@ const resetPassword = async (req, res) => {
   try {
     const result = await UsersModel.resetPassword(req.params.email);
     try {
-      await EmailService.sendResetPasswordEmail({ to: result.email, username: result.username, role: "backoffice" });
+      await EmailService.sendResetPasswordEmail({ to: result.email, username: result.username, role: ACCOUNT_TYPES.BACKOFFICE });
     } catch (emailError) {
       console.error("Gagal mengirim email reset password backoffice:", emailError.message);
     }

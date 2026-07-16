@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   findDirectServerErrorResponses,
+  findMagicStringViolations,
   findRethrowOnlyCatches,
 } = require("./refactor-quality-rules");
 
@@ -94,6 +95,7 @@ const getJavaScriptFiles = (directory) => {
 for (const fullPath of getJavaScriptFiles(srcDir)) {
   const relativePath = path.relative(path.join(__dirname, ".."), fullPath);
   violations.push(...findRethrowOnlyCatches(fs.readFileSync(fullPath, "utf8"), relativePath));
+  violations.push(...findMagicStringViolations(fs.readFileSync(fullPath, "utf8"), relativePath));
 }
 
 if (violations.length > 0) {

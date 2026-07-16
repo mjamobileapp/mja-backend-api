@@ -1,5 +1,6 @@
 const TransaksiModel = require("../models/transaksi");
 const { normalizeTransaksiPayload } = require("../domain/transaksi");
+const { MACHINE_CONTROL_ACTOR_TYPES } = require("../domain/machineControl");
 const TransaksiService = require("../services/transaksi");
 const { createHttpError } = require("../utils/httpError");
 
@@ -12,14 +13,14 @@ const getMachineControlContext = async (req) => {
   let idMitra;
   let cabangId;
 
-  if (actor?.type === "owner") {
+  if (actor?.type === MACHINE_CONTROL_ACTOR_TYPES.OWNER) {
     idMitra = Number(req.user.idMitra);
     cabangId = Number(req.body.cabangId);
 
     if (req.body.idMitra !== undefined && Number(req.body.idMitra) !== idMitra) {
       throw createHttpError(403, "Owner hanya dapat mengontrol mesin mitra sendiri", "BRANCH_SCOPE_FORBIDDEN");
     }
-  } else if (actor?.type === "backoffice") {
+  } else if (actor?.type === MACHINE_CONTROL_ACTOR_TYPES.BACKOFFICE) {
     idMitra = Number(req.body.idMitra);
     cabangId = Number(req.body.cabangId);
   } else {
@@ -41,7 +42,7 @@ const getMachineControlContext = async (req) => {
   }
 
   const resolvedActor = actor || {
-    type: "kasir",
+    type: MACHINE_CONTROL_ACTOR_TYPES.KASIR,
     id: req.user?.id,
     username: req.user?.username,
   };
@@ -53,7 +54,7 @@ const getMachineControlContext = async (req) => {
   return {
     idMitra,
     cabangId,
-    kasirId: resolvedActor.type === "kasir" ? Number(resolvedActor.id) : null,
+    kasirId: resolvedActor.type === MACHINE_CONTROL_ACTOR_TYPES.KASIR ? Number(resolvedActor.id) : null,
     actor: resolvedActor,
   };
 };

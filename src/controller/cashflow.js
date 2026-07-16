@@ -1,13 +1,14 @@
 const CashflowModel = require("../models/cashflow");
 const { getMissingRequiredFields } = require("../utils/validation");
+const { MOBILE_ROLES, normalizeMobileRole } = require("../domain/auth");
 
 const getRequestDateFilter = (req) => req.query.filter ?? req.query.periode ?? req.query.tanggal ?? "";
 const getExpenseScope = (req, res) => {
   const idMitra = req.user?.idMitra;
-  const role = String(req.user?.role || "").toLowerCase();
+  const role = normalizeMobileRole(req.user?.role);
   if (!idMitra) { res.status(401).json({ error: "Token tidak valid" }); return null; }
-  if (role === "owner") return { idMitra, cabangId: null, role };
-  if (role === "kasir") {
+  if (role === MOBILE_ROLES.OWNER) return { idMitra, cabangId: null, role };
+  if (role === MOBILE_ROLES.KASIR) {
     const cabangId = req.user?.cabang_id || req.user?.cabangId;
     if (!cabangId) { res.status(403).json({ error: "Cabang kasir tidak ditemukan di token" }); return null; }
     return { idMitra, cabangId, role };
@@ -32,7 +33,7 @@ const getPendapatan = async (req, res) => {
 const getListPengeluaran = async (req, res) => {
   const scope = getExpenseScope(req, res); if (!scope) return;
   const requested = req.query.cabangId; const filter = getRequestDateFilter(req);
-  if (scope.role === "kasir") {
+  if (scope.role === MOBILE_ROLES.KASIR) {
     if (requested && Number(requested) !== Number(scope.cabangId)) return res.status(403).json({ error: "Kasir hanya dapat mengakses pengeluaran cabangnya sendiri" });
     return res.status(200).json({ success: "Get Data List Expense Success", data: await CashflowModel.getListPengeluaran(scope.cabangId, scope.idMitra, filter) });
   }

@@ -4,6 +4,8 @@ const { createHttpError } = require("../utils/httpError");
 const { publishAndWaitAck } = require("../utils/mqttClient");
 const { withTransaction } = require("../utils/transaction");
 const { calculateLineSubtotal, sumMoney } = require("../domain/transaksi");
+const { MACHINE_CONTROL_ACTOR_TYPES } = require("../domain/machineControl");
+const { MACHINE_STATUSES, normalizeMachineStatus } = require("../domain/mesin");
 
 const jenisMesinToLayanan = {
   WASHER: "cuci",
@@ -274,7 +276,7 @@ const insertLogMesin = async (
   connection,
   { idMitra, cabangId, mesinId, kasirId, actor, invoiceNumber, statusPerintah, errorMessage = null }
 ) => {
-  const auditActor = actor || { type: "kasir", id: kasirId, username: null };
+  const auditActor = actor || { type: MACHINE_CONTROL_ACTOR_TYPES.KASIR, id: kasirId, username: null };
   await connection.execute(
     `INSERT INTO tbl_log_mesin (
       idMitra,
@@ -340,7 +342,7 @@ const getMesinForStart = async (connection, { mesinId, idMitra, cabangId }) => {
   }
 
   const mesin = rows[0];
-  if (String(mesin.status).toUpperCase() !== "READY") {
+  if (normalizeMachineStatus(mesin.status) !== MACHINE_STATUSES.READY) {
     throw createHttpError(409, "Mesin tidak tersedia", "MACHINE_NOT_READY");
   }
 
@@ -375,7 +377,7 @@ const getMesinForStop = async (connection, { mesinId, idMitra, cabangId }) => {
   }
 
   const mesin = rows[0];
-  if (String(mesin.status).toUpperCase() !== "IN_USE") {
+  if (normalizeMachineStatus(mesin.status) !== MACHINE_STATUSES.IN_USE) {
     throw createHttpError(409, "Mesin tidak sedang digunakan", "MACHINE_NOT_IN_USE");
   }
 
@@ -508,9 +510,9 @@ const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceN
 
     await connection.execute(
       `UPDATE tbl_mesin_detail
-       SET status = 'IN_USE'
+       SET status = ?
        WHERE id = ?`,
-      [mesinId]
+      [MACHINE_STATUSES.IN_USE, mesinId]
     );
 
     await insertLogMesin(connection, {
@@ -597,9 +599,9 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
 
     await connection.execute(
       `UPDATE tbl_mesin_detail
-       SET status = 'READY'
+       SET status = ?
        WHERE id = ?`,
-      [mesinId]
+      [MACHINE_STATUSES.READY, mesinId]
     );
 
     await insertLogMesin(connection, {

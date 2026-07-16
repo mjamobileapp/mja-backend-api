@@ -6,6 +6,7 @@ const { generateToken, TOKEN_TYPES } = require("../utils/jwt");
 const { getMissingRequiredFields } = require("../utils/validation");
 const { getRequiredJwtSecret } = require("../config/environment");
 const { createHttpError } = require("../utils/httpError");
+const { ACCOUNT_TYPES, MOBILE_ROLES, normalizeMobileRole } = require("../domain/auth");
 
 const loginUser = async (req, res) => {
   const { body } = req;
@@ -58,11 +59,11 @@ const loginUser = async (req, res) => {
       username: user.username,
       idMitra: user.idMitra,
       cabangId: user.cabangId || null,
-      id_role: user.role === "owner" ? 1 : 2, // Mapping role ke id_role
+      id_role: normalizeMobileRole(user.role) === MOBILE_ROLES.OWNER ? 1 : 2, // Mapping role ke id_role
     }, TOKEN_TYPES.MOBILE);
 
     // 6. Proses Role Kasir
-    if (user.role === "kasir") {
+    if (normalizeMobileRole(user.role) === MOBILE_ROLES.KASIR) {
       // a. Insert absensi
       await UserMobileModel.createAbsensi(user.id, user.cabangId);
 
@@ -132,7 +133,7 @@ const activateAccount = async (req, res) => {
       const decoded = jwt.verify(token, getRequiredJwtSecret());
 
       const { username, role } = decoded;
-      const isBackoffice = role === "backoffice";
+      const isBackoffice = role === ACCOUNT_TYPES.BACKOFFICE;
 
       // 5. Cari user di database
       let user;
@@ -254,7 +255,7 @@ const logoutUser = async (req, res) => {
     }
 
     // Proses khusus jika role = kasir
-    if (user.role === "kasir") {
+    if (normalizeMobileRole(user.role) === MOBILE_ROLES.KASIR) {
       // a. Input data logout ke tbl_absensi
       await UserMobileModel.recordAbsensiLogout(user.id, user.cabangId);
 

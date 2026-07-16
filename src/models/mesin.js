@@ -1,6 +1,7 @@
 const dbPool = require("../config/database");
 const { withTransaction } = require("../utils/transaction");
 const { createHttpError } = require("../utils/httpError");
+const { MACHINE_STATUSES } = require("../domain/mesin");
 
 const createNewMesin = async (body, createdBy = null) => {
   const { idMitra, cabangId, espId, washer, dryer } = body;
@@ -64,8 +65,8 @@ const createNewMesin = async (body, createdBy = null) => {
     if (washer === 1) {
       const [detailWasher] = await connection.execute(
         `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, status) 
-         VALUES (?, 'WASHER', 'READY')`,
-        [idMesinMaster]
+         VALUES (?, 'WASHER', ?)`,
+        [idMesinMaster, MACHINE_STATUSES.READY]
       );
       washerResult = { id: detailWasher.insertId, status: "Ready" };
     }
@@ -75,8 +76,8 @@ const createNewMesin = async (body, createdBy = null) => {
     if (dryer === 1) {
       const [detailDryer] = await connection.execute(
         `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, status) 
-         VALUES (?, 'DRYER', 'READY')`,
-        [idMesinMaster]
+         VALUES (?, 'DRYER', ?)`,
+        [idMesinMaster, MACHINE_STATUSES.READY]
       );
       dryerResult = { id: detailDryer.insertId, status: "Ready" };
     }
@@ -131,8 +132,8 @@ const updateMesin = async (idMesinMaster, body, updatedBy) => {
         } else {
           // KONDISI B: Detail belum ada -> Lakukan INSERT
           const [result] = await connection.execute(
-            `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, status) VALUES (?, ?, 'READY')`,
-            [idMesinMaster, jenis]
+            `INSERT INTO tbl_mesin_detail (idMesinMaster, jenisMesin, status) VALUES (?, ?, ?)`,
+            [idMesinMaster, jenis, MACHINE_STATUSES.READY]
           );
           currentId = result.insertId;
         }
@@ -169,11 +170,11 @@ const deleteMesin = async (id, updatedBy) => {
                 SELECT 1
                 FROM tbl_mesin_detail d
                 WHERE d.idMesinMaster = m.id
-                  AND UPPER(d.status) = 'IN_USE'
-              ) AS isInUse
+                  AND UPPER(d.status) = ?
+               ) AS isInUse
        FROM tbl_mesin_master m
        WHERE m.id = ? AND m.statusAktif = 1`,
-      [id]
+      [MACHINE_STATUSES.IN_USE, id]
     );
 
     if (existingMesin.length === 0) {
@@ -289,7 +290,7 @@ const getMesinByIdMitra = async (idMitra) => {
         const detailMesin = {
           idDb: row.detailId,
           status: row.status,
-          waktuSelesai: row.status === 'IN_USE' ? row.waktuSelesai : null,
+          waktuSelesai: row.status === MACHINE_STATUSES.IN_USE ? row.waktuSelesai : null,
         };
 
         if (row.jenisMesin === 'WASHER') {
@@ -338,7 +339,7 @@ const getMesinByIdCabang = async (cabangId) => {
         const detailMesin = {
           idDb: row.detailId,
           status: row.status,
-          waktuSelesai: row.status === 'IN_USE' ? row.waktuSelesai : null,
+          waktuSelesai: row.status === MACHINE_STATUSES.IN_USE ? row.waktuSelesai : null,
         };
 
         if (row.jenisMesin === 'WASHER') {
@@ -464,7 +465,7 @@ const getListMesinMobile = async (cabangId, idMitra, filter) => {
         const detailMesin = {
           idDb: row.detailId,
           status: row.status,
-          waktuSelesai: row.status === 'IN_USE' ? row.waktuSelesai : null,
+          waktuSelesai: row.status === MACHINE_STATUSES.IN_USE ? row.waktuSelesai : null,
           enable: !normalizedFilter || normalizedFilter === jenisMesin ? 1 : 0,
         };
 
@@ -564,14 +565,14 @@ const setMaintenance = async (idMesinDetail, updatedBy) => {
     // Update status menjadi OFFLINE
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     await dbPool.execute(
-      `UPDATE tbl_mesin_detail SET status = 'OFFLINE' WHERE id = ?`,
-      [idMesinDetail]
+      `UPDATE tbl_mesin_detail SET status = ? WHERE id = ?`,
+      [MACHINE_STATUSES.OFFLINE, idMesinDetail]
     );
 
     return {
       id: String(idMesinDetail),
       jenisMesin: existingDetail[0].jenisMesin,
-      status: "OFFLINE",
+      status: MACHINE_STATUSES.OFFLINE,
     };
 };
 
@@ -590,14 +591,14 @@ const setReady = async (idMesinDetail, updatedBy) => {
 
     // Update status menjadi READY
     await dbPool.execute(
-      `UPDATE tbl_mesin_detail SET status = 'READY', waktuSelesai = NULL WHERE id = ?`,
-      [idMesinDetail]
+      `UPDATE tbl_mesin_detail SET status = ?, waktuSelesai = NULL WHERE id = ?`,
+      [MACHINE_STATUSES.READY, idMesinDetail]
     );
 
     return {
       id: String(idMesinDetail),
       jenisMesin: existingDetail[0].jenisMesin,
-      status: "READY",
+      status: MACHINE_STATUSES.READY,
     };
 };
 

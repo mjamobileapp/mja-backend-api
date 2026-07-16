@@ -3,6 +3,7 @@ const EmailService = require("../utils/email");
 const { sendResetPasswordAccepted } = require("../utils/publicAuth");
 const { formatTanggalWIB } = require("../utils/date");
 const { getMissingRequiredFields } = require("../utils/validation");
+const { MOBILE_ROLES, normalizeMobileRole } = require("../domain/auth");
 
 const createNewUserKasir = async (req, res) => {
   const { body } = req;
@@ -12,7 +13,7 @@ const createNewUserKasir = async (req, res) => {
   if (!idMitra || !usernameToken) return res.status(400).json({ error: "idMitra atau username tidak ditemukan di token" });
   const result = await KasirModel.createNewUserKasir({ ...body, idMitra, createdBy: usernameToken });
   try {
-    await EmailService.sendUserMobileCredentialEmail({ to: result.email, username: result.username, role: "kasir" });
+    await EmailService.sendUserMobileCredentialEmail({ to: result.email, username: result.username, role: MOBILE_ROLES.KASIR });
   } catch (emailError) { console.error("Gagal mengirim email create kasir:", emailError.message); }
   return res.status(201).json({ message: "CREATE new Kasir success", data: result });
 };
@@ -42,7 +43,7 @@ const changePassword = async (req, res) => {
 const resetPassword = async (req, res) => {
   try {
     const result = await KasirModel.resetPassword(req.params.email);
-    try { await EmailService.sendResetPasswordEmail({ to: result.email, username: result.username, role: "kasir" }); }
+    try { await EmailService.sendResetPasswordEmail({ to: result.email, username: result.username, role: MOBILE_ROLES.KASIR }); }
     catch (emailError) { console.error("Gagal mengirim email reset password:", emailError.message); }
   } catch (error) { console.error("Gagal memproses permintaan reset password kasir:", error.message); }
   return sendResetPasswordAccepted(res);
@@ -51,15 +52,15 @@ const resetPassword = async (req, res) => {
 const getAbsensiKasir = async (req, res) => {
   const { tanggal, namaKasir, cabangId: requestedCabangId } = req.query;
   const idMitra = req.user?.idMitra;
-  const role = String(req.user?.role || "").toLowerCase();
+  const role = normalizeMobileRole(req.user?.role);
   const tokenCabangId = req.user?.cabang_id || req.user?.cabangId;
   if (!idMitra) return res.status(403).json({ error: "idMitra tidak ditemukan di token" });
   let cabangId;
-  if (role === "kasir") {
+  if (role === MOBILE_ROLES.KASIR) {
     if (!tokenCabangId) return res.status(403).json({ error: "Cabang kasir tidak ditemukan di token" });
     if (requestedCabangId && Number(requestedCabangId) !== Number(tokenCabangId)) return res.status(403).json({ error: "Kasir hanya dapat mengakses absensi cabangnya sendiri" });
     cabangId = tokenCabangId;
-  } else if (role === "owner") {
+  } else if (role === MOBILE_ROLES.OWNER) {
     if (!requestedCabangId) return res.status(400).json({ error: "Parameter cabangId diperlukan untuk owner" });
     if (!await KasirModel.isCabangOwnedByMitra(requestedCabangId, idMitra)) return res.status(403).json({ error: "Cabang tidak dapat diakses oleh user owner mitra ini" });
     cabangId = requestedCabangId;

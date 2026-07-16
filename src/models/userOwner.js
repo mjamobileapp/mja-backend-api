@@ -2,6 +2,7 @@ const dbPool = require("../config/database");
 const bcrypt = require("bcrypt");
 const { createHttpError } = require("../utils/httpError");
 const { generateAndHashPassword } = require("../utils/password");
+const { MOBILE_ROLES } = require("../domain/auth");
 
 const createNewUserOwner = async (body) => {
     const {
@@ -77,7 +78,7 @@ const createNewUserOwner = async (body) => {
     const values = [
       username,
       hashedPassword,
-      "owner",
+      MOBILE_ROLES.OWNER,
       idMitra,
       namaLengkap,
       noTelp,
@@ -92,7 +93,7 @@ const createNewUserOwner = async (body) => {
     // 6. Return data sesuai spesifikasi response success
     return {
       username,
-      role: "owner",
+      role: MOBILE_ROLES.OWNER,
       idMitra,
       namaLengkap,
       noTelp,
@@ -253,13 +254,13 @@ const changePassword = async (id, body, updatedBy) => {
 const resetPassword = async (email) => {
     // 1. Validasi eksistensi email
     const [rows] = await dbPool.execute(
-      "SELECT username, email FROM tbl_users_mobile WHERE email = ? AND role = 'owner' AND statusAktif = 1",
-      [email]
+      "SELECT username, email FROM tbl_users_mobile WHERE email = ? AND role = ? AND statusAktif = 1",
+      [email, MOBILE_ROLES.OWNER]
     );
 
     if (rows.length === 0) throw createHttpError(404, "data not found", "OWNER_NOT_FOUND");
 
-    return { username: rows[0].username, email: rows[0].email, role: "owner" };
+    return { username: rows[0].username, email: rows[0].email, role: MOBILE_ROLES.OWNER };
 };
 
 module.exports = {

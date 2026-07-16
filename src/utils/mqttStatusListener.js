@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const { connectClient, isMqttDebugEnabled } = require("./mqttClient");
+const { MACHINE_STATUSES, normalizeMachineStatus } = require("../domain/mesin");
 
 const STATUS_TOPIC = "modul/+/status";
 let statusListenerClient = null;
@@ -25,7 +26,7 @@ const parseStatusPayload = (message) => {
 };
 
 const updateMesinReadyByEspId = async ({ espId, machineType = null }) => {
-  const params = [espId];
+  const params = [MACHINE_STATUSES.READY, espId];
   let machineFilter = "";
 
   if (machineType) {
@@ -36,7 +37,7 @@ const updateMesinReadyByEspId = async ({ espId, machineType = null }) => {
   const [result] = await dbPool.execute(
     `UPDATE tbl_mesin_detail d
      JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
-     SET d.status = 'READY'
+     SET d.status = ?
      WHERE m.espId = ?
        AND m.statusAktif = 1${machineFilter}`,
     params
@@ -51,7 +52,7 @@ const createStatusMessageHandler = ({ updateReady = updateMesinReadyByEspId, log
     if (!topicData) return;
 
     const payload = parseStatusPayload(message);
-    if (!payload || String(payload.status || "").toUpperCase() !== "READY") {
+    if (!payload || normalizeMachineStatus(payload.status) !== MACHINE_STATUSES.READY) {
       return;
     }
 

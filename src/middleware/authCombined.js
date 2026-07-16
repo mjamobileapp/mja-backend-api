@@ -1,6 +1,8 @@
 const { verifyBackofficeToken } = require("./auth");
 const { verifyMobileToken } = require("./authMobile");
 const { isTypedHttpError } = require("../utils/httpError");
+const { MOBILE_ROLES, normalizeMobileRole } = require("../domain/auth");
+const { MACHINE_CONTROL_ACTOR_TYPES } = require("../domain/machineControl");
 
 const selectAuthError = (backofficeError, mobileError) => {
   if (!isTypedHttpError(backofficeError)) return backofficeError;
@@ -32,7 +34,7 @@ const authenticateBackofficeOrOwner = (options = {}) => {
         const user = await verifyMobileToken(req);
         const requestedMitraId = Number(req.params[mitraParam]);
 
-        if (user.role !== "owner") {
+        if (normalizeMobileRole(user.role) !== MOBILE_ROLES.OWNER) {
           return res.status(403).json({
             success: false,
             code: "FORBIDDEN",
@@ -67,10 +69,10 @@ const authenticateBackofficeOrOwnerKasirCabang = (options = {}) => {
     } catch (backofficeError) {
       try {
         const user = await verifyMobileToken(req);
-        const role = user.role ? String(user.role).toLowerCase() : null;
+        const role = normalizeMobileRole(user.role) || null;
         const requestedCabangId = Number(req.params[cabangParam]);
 
-        if (role !== "owner" && role !== "kasir") {
+        if (role !== MOBILE_ROLES.OWNER && role !== MOBILE_ROLES.KASIR) {
           return res.status(403).json({
             success: false,
             code: "FORBIDDEN",
@@ -78,7 +80,7 @@ const authenticateBackofficeOrOwnerKasirCabang = (options = {}) => {
           });
         }
 
-        if (role === "kasir" && Number(user.cabangId) !== requestedCabangId) {
+        if (role === MOBILE_ROLES.KASIR && Number(user.cabangId) !== requestedCabangId) {
           return res.status(403).json({
             success: false,
             code: "FORBIDDEN",
@@ -103,9 +105,9 @@ const authenticateBackofficeOrOwnerKasir = () => {
     } catch (backofficeError) {
       try {
         const user = await verifyMobileToken(req);
-        const role = user.role ? String(user.role).toLowerCase() : null;
+        const role = normalizeMobileRole(user.role) || null;
 
-        if (role !== "owner" && role !== "kasir") {
+        if (role !== MOBILE_ROLES.OWNER && role !== MOBILE_ROLES.KASIR) {
           return res.status(403).json({
             success: false,
             code: "FORBIDDEN",
@@ -128,7 +130,7 @@ const authenticateBackofficeOrOwnerMachineControl = () => {
       const user = await verifyBackofficeToken(req);
       req.user = user;
       req.machineControlActor = {
-        type: "backoffice",
+        type: MACHINE_CONTROL_ACTOR_TYPES.BACKOFFICE,
         id: user.id,
         username: user.username,
       };
@@ -137,7 +139,7 @@ const authenticateBackofficeOrOwnerMachineControl = () => {
       try {
         const user = await verifyMobileToken(req);
 
-        if (String(user.role || "").toLowerCase() !== "owner") {
+        if (normalizeMobileRole(user.role) !== MOBILE_ROLES.OWNER) {
           return res.status(403).json({
             success: false,
             code: "FORBIDDEN",
@@ -147,7 +149,7 @@ const authenticateBackofficeOrOwnerMachineControl = () => {
 
         req.user = user;
         req.machineControlActor = {
-          type: "owner",
+          type: MACHINE_CONTROL_ACTOR_TYPES.OWNER,
           id: user.id,
           username: user.username,
         };

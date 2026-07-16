@@ -1,6 +1,7 @@
 const SettingStokModel = require("../models/settingStokMitra");
+const { MOBILE_ROLES, normalizeMobileRole } = require("../domain/auth");
 
-const isOwner = (user) => String(user?.role || "").toLowerCase() === "owner";
+const isOwner = (user) => normalizeMobileRole(user?.role) === MOBILE_ROLES.OWNER;
 const ownerOnly = (req, res, message) => {
   if (!isOwner(req.user)) { res.status(403).json({ message }); return false; }
   return true;

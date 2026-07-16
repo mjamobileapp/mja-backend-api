@@ -2,6 +2,7 @@ const dbPool = require("../config/database");
 const bcrypt = require("bcrypt");
 const { createHttpError } = require("../utils/httpError");
 const { generateAndHashPassword } = require("../utils/password");
+const { MOBILE_ROLES } = require("../domain/auth");
 const { getJakartaSqlDate, getJakartaSqlTime } = require("../utils/date");
 
 const createNewUserKasir = async (body) => {
@@ -95,7 +96,7 @@ const createNewUserKasir = async (body) => {
     const values = [
       username,
       hashedPassword,
-      "kasir",
+      MOBILE_ROLES.KASIR,
       idMitra,
       cabangId,
       namaLengkap,
@@ -111,7 +112,7 @@ const createNewUserKasir = async (body) => {
     // 6. Return data sesuai spesifikasi response success
     return {
       username,
-      role: "kasir",
+      role: MOBILE_ROLES.KASIR,
       idMitra,
       cabangId,
       namaLengkap,
@@ -124,9 +125,9 @@ const createNewUserKasir = async (body) => {
 };
 
 const getAllUserKasir = async (status, idMitra) => {
-    let SQLQuery = "SELECT * FROM tbl_users_mobile WHERE role = 'kasir' AND idMitra = ?";
+    let SQLQuery = "SELECT * FROM tbl_users_mobile WHERE role = ? AND idMitra = ?";
     let conditions = [];
-    let values = [idMitra];
+    let values = [MOBILE_ROLES.KASIR, idMitra];
 
     if (status === "all") {
       // No status filter
@@ -152,8 +153,8 @@ const getAllUserKasir = async (status, idMitra) => {
 
 const getUserKasirById = async (id, idMitra) => {
     const [user] = await dbPool.execute(
-      "SELECT * FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir'",
-      [id, idMitra]
+      "SELECT * FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = ?",
+      [id, idMitra, MOBILE_ROLES.KASIR]
     );
     if (user.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
     delete user[0].password;
@@ -173,8 +174,8 @@ const updateUserKasir = async (id, body, idMitra) => {
 
     // 1. Cek eksistensi
     const [existing] = await dbPool.execute(
-      "SELECT * FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir'",
-      [id, idMitra]
+      "SELECT * FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = ?",
+      [id, idMitra, MOBILE_ROLES.KASIR]
     );
     if (existing.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
@@ -223,8 +224,8 @@ const updateUserKasir = async (id, body, idMitra) => {
 
 const deleteUserKasir = async (id, updatedBy, idMitra) => {
     const [existing] = await dbPool.execute(
-      "SELECT id FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 1",
-      [id, idMitra]
+      "SELECT id FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = ? AND statusAktif = 1",
+      [id, idMitra, MOBILE_ROLES.KASIR]
     );
     if (existing.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
@@ -236,8 +237,8 @@ const deleteUserKasir = async (id, updatedBy, idMitra) => {
 
 const restoreUserKasir = async (id, updatedBy, idMitra) => {
     const [existing] = await dbPool.execute(
-      "SELECT id FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 0",
-      [id, idMitra]
+      "SELECT id FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = ? AND statusAktif = 0",
+      [id, idMitra, MOBILE_ROLES.KASIR]
     );
     if (existing.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
@@ -250,8 +251,8 @@ const restoreUserKasir = async (id, updatedBy, idMitra) => {
 const resetDeviceId = async (id, body, updatedBy, idMitra) => {
     // 1. Validasi eksistensi berdasarkan id dan mitra
     const [existing] = await dbPool.execute(
-      "SELECT username FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 1",
-      [id, idMitra]
+      "SELECT username FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = ? AND statusAktif = 1",
+      [id, idMitra, MOBILE_ROLES.KASIR]
     );
 
     if (existing.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
@@ -268,8 +269,8 @@ const changePassword = async (id, body, updatedBy, idMitra) => {
 
     // 1. Ambil data user termasuk password hashed
     const [rows] = await dbPool.execute(
-      "SELECT username, password FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = 'kasir' AND statusAktif = 1",
-      [id, idMitra]
+      "SELECT username, password FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = ? AND statusAktif = 1",
+      [id, idMitra, MOBILE_ROLES.KASIR]
     );
 
     if (rows.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
@@ -296,8 +297,8 @@ const changePassword = async (id, body, updatedBy, idMitra) => {
 const resetPassword = async (email) => {
     // 1. Validasi eksistensi email
     const [rows] = await dbPool.execute(
-      "SELECT username, email FROM tbl_users_mobile WHERE email = ? AND role = 'kasir' AND statusAktif = 1",
-      [email]
+      "SELECT username, email FROM tbl_users_mobile WHERE email = ? AND role = ? AND statusAktif = 1",
+      [email, MOBILE_ROLES.KASIR]
     );
 
     if (rows.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");

@@ -2,6 +2,7 @@ const nodemailer = require("nodemailer");
 const EmailTemplateModel = require("../models/emailTemplate");
 const jwt = require("jsonwebtoken");
 const { getEmailSendTimeoutMs, getRequiredJwtSecret } = require("../config/environment");
+const { ACCOUNT_TYPES, MOBILE_ROLES } = require("../domain/auth");
 
 const getTransporter = () => {
   const requiredConfig = [
@@ -86,7 +87,7 @@ const sendUserMobileCredentialEmail = async ({ to, username, role }) => {
   const transporter = getTransporter();
   
   // Pilih template berdasarkan role
-  const kodeTemplate = role === "kasir" ? "CREATE_USER_KASIR" : "CREATE_USER_OWNER";
+  const kodeTemplate = role === MOBILE_ROLES.KASIR ? "CREATE_USER_KASIR" : "CREATE_USER_OWNER";
   const template = await EmailTemplateModel.getTemplateByKode(kodeTemplate);
 
   if (!template) throw new Error(`Email template ${kodeTemplate} not found`);
@@ -119,9 +120,9 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
   
   // Pilih template berdasarkan role
   let kodeTemplate;
-  if (role === "backoffice") {
+  if (role === ACCOUNT_TYPES.BACKOFFICE) {
     kodeTemplate = "RESET_PASSWORD_BACKOFFICE";
-  }else if (role === "kasir") {
+  }else if (role === ACCOUNT_TYPES.KASIR) {
     kodeTemplate = "RESET_PASSWORD_KASIR";
   } else {
     kodeTemplate = "RESET_PASSWORD_OWNER"; // Default ke owner jika role tidak dikenali

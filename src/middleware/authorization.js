@@ -1,4 +1,5 @@
 const dbPool = require("../config/database");
+const { MOBILE_ROLES, normalizeMobileRole } = require("../domain/auth");
 
 const sendForbiddenResponse = (res) =>
   res.status(403).json({
@@ -37,9 +38,9 @@ const requireBackofficeSelfOrMenuAccess = (menuUrl, usernameParam = "email") => 
 };
 
 const requireMobileOwner = (req, res, next) => {
-  const role = String(req.user?.role || "").toLowerCase();
+  const role = normalizeMobileRole(req.user?.role);
 
-  if (role !== "owner") {
+  if (role !== MOBILE_ROLES.OWNER) {
     return res.status(403).json({
       success: false,
       code: "FORBIDDEN",
@@ -51,9 +52,9 @@ const requireMobileOwner = (req, res, next) => {
 };
 
 const requireMobileKasir = (req, res, next) => {
-  const role = String(req.user?.role || "").toLowerCase();
+  const role = normalizeMobileRole(req.user?.role);
 
-  if (role !== "kasir") {
+  if (role !== MOBILE_ROLES.KASIR) {
     return res.status(403).json({
       success: false,
       code: "FORBIDDEN",
