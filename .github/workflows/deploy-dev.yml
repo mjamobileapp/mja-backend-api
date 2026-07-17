@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - dev
+  workflow_dispatch: # Baris ajaib untuk memunculkan tombol manual
 
 jobs:
   deploy:
@@ -20,6 +21,8 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script: |
-            echo "Memulai eksekusi dari GitHub Actions..."
+            echo "Memulai eksekusi dari GitHub Actions untuk branch: ${{ github.ref_name }}..."
             cd /var/www/mjaproject/backend/
-            ./deploy-dev.sh
+
+            # Menjalankan script dan mengirimkan nama branch sebagai parameter
+            ./deploy-dev.sh ${{ github.ref_name }}
