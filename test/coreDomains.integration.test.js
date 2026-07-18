@@ -652,6 +652,7 @@ test("core domains complete their HTTP flows on the isolated integration schema"
         token: ownerToken(),
       });
       const ownerKasirAbsensi = await request(server, { path: "/api/kasir/absensi", token: ownerToken() });
+      const ownerPendingUnknownBranch = await request(server, { path: "/api/kasir/transaksi/pending?cabangId=999999999", token: ownerToken() });
       const ownerKasirHistory = await request(server, { path: "/api/kasir/history/transaksi", token: ownerToken() });
       const ownerKasirTransaction = await request(server, { path: "/api/kasir/transaksi", token: ownerToken() });
 
@@ -670,6 +671,7 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       ]) {
         assert.equal(response.statusCode, 403);
       }
+      assert.equal(ownerPendingUnknownBranch.statusCode, 403);
       assert.equal(kasirHarga.statusCode, 200);
       const hargaAddon = kasirHarga.body.data.find(
         (row) => row.jenisLayanan === "addon_barang" && Number(row.itemId) === Number(fixture.itemId)

@@ -100,6 +100,13 @@ const getPendingTransaksi = async (req, res) => {
     });
   }
 
+  if (role === MOBILE_ROLES.OWNER && !await TransaksiModel.isActiveCabangForMitra(idMitra, cabangId)) {
+    return res.status(403).json({
+      error: "Cabang tidak sesuai dengan mitra atau tidak aktif",
+      code: "BRANCH_SCOPE_FORBIDDEN",
+    });
+  }
+
   const rows = await TransaksiModel.getPendingTransaksi(cabangId, idMitra);
 
     const data = rows.map((row) => {
