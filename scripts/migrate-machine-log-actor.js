@@ -6,6 +6,7 @@ const columnsToAdd = [
   ["actorType", "VARCHAR(20) NULL AFTER kasirId"],
   ["actorId", "BIGINT NULL AFTER actorType"],
   ["actorUsername", "VARCHAR(255) NULL AFTER actorId"],
+  ["commandType", "VARCHAR(3) NULL AFTER invoiceNumber"],
 ];
 
 const migrateMachineLogActor = async (database = dbPool) => {

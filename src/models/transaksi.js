@@ -274,7 +274,7 @@ const getOfficialPrice = async (connection, { idMitra, cabangId, jenisLayanan, i
 
 const insertLogMesin = async (
   connection,
-  { idMitra, cabangId, mesinId, kasirId, actor, invoiceNumber, statusPerintah, errorMessage = null }
+  { idMitra, cabangId, mesinId, kasirId, actor, invoiceNumber, commandType, statusPerintah, errorMessage = null }
 ) => {
   const auditActor = actor || { type: MACHINE_CONTROL_ACTOR_TYPES.KASIR, id: kasirId, username: null };
   await connection.execute(
@@ -287,10 +287,11 @@ const insertLogMesin = async (
       actorId,
       actorUsername,
       invoiceNumber,
+      commandType,
       statusPerintah,
       errorMessage,
       waktuLog
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
     [
       idMitra,
       cabangId,
@@ -300,6 +301,7 @@ const insertLogMesin = async (
       auditActor.id,
       auditActor.username || null,
       invoiceNumber,
+      commandType,
       statusPerintah,
       errorMessage,
     ]
@@ -457,11 +459,12 @@ const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceN
     }
 
     const requestId = `${invoiceNumber}-${mesinId}-${Date.now()}`;
+    const commandType = "ON";
     const espId = normalizeEspId(mesin.espId);
     const topic = `modul/${espId}/${mesin.jenisMesin}/on`;
     const ackTopic = `modul/${espId}/${mesin.jenisMesin}/ack`;
     const mqttPayload = {
-      command: "ON",
+      command: commandType,
       requestId,
     };
 
@@ -492,6 +495,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceN
         kasirId,
         actor,
         invoiceNumber,
+        commandType,
         statusPerintah: "failed",
         errorMessage: mqttError.message,
       });
@@ -522,6 +526,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceN
       kasirId,
       actor,
       invoiceNumber,
+      commandType,
       statusPerintah: "success",
     });
 
@@ -553,11 +558,12 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
 
     const mesin = await getMesinForStop(connection, { mesinId, idMitra, cabangId });
     const requestId = `${invoiceNumber || "NO-INVOICE"}-${mesinId}-OFF-${Date.now()}`;
+    const commandType = "OFF";
     const espId = normalizeEspId(mesin.espId);
     const topic = `modul/${espId}/${mesin.jenisMesin}/off`;
     const ackTopic = `modul/${espId}/${mesin.jenisMesin}/ack`;
     const mqttPayload = {
-      command: "OFF",
+      command: commandType,
       requestId,
     };
 
@@ -588,6 +594,7 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
         kasirId,
         actor,
         invoiceNumber,
+        commandType,
         statusPerintah: "failed",
         errorMessage: mqttError.message,
       });
@@ -611,6 +618,7 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
       kasirId,
       actor,
       invoiceNumber,
+      commandType,
       statusPerintah: "success",
     });
 

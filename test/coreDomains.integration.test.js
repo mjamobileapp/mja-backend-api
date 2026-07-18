@@ -532,8 +532,8 @@ test("core domains complete their HTTP flows on the isolated integration schema"
 
     await db.execute(
       `INSERT INTO tbl_log_mesin
-        (idMitra, cabangId, mesinId, kasirId, actorType, actorId, actorUsername, invoiceNumber, statusPerintah)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'success'), (?, ?, ?, NULL, ?, ?, ?, NULL, 'success'), (?, ?, ?, NULL, ?, ?, ?, NULL, 'success')`,
+        (idMitra, cabangId, mesinId, kasirId, actorType, actorId, actorUsername, invoiceNumber, commandType, statusPerintah)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ON', 'success'), (?, ?, ?, NULL, ?, ?, ?, NULL, 'ON', 'success'), (?, ?, ?, NULL, ?, ?, ?, NULL, 'OFF', 'success')`,
       [
         fixture.idMitra,
         fixture.cabangId,
