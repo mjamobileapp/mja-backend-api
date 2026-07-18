@@ -523,11 +523,14 @@ test("core domains complete their HTTP flows on the isolated integration schema"
 
     const count = await request(server, { path: "/api/kasir/transaksi?filter=hari_ini", token: mobileToken() });
     const pending = await request(server, { path: "/api/kasir/transaksi/pending", token: mobileToken() });
+    const ownerPending = await request(server, { path: `/api/kasir/transaksi/pending?cabangId=${fixture.cabangId}`, token: ownerToken() });
     const invalidStart = await request(server, { method: "POST", path: "/api/kasir/transaksi/startmesin", token: mobileToken(), body: {} });
     assert.equal(count.statusCode, 200);
     assert.equal(count.body.data.Total, 1);
     assert.equal(pending.statusCode, 200);
     assert.equal(pending.body.data[0].invoiceNumber, create.body.data.invoiceNumber);
+    assert.equal(ownerPending.statusCode, 200);
+    assert.equal(ownerPending.body.data[0].invoiceNumber, create.body.data.invoiceNumber);
     assert.equal(invalidStart.statusCode, 400);
 
     await db.execute(

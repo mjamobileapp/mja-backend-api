@@ -66,7 +66,11 @@ const requireMobileKasir = (req, res, next) => {
 };
 
 const requireMobileOwnerOrKasirCabang = (options = {}) => {
-  const { cabangSource = "query", cabangField = "cabangId" } = options;
+  const {
+    cabangSource = "query",
+    cabangField = "cabangId",
+    allowKasirTokenCabang = false,
+  } = options;
 
   return (req, res, next) => {
     const role = normalizeMobileRole(req.user?.role);
@@ -79,8 +83,12 @@ const requireMobileOwnerOrKasirCabang = (options = {}) => {
       });
     }
 
-    const requestedCabangId = Number(req[cabangSource]?.[cabangField]);
-    if (role === MOBILE_ROLES.KASIR && Number(req.user?.cabangId) !== requestedCabangId) {
+    const requestedCabangValue = req[cabangSource]?.[cabangField];
+    if (
+      role === MOBILE_ROLES.KASIR &&
+      !(allowKasirTokenCabang && (requestedCabangValue === undefined || requestedCabangValue === null || requestedCabangValue === "")) &&
+      Number(req.user?.cabangId) !== Number(requestedCabangValue)
+    ) {
       return res.status(403).json({
         success: false,
         code: "FORBIDDEN",

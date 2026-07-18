@@ -1,6 +1,7 @@
 const TransaksiModel = require("../models/transaksi");
 const { normalizeTransaksiPayload } = require("../domain/transaksi");
 const { MACHINE_CONTROL_ACTOR_TYPES } = require("../domain/machineControl");
+const { MOBILE_ROLES, normalizeMobileRole } = require("../domain/auth");
 const TransaksiService = require("../services/transaksi");
 const { createHttpError } = require("../utils/httpError");
 
@@ -82,7 +83,10 @@ const getJumlahTransaksi = async (req, res) => {
 
 const getPendingTransaksi = async (req, res) => {
   const idMitra = req.user ? req.user.idMitra : null;
-  const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
+  const role = normalizeMobileRole(req.user?.role);
+  const cabangId = role === MOBILE_ROLES.OWNER
+    ? req.query.cabangId
+    : (req.user ? (req.user.cabang_id || req.user.cabangId) : null);
 
   if (!idMitra) {
     return res.status(401).json({

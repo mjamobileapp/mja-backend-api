@@ -96,3 +96,20 @@ test("owner or cashier branch authorization scopes cashier to own cabang", () =>
   assert.equal(otherCabangResponse.statusCode, 403);
   assert.equal(otherCabangResponse.body.message, "Kasir hanya dapat mengakses data cabang sendiri");
 });
+
+test("owner or cashier branch authorization can use cashier token cabang when query is omitted", () => {
+  const authorize = requireMobileOwnerOrKasirCabang({ allowKasirTokenCabang: true });
+  const response = createResponse();
+  let nextCalled = false;
+
+  authorize(
+    { user: { role: "kasir", cabangId: 10 }, query: {} },
+    response,
+    () => {
+      nextCalled = true;
+    }
+  );
+
+  assert.equal(nextCalled, true);
+  assert.equal(response.statusCode, null);
+});
