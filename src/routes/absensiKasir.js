@@ -1,12 +1,17 @@
 const express = require("express");
 const KasirController = require("../controller/kasir");
 const { authenticateMobile } = require("../middleware/authMobile");
-const { requireMobileKasir } = require("../middleware/authorization");
+const { requireMobileOwnerOrKasirCabang } = require("../middleware/authorization");
 const { catchAsync } = require("../utils/catchAsync");
 
 const router = express.Router();
 
-router.get("/", authenticateMobile, requireMobileKasir, catchAsync(KasirController.getAbsensiKasir));
+router.get(
+  "/",
+  authenticateMobile,
+  requireMobileOwnerOrKasirCabang({ allowKasirTokenCabang: true }),
+  catchAsync(KasirController.getAbsensiKasir)
+);
 
 module.exports = router;
 

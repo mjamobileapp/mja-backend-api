@@ -596,10 +596,20 @@ test("core domains complete their HTTP flows on the isolated integration schema"
         path: `/api/owner/kasir/absensi?cabangId=${foreignCabang.insertId}`,
         token: ownerToken(),
       });
+      const ownerForeignMitraKasirRoute = await request(server, {
+        path: `/api/kasir/absensi?cabangId=${foreignCabang.insertId}`,
+        token: ownerToken(),
+      });
+      const ownerOwnCabangKasirRoute = await request(server, {
+        path: `/api/kasir/absensi?cabangId=${fixture.cabangId}`,
+        token: ownerToken(),
+      });
 
       assert.equal(kasirOwnCabang.statusCode, 200);
       assert.equal(kasirForeignCabang.statusCode, 403);
       assert.equal(ownerForeignMitra.statusCode, 403);
+      assert.equal(ownerForeignMitraKasirRoute.statusCode, 403);
+      assert.equal(ownerOwnCabangKasirRoute.statusCode, 200);
     } finally {
       await db.execute("DELETE FROM tbl_cabang WHERE id = ?", [foreignCabang.insertId]);
       await db.execute("DELETE FROM tbl_mitra WHERE id = ?", [foreignMitra.insertId]);
@@ -665,12 +675,12 @@ test("core domains complete their HTTP flows on the isolated integration schema"
         kasirCashflow,
         kasirIncome,
         kasirOtherBranchExpense,
-        ownerKasirAbsensi,
         ownerKasirHistory,
         ownerKasirTransaction,
       ]) {
         assert.equal(response.statusCode, 403);
       }
+      assert.equal(ownerKasirAbsensi.statusCode, 400);
       assert.equal(ownerPendingUnknownBranch.statusCode, 403);
       assert.equal(kasirHarga.statusCode, 200);
       const hargaAddon = kasirHarga.body.data.find(
