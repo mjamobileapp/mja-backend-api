@@ -91,6 +91,43 @@ test("owner machine start does not require invoice number or update an order det
   }
 });
 
+test("owner machine stop does not require invoice number", async () => {
+  const original = {
+    isActiveCabangForMitra: TransaksiModel.isActiveCabangForMitra,
+    stopMesinByOwner: TransaksiModel.stopMesinByOwner,
+  };
+  let receivedParams;
+
+  TransaksiModel.isActiveCabangForMitra = async (idMitra, cabangId) => idMitra === 7 && cabangId === 9;
+  TransaksiModel.stopMesinByOwner = async (params) => {
+    receivedParams = params;
+  };
+
+  try {
+    const response = createResponse();
+    await TransaksiController.stopMesinByOwner(
+      {
+        body: { mesinId: 3, cabangId: 9 },
+        user: { id: 11, idMitra: 7, username: "owner-test" },
+        machineControlActor: { type: "owner", id: 11, username: "owner-test" },
+      },
+      response
+    );
+
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(receivedParams, {
+      idMitra: 7,
+      cabangId: 9,
+      kasirId: null,
+      actor: { type: "owner", id: 11, username: "owner-test" },
+      mesinId: 3,
+    });
+  } finally {
+    TransaksiModel.isActiveCabangForMitra = original.isActiveCabangForMitra;
+    TransaksiModel.stopMesinByOwner = original.stopMesinByOwner;
+  }
+});
+
 test("machine-control controller requires backoffice scope and rejects owner tenant spoofing", async () => {
   const original = {
     isActiveCabangForMitra: TransaksiModel.isActiveCabangForMitra,

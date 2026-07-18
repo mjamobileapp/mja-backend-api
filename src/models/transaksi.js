@@ -732,6 +732,98 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
   }
 };
 
+const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }) => {
+  const connection = await dbPool.getConnection();
+  let shouldRollback = false;
+
+  try {
+    await connection.beginTransaction();
+    shouldRollback = true;
+
+    const mesin = await getMesinForStop(connection, { mesinId, idMitra, cabangId });
+    const requestId = `MANUAL-${mesinId}-OFF-${Date.now()}`;
+    const commandType = "OFF";
+    const espId = normalizeEspId(mesin.espId);
+    const topic = `modul/${espId}/${mesin.jenisMesin}/off`;
+    const ackTopic = `modul/${espId}/${mesin.jenisMesin}/ack`;
+    const mqttPayload = {
+      command: commandType,
+      requestId,
+    };
+
+    try {
+      if (isMqttDebugEnabled()) {
+        console.log("[TRANSAKSI] Stop mesin by owner MQTT command", {
+          mesinId: Number(mesinId),
+          jenisMesin: mesin.jenisMesin,
+          espId,
+          rawEspId: mesin.espId,
+          topic,
+          ackTopic,
+          requestId,
+        });
+      }
+
+      await publishAndWaitAck({
+        topic,
+        ackTopic,
+        payload: mqttPayload,
+        requestId,
+      });
+    } catch (mqttError) {
+      await insertLogMesin(connection, {
+        idMitra,
+        cabangId,
+        mesinId,
+        kasirId,
+        actor,
+        invoiceNumber: null,
+        commandType,
+        statusPerintah: "failed",
+        errorMessage: mqttError.message,
+      });
+
+      await connection.commit();
+      shouldRollback = false;
+      throw createHttpError(502, "Gagal mengirim perintah off ke mesin", "MQTT_COMMAND_FAILED");
+    }
+
+    await connection.execute(
+      `UPDATE tbl_mesin_detail
+       SET status = ?
+       WHERE id = ?`,
+      [MACHINE_STATUSES.READY, mesinId]
+    );
+
+    await insertLogMesin(connection, {
+      idMitra,
+      cabangId,
+      mesinId,
+      kasirId,
+      actor,
+      invoiceNumber: null,
+      commandType,
+      statusPerintah: "success",
+    });
+
+    await connection.commit();
+    shouldRollback = false;
+    return null;
+  } catch (error) {
+    if (shouldRollback) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error("Rollback stop mesin by owner gagal:", rollbackError.message);
+      }
+    }
+
+    throw error;
+  } finally {
+    connection.release();
+  }
+};
+
 const getPendingTransaksi = async (cabangId, idMitra) => {
   const [rows] = await dbPool.execute(
     `SELECT 
@@ -791,4 +883,5 @@ module.exports = {
   startMesin,
   startMesinByOwner,
   stopMesin,
+  stopMesinByOwner,
 };

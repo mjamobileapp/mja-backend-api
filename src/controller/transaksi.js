@@ -237,6 +237,27 @@ const stopMesin = async (req, res) => {
   });
 };
 
+const stopMesinByOwner = async (req, res) => {
+  const { mesinId } = req.body;
+
+  if (!isPositiveInteger(mesinId)) {
+    return res.status(400).json({
+      error: "mesinId wajib diisi dan harus integer lebih dari 0",
+    });
+  }
+
+  const context = await getMachineControlContext(req);
+  await TransaksiModel.stopMesinByOwner({
+    ...context,
+    mesinId: Number(mesinId),
+  });
+
+  return res.status(200).json({
+    success: "Stop Mesin By Owner Success",
+    data: null,
+  });
+};
+
 module.exports = {
   getJumlahTransaksi,
   getPendingTransaksi,
@@ -244,4 +265,5 @@ module.exports = {
   startMesin,
   startMesinByOwner,
   stopMesin,
+  stopMesinByOwner,
 };
