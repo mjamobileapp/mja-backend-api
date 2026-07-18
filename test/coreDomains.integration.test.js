@@ -328,6 +328,11 @@ test("core domains complete their HTTP flows on the isolated integration schema"
     );
 
     try {
+      const kasirReadAllResponse = await request(server, {
+        method: "PUT",
+        path: "/api/mobile/notifications/readall",
+        token: mobileToken(),
+      });
       const ownResponse = await request(server, {
         method: "PUT",
         path: `/api/mobile/notifications/${ownNotification.insertId}/read`,
@@ -343,17 +348,24 @@ test("core domains complete their HTTP flows on the isolated integration schema"
         path: `/api/mobile/notifications/${otherBranchNotification.insertId}/read`,
         token: mobileToken(),
       });
+      const ownerReadAllResponse = await request(server, {
+        method: "PUT",
+        path: "/api/mobile/notifications/readall",
+        token: ownerToken(),
+      });
       const [notifications] = await db.execute(
         "SELECT id, isRead FROM tbl_notifikasi WHERE id IN (?, ?, ?)",
         [ownNotification.insertId, otherBranchNotification.insertId, foreignNotification.insertId]
       );
       const isReadById = new Map(notifications.map((notification) => [notification.id, notification.isRead]));
 
+      assert.equal(kasirReadAllResponse.statusCode, 200);
       assert.equal(ownResponse.statusCode, 200);
       assert.equal(foreignResponse.statusCode, 404);
       assert.equal(otherBranchResponse.statusCode, 404);
+      assert.equal(ownerReadAllResponse.statusCode, 200);
       assert.equal(isReadById.get(ownNotification.insertId), 1);
-      assert.equal(isReadById.get(otherBranchNotification.insertId), 0);
+      assert.equal(isReadById.get(otherBranchNotification.insertId), 1);
       assert.equal(isReadById.get(foreignNotification.insertId), 0);
     } finally {
       await db.execute("DELETE FROM tbl_notifikasi WHERE id IN (?, ?, ?)", [

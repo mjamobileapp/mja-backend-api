@@ -64,7 +64,26 @@ const markAsRead = async (req, res) => {
   });
 };
 
+const markAllAsRead = async (req, res) => {
+  const idMitra = req.user.idMitra || req.user.mitra_id;
+  const role = normalizeMobileRole(req.user.role);
+  const cabangId = role === MOBILE_ROLES.KASIR ? req.user.cabang_id || req.user.cabangId : null;
+
+  if (!idMitra) {
+    return res.status(400).json({
+      error: "idMitra tidak ditemukan di token",
+    });
+  }
+
+  const data = await NotifikasiModel.markAllAsRead(idMitra, cabangId);
+  return res.status(200).json({
+    success: "Mark All as Read Success",
+    data,
+  });
+};
+
 module.exports = {
   getNotifikasi,
   markAsRead,
+  markAllAsRead,
 };

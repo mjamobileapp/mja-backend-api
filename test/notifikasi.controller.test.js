@@ -42,3 +42,33 @@ test("notification mark-as-read forwards typed not-found errors", async () => {
     );
   } finally { NotifikasiModel.markAsRead = original; }
 });
+
+test("notification read-all forwards tenant and cashier branch scope", async () => {
+  const original = NotifikasiModel.markAllAsRead;
+  const received = [];
+  NotifikasiModel.markAllAsRead = async (...params) => {
+    received.push(params);
+    return { updatedCount: 2, isRead: true };
+  };
+
+  try {
+    const ownerResponse = createResponse();
+    await NotifikasiController.markAllAsRead(
+      { user: { role: "owner", idMitra: 1, cabangId: 2 } },
+      ownerResponse
+    );
+    const kasirResponse = createResponse();
+    await NotifikasiController.markAllAsRead(
+      { user: { role: "kasir", idMitra: 1, cabangId: 2 } },
+      kasirResponse
+    );
+
+    assert.deepEqual(received, [[1, null], [1, 2]]);
+    assert.equal(ownerResponse.statusCode, 200);
+    assert.deepEqual(ownerResponse.body, {
+      success: "Mark All as Read Success",
+      data: { updatedCount: 2, isRead: true },
+    });
+    assert.equal(kasirResponse.statusCode, 200);
+  } finally { NotifikasiModel.markAllAsRead = original; }
+});

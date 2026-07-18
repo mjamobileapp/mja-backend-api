@@ -16,6 +16,7 @@ router.post("/logout", authenticateMobile, catchAsync(MobileController.logoutUse
 router.get("/notifications", authenticateMobile, catchAsync(NotifikasiController.getNotifikasi));
 
 // PUT - Mark as Read Notifikasi
+router.put("/notifications/readall", authenticateMobile, catchAsync(NotifikasiController.markAllAsRead));
 router.put("/notifications/:id/read", authenticateMobile, catchAsync(NotifikasiController.markAsRead));
 
 module.exports = router;

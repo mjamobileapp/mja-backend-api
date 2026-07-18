@@ -58,7 +58,25 @@ const markAsRead = async (id, idMitra, cabangId = null) => {
   };
 };
 
+const markAllAsRead = async (idMitra, cabangId = null) => {
+  let updateQuery = "UPDATE tbl_notifikasi SET isRead = 1 WHERE idMitra = ?";
+  const updateParams = [idMitra];
+
+  if (cabangId) {
+    updateQuery += " AND (cabangId = ? OR cabangId IS NULL)";
+    updateParams.push(cabangId);
+  }
+
+  const [result] = await dbPool.execute(updateQuery, updateParams);
+
+  return {
+    updatedCount: result.affectedRows || 0,
+    isRead: true,
+  };
+};
+
 module.exports = {
   getNotifikasi,
   markAsRead,
+  markAllAsRead,
 };
