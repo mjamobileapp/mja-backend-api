@@ -1,6 +1,10 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { requireMobileOwner, requireMobileKasir } = require("../src/middleware/authorization");
+const {
+  requireMobileOwner,
+  requireMobileKasir,
+  requireMobileOwnerOrKasirCabang,
+} = require("../src/middleware/authorization");
 
 const createResponse = () => ({
   statusCode: null,
@@ -52,4 +56,43 @@ test("cashier authorization rejects owner and permits kasir", () => {
 
   assert.equal(kasirNextCalled, true);
   assert.equal(kasirResponse.statusCode, null);
+});
+
+test("owner or cashier branch authorization scopes cashier to own cabang", () => {
+  const authorize = requireMobileOwnerOrKasirCabang();
+
+  const ownerResponse = createResponse();
+  let ownerNextCalled = false;
+  authorize(
+    { user: { role: "owner", cabangId: null }, query: { cabangId: "20" } },
+    ownerResponse,
+    () => {
+      ownerNextCalled = true;
+    }
+  );
+  assert.equal(ownerNextCalled, true);
+
+  const ownCabangResponse = createResponse();
+  let ownCabangNextCalled = false;
+  authorize(
+    { user: { role: "kasir", cabangId: 10 }, query: { cabangId: "10" } },
+    ownCabangResponse,
+    () => {
+      ownCabangNextCalled = true;
+    }
+  );
+  assert.equal(ownCabangNextCalled, true);
+
+  const otherCabangResponse = createResponse();
+  let otherCabangNextCalled = false;
+  authorize(
+    { user: { role: "kasir", cabangId: 10 }, query: { cabangId: "20" } },
+    otherCabangResponse,
+    () => {
+      otherCabangNextCalled = true;
+    }
+  );
+  assert.equal(otherCabangNextCalled, false);
+  assert.equal(otherCabangResponse.statusCode, 403);
+  assert.equal(otherCabangResponse.body.message, "Kasir hanya dapat mengakses data cabang sendiri");
 });

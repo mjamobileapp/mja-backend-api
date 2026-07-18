@@ -65,9 +65,37 @@ const requireMobileKasir = (req, res, next) => {
   return next();
 };
 
+const requireMobileOwnerOrKasirCabang = (options = {}) => {
+  const { cabangSource = "query", cabangField = "cabangId" } = options;
+
+  return (req, res, next) => {
+    const role = normalizeMobileRole(req.user?.role);
+
+    if (role !== MOBILE_ROLES.OWNER && role !== MOBILE_ROLES.KASIR) {
+      return res.status(403).json({
+        success: false,
+        code: "FORBIDDEN",
+        message: "Akses hanya diizinkan untuk owner atau kasir",
+      });
+    }
+
+    const requestedCabangId = Number(req[cabangSource]?.[cabangField]);
+    if (role === MOBILE_ROLES.KASIR && Number(req.user?.cabangId) !== requestedCabangId) {
+      return res.status(403).json({
+        success: false,
+        code: "FORBIDDEN",
+        message: "Kasir hanya dapat mengakses data cabang sendiri",
+      });
+    }
+
+    return next();
+  };
+};
+
 module.exports = {
   requireBackofficeMenuAccess,
   requireBackofficeSelfOrMenuAccess,
   requireMobileOwner,
   requireMobileKasir,
+  requireMobileOwnerOrKasirCabang,
 };

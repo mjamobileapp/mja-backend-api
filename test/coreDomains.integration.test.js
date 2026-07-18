@@ -621,6 +621,7 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       const kasirOwnerAbsensi = await request(server, { path: `/api/owner/kasir/absensi?cabangId=${fixture.cabangId}`, token: mobileToken() });
       const kasirStok = await request(server, { path: "/api/owner/stokmitra", token: mobileToken() });
       const kasirHarga = await request(server, { path: `/api/owner/settingharga?cabangId=${fixture.cabangId}`, token: mobileToken() });
+      const kasirHargaCabangLain = await request(server, { path: `/api/owner/settingharga?cabangId=${otherCabang.insertId}`, token: mobileToken() });
       const kasirOwnerHistory = await request(server, { path: `/api/owner/history/transaksi?cabangId=${fixture.cabangId}`, token: mobileToken() });
       const kasirOwnerMachineHistory = await request(server, { path: `/api/owner/history/mesin?cabangId=${fixture.cabangId}`, token: mobileToken() });
       const kasirCashflow = await request(server, { path: `/api/owner/cashflow?cabangId=${fixture.cabangId}`, token: mobileToken() });
@@ -650,7 +651,6 @@ test("core domains complete their HTTP flows on the isolated integration schema"
         kasirOwnerManagement,
         kasirOwnerAbsensi,
         kasirStok,
-        kasirHarga,
         kasirOwnerHistory,
         kasirOwnerMachineHistory,
         kasirCashflow,
@@ -662,6 +662,8 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       ]) {
         assert.equal(response.statusCode, 403);
       }
+      assert.equal(kasirHarga.statusCode, 200);
+      assert.equal(kasirHargaCabangLain.statusCode, 403);
       for (const response of [kasirOtherExpenseDetail, kasirOtherExpenseUpdate, kasirOtherExpenseDelete]) {
         assert.equal(response.statusCode, 404);
       }
