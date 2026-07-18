@@ -437,6 +437,108 @@ const validateDryerCanStart = async (connection, orderId) => {
   }
 };
 
+const parseDryerRecoveryRequestId = (requestId) => {
+  const match = String(requestId || "").trim().match(/^(.+)-(\d+)-(\d+)$/);
+  if (!match || !match[1]) {
+    throw createHttpError(400, "requestId recovery mesin tidak valid", "MACHINE_RECOVERY_REQUEST_INVALID");
+  }
+
+  return {
+    invoiceNumber: match[1],
+    mesinId: Number(match[2]),
+  };
+};
+
+const recoverPendingTransaksi = async ({ espId, requestId, machineType = "DRYER" }) => {
+  const normalizedMachineType = String(machineType || "").trim().toUpperCase();
+  if (normalizedMachineType !== "DRYER") {
+    throw createHttpError(400, "Recovery transaksi hanya mendukung mesin DRYER", "MACHINE_RECOVERY_TYPE_INVALID");
+  }
+
+  const normalizedEspId = normalizeEspId(espId);
+  if (!normalizedEspId) {
+    throw createHttpError(400, "espId recovery mesin tidak valid", "MACHINE_RECOVERY_ESP_INVALID");
+  }
+
+  const { invoiceNumber, mesinId } = parseDryerRecoveryRequestId(requestId);
+
+  return withTransaction(async (connection) => {
+    const [machineRows] = await connection.execute(
+      `SELECT
+        d.id AS mesinId,
+        d.jenisMesin,
+        m.idMitra,
+        m.cabangId
+       FROM tbl_mesin_detail d
+       JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
+       WHERE d.id = ?
+         AND d.jenisMesin = ?
+         AND m.espId = ?
+         AND m.statusAktif = 1
+       FOR UPDATE`,
+      [mesinId, normalizedMachineType, normalizedEspId]
+    );
+
+    if (machineRows.length === 0) {
+      throw createHttpError(404, "Mesin recovery tidak ditemukan", "MACHINE_RECOVERY_NOT_FOUND");
+    }
+
+    const machine = machineRows[0];
+    const [orderRows] = await connection.execute(
+      `SELECT id, invoiceNumber
+       FROM tbl_order_laundry
+       WHERE invoiceNumber = ?
+         AND idMitra = ?
+         AND cabangId = ?
+       FOR UPDATE`,
+      [invoiceNumber, machine.idMitra, machine.cabangId]
+    );
+
+    if (orderRows.length === 0) {
+      throw createHttpError(404, "Transaksi recovery tidak ditemukan", "TRANSACTION_RECOVERY_NOT_FOUND");
+    }
+
+    const order = orderRows[0];
+    const [detailRows] = await connection.execute(
+      `SELECT id
+       FROM tbl_detail_order
+       WHERE orderId = ?
+         AND jenisLayanan = 'kering'
+       ORDER BY id ASC
+       LIMIT 1
+       FOR UPDATE`,
+      [order.id]
+    );
+
+    if (detailRows.length === 0) {
+      throw createHttpError(404, "Detail transaksi dryer recovery tidak ditemukan", "TRANSACTION_RECOVERY_DETAIL_NOT_FOUND");
+    }
+
+    await connection.execute(
+      `UPDATE tbl_detail_order
+       SET mesinId = NULL,
+           statusEksekusi = 'pending'
+       WHERE id = ?`,
+      [detailRows[0].id]
+    );
+
+    await connection.execute(
+      `UPDATE tbl_mesin_detail
+       SET status = ?
+       WHERE id = ?`,
+      [MACHINE_STATUSES.READY, machine.mesinId]
+    );
+
+    return {
+      invoiceNumber: order.invoiceNumber,
+      idMitra: machine.idMitra,
+      cabangId: machine.cabangId,
+      mesinId: machine.mesinId,
+      machineType: normalizedMachineType,
+    };
+  });
+};
+
 const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNumber }) => {
   const connection = await dbPool.getConnection();
   let shouldRollback = false;
@@ -880,6 +982,7 @@ module.exports = {
   getPendingTransaksi,
   getJumlahTransaksi,
   isActiveCabangForMitra,
+  recoverPendingTransaksi,
   startMesin,
   startMesinByOwner,
   stopMesin,

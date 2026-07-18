@@ -155,3 +155,60 @@ test("createTransaksi maps a non-positive official price to a typed 409", async 
     restore();
   }
 });
+
+test("recoverPendingTransaksi restores dryer transaction after power recovery", async () => {
+  const calls = [];
+  let executeCount = 0;
+  const connection = {
+    async beginTransaction() {
+      calls.push("beginTransaction");
+    },
+    async execute(sql, params) {
+      calls.push({ sql, params });
+      executeCount += 1;
+
+      if (executeCount === 1) return [[{ mesinId: 10, jenisMesin: "DRYER", idMitra: 2, cabangId: 5 }]];
+      if (executeCount === 2) return [[{ id: 20, invoiceNumber: "INV-5-20260718-0001" }]];
+      if (executeCount === 3) return [[{ id: 30 }]];
+      if (executeCount === 4 || executeCount === 5) return [{ affectedRows: 1 }];
+      throw new Error("Unexpected recovery query");
+    },
+    async commit() {
+      calls.push("commit");
+    },
+    async rollback() {
+      calls.push("rollback");
+    },
+    release() {
+      calls.push("release");
+    },
+  };
+  const { transaksiModel, restore } = loadTransaksiModel({
+    async getConnection() {
+      return connection;
+    },
+  });
+
+  try {
+    const result = await transaksiModel.recoverPendingTransaksi({
+      espId: "esp-001",
+      requestId: "INV-5-20260718-0001-10-12345",
+      machineType: "dryer",
+    });
+
+    assert.deepEqual(result, {
+      invoiceNumber: "INV-5-20260718-0001",
+      idMitra: 2,
+      cabangId: 5,
+      mesinId: 10,
+      machineType: "DRYER",
+    });
+    assert.deepEqual(calls.slice(-2), ["commit", "release"]);
+    assert.match(calls[4].sql, /statusEksekusi = 'pending'/);
+    assert.deepEqual(calls[4].params, [30]);
+    assert.match(calls[5].sql, /SET status = \?/);
+    assert.deepEqual(calls[5].params, ["READY", 10]);
+  } finally {
+    restore();
+  }
+});

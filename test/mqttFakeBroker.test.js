@@ -3,6 +3,7 @@ const { EventEmitter } = require("node:events");
 const test = require("node:test");
 const { publishAndWaitAck } = require("../src/utils/mqttClient");
 const {
+  createPendingTransactionMessageHandler,
   createStatusMessageHandler,
   startMqttStatusListener,
   stopMqttStatusListener,
@@ -131,7 +132,10 @@ test("fake MQTT status listener updates READY only for a valid status topic and 
       client
     );
     client.emit("connect");
-    assert.deepEqual(client.subscriptions, [{ topic: "modul/+/status", options: { qos: 1 } }]);
+    assert.deepEqual(client.subscriptions, [{
+      topic: ["modul/+/status", "modul/+/pendingTransaksi"],
+      options: { qos: 1 },
+    }]);
 
     client.emit("message", "modul/ESP-READY/status", Buffer.from('{"status":"READY","machineType":"dryer"}'));
     await waitForAsyncHandler();
@@ -144,4 +148,26 @@ test("fake MQTT status listener updates READY only for a valid status topic and 
   } finally {
     await stopMqttStatusListener();
   }
+});
+
+test("pending transaction listener recovers dryer transaction from MQTT payload", async () => {
+  const recoveries = [];
+  const messageHandler = createPendingTransactionMessageHandler({
+    recoverPending: async (params) => {
+      recoveries.push(params);
+      return { invoiceNumber: "INV-1-20260718-0001" };
+    },
+    logger: silentLogger,
+  });
+
+  await messageHandler(
+    "modul/ESP-READY/pendingTransaksi",
+    Buffer.from('{"requestId":"INV-1-20260718-0001-10-12345","status":"READY","machineType":"DRYER"}')
+  );
+
+  assert.deepEqual(recoveries, [{
+    espId: "ESP-READY",
+    requestId: "INV-1-20260718-0001-10-12345",
+    machineType: "DRYER",
+  }]);
 });

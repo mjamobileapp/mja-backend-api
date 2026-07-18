@@ -1,8 +1,11 @@
 const dbPool = require("../config/database");
 const { connectClient, isMqttDebugEnabled } = require("./mqttClient");
 const { MACHINE_STATUSES, normalizeMachineStatus } = require("../domain/mesin");
+const TransaksiModel = require("../models/transaksi");
 
 const STATUS_TOPIC = "modul/+/status";
+const PENDING_TRANSACTION_TOPIC = "modul/+/pendingTransaksi";
+const MQTT_TOPICS = [STATUS_TOPIC, PENDING_TRANSACTION_TOPIC];
 let statusListenerClient = null;
 
 const parseStatusTopic = (topic) => {
@@ -20,6 +23,31 @@ const parseStatusTopic = (topic) => {
 const parseStatusPayload = (message) => {
   try {
     return JSON.parse(message.toString());
+  } catch (error) {
+    return null;
+  }
+};
+
+const parsePendingTransactionTopic = (topic) => {
+  const parts = String(topic || "").split("/");
+
+  if (parts.length !== 3 || parts[0] !== "modul" || parts[2] !== "pendingTransaksi") {
+    return null;
+  }
+
+  return {
+    espId: parts[1],
+  };
+};
+
+const parsePendingTransactionPayload = (message) => {
+  try {
+    const payload = JSON.parse(message.toString());
+    if (!payload || typeof payload !== "object") {
+      return null;
+    }
+
+    return payload;
   } catch (error) {
     return null;
   }
@@ -71,7 +99,47 @@ const createStatusMessageHandler = ({ updateReady = updateMesinReadyByEspId, log
 
 const handleStatusMessage = createStatusMessageHandler();
 
-const startMqttStatusListener = ({ clientFactory = connectClient, messageHandler = handleStatusMessage, logger = console } = {}) => {
+const createPendingTransactionMessageHandler = ({
+  recoverPending = TransaksiModel.recoverPendingTransaksi,
+  logger = console,
+} = {}) => async (topic, message) => {
+  const topicData = parsePendingTransactionTopic(topic);
+  if (!topicData) return;
+
+  const payload = parsePendingTransactionPayload(message);
+  if (!payload || normalizeMachineStatus(payload.status) !== MACHINE_STATUSES.READY || !payload.requestId) {
+    return;
+  }
+
+  const machineType = payload.machineType ? String(payload.machineType).toUpperCase() : "DRYER";
+  const recovery = await recoverPending({
+    espId: topicData.espId,
+    requestId: String(payload.requestId),
+    machineType,
+  });
+
+  logger.log("[MQTT RECOVERY] Transaksi pending dipulihkan", {
+    espId: topicData.espId,
+    requestId: String(payload.requestId),
+    machineType,
+    recovery,
+  });
+};
+
+const handlePendingTransactionMessage = createPendingTransactionMessageHandler();
+
+const handleMqttMessage = async (topic, message) => {
+  if (parseStatusTopic(topic)) {
+    await handleStatusMessage(topic, message);
+    return;
+  }
+
+  if (parsePendingTransactionTopic(topic)) {
+    await handlePendingTransactionMessage(topic, message);
+  }
+};
+
+const startMqttStatusListener = ({ clientFactory = connectClient, messageHandler = handleMqttMessage, logger = console } = {}) => {
   if (statusListenerClient) {
     return statusListenerClient;
   }
@@ -87,19 +155,19 @@ const startMqttStatusListener = ({ clientFactory = connectClient, messageHandler
   }
 
   statusListenerClient.on("connect", () => {
-    statusListenerClient.subscribe(STATUS_TOPIC, { qos: 1 }, (error) => {
+    statusListenerClient.subscribe(MQTT_TOPICS, { qos: 1 }, (error) => {
       if (error) {
-        logger.error("[MQTT STATUS] Gagal subscribe topic status:", error.message);
+        logger.error("[MQTT STATUS] Gagal subscribe topic status/recovery:", error.message);
         return;
       }
 
-      logger.log("[MQTT STATUS] Subscribed:", STATUS_TOPIC);
+      logger.log("[MQTT STATUS] Subscribed:", MQTT_TOPICS);
     });
   });
 
   statusListenerClient.on("message", (topic, message) => {
     Promise.resolve(messageHandler(topic, message)).catch((error) => {
-      logger.error("[MQTT STATUS] Gagal memproses status mesin:", {
+      logger.error("[MQTT STATUS] Gagal memproses status/recovery mesin:", {
         topic,
         error: error.message,
       });
@@ -152,4 +220,7 @@ module.exports = {
   startMqttStatusListener,
   stopMqttStatusListener,
   createStatusMessageHandler,
+  createPendingTransactionMessageHandler,
+  parsePendingTransactionTopic,
+  parsePendingTransactionPayload,
 };
