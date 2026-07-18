@@ -152,13 +152,18 @@ const getSettingHarga = async (idMitra, cabangId) => {
 SELECT 
     t.jenisLayanan, 
     t.itemId, 
-    IFNULL(h.harga, 0) AS harga
+    IFNULL(h.harga, 0) AS harga,
+    IFNULL(s.stokSekarang, 0) AS stokSekarang
 FROM TemplateLayanan t
 LEFT JOIN tbl_harga_cabang h ON 
     h.cabangId = ? AND 
     h.idMitra = ? AND
     h.jenisLayanan = t.jenisLayanan AND 
     (h.itemId = t.itemId OR (h.itemId IS NULL AND t.itemId IS NULL))
+LEFT JOIN tbl_stok_cabang s ON
+    s.idMitra = ? AND
+    s.cabangId = ? AND
+    s.itemId = t.itemId
 ORDER BY 
     CASE t.jenisLayanan
         WHEN 'cuci' THEN 1
@@ -166,7 +171,7 @@ ORDER BY
         WHEN 'addon_barang' THEN 3
     END,
     t.itemId`,
-      [cabangId, idMitra]
+      [cabangId, idMitra, idMitra, cabangId]
     );
 
     if (rows.length === 0) {

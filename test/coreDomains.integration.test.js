@@ -144,6 +144,11 @@ test.before(async () => {
       "integration-test",
     ]
   );
+  await db.execute(
+    `INSERT INTO tbl_stok_cabang (idMitra, cabangId, itemId, stokSekarang, createdBy, updatedBy)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [mitra.insertId, cabang.insertId, item.insertId, 7, "integration-test", "integration-test"]
+  );
   const [mesinMaster] = await db.execute(
     `INSERT INTO tbl_mesin_master (idMitra, cabangId, espId, namaGroupMesin, createdBy, statusAktif)
      VALUES (?, ?, ?, ?, ?, 1)`,
@@ -663,6 +668,10 @@ test("core domains complete their HTTP flows on the isolated integration schema"
         assert.equal(response.statusCode, 403);
       }
       assert.equal(kasirHarga.statusCode, 200);
+      const hargaAddon = kasirHarga.body.data.find(
+        (row) => row.jenisLayanan === "addon_barang" && Number(row.itemId) === Number(fixture.itemId)
+      );
+      assert.equal(hargaAddon.stokSekarang, 7);
       assert.equal(kasirHargaCabangLain.statusCode, 403);
       for (const response of [kasirOtherExpenseDetail, kasirOtherExpenseUpdate, kasirOtherExpenseDelete]) {
         assert.equal(response.statusCode, 404);
