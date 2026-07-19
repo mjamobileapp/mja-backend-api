@@ -9,6 +9,7 @@ const createPublicAuthRateLimiter = ({
   windowMs,
   maxAttempts,
   now = () => Date.now(),
+  onBlocked,
 } = {}) => {
   const configuredRateLimit = getPublicAuthRateLimitConfig();
   const effectiveWindowMs = windowMs ?? configuredRateLimit.windowMs;
@@ -22,6 +23,7 @@ const createPublicAuthRateLimiter = ({
     const activeAttempts = previousAttempts.filter((attemptedAt) => currentTime - attemptedAt < effectiveWindowMs);
 
     if (activeAttempts.length >= effectiveMaxAttempts) {
+      try { if (onBlocked) Promise.resolve(onBlocked(req)).catch(() => {}); } catch (_) { /* best effort */ }
       return res.status(429).json({
         code: "TOO_MANY_REQUESTS",
         message: "Terlalu banyak percobaan. Silakan coba kembali nanti.",
@@ -50,7 +52,7 @@ const createPublicAuthRateLimiter = ({
   };
 };
 
-const publicLoginRateLimiter = createPublicAuthRateLimiter({ keyPrefix: "login" });
+const publicLoginRateLimiter = createPublicAuthRateLimiter({ keyPrefix: "login", onBlocked: (req) => require("../services/auditBackoffice").recordBackofficeAudit({ req, actor: { username: req.body?.username || "unknown", role: "unknown", accountType: "backoffice" }, actionType: "LOGIN_BLOCKED", entityName: "backoffice_authentication", newValues: { reason: "RATE_LIMIT" } }) });
 const publicActivationRateLimiter = createPublicAuthRateLimiter({ keyPrefix: "activation" });
 const publicPasswordResetRateLimiter = createPublicAuthRateLimiter({ keyPrefix: "password-reset" });
 

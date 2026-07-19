@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const AksesModel = require("../models/akses");
+const { audit, A, E } = require("../utils/auditBackoffice");
 
 /**
  * Mengambil daftar menu beserta status akses (checked) untuk role tertentu
@@ -66,6 +67,7 @@ const saveAksesRole = async (req, res) => {
   }
 
   await AksesModel.saveAksesRole(idRole, menuTree);
+  await audit(req, A.UPDATE_ACCESS, E.ACCESS, idRole, null, menuTree);
   return res.json({ message: "Akses role berhasil diperbarui" });
 };
 

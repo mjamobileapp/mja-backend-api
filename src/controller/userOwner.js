@@ -2,12 +2,14 @@ const UserOwnerModel = require("../models/userOwner");
 const EmailService = require("../utils/email");
 const { sendResetPasswordAccepted } = require("../utils/publicAuth");
 const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
+const { audit, getAuditSnapshot, A, E } = require("../utils/auditBackoffice");
 
 const createNewUserOwner = async (req, res) => {
   const body = withAuthenticatedAuditUsername(req.body, req.user, "createdBy");
   const missingFields = getMissingRequiredFields(body, ["username", "idMitra", "namaLengkap", "noTelp", "email", "createdBy"]);
   if (missingFields.length > 0) return res.status(400).json({ message: "Bad request, missing required fields", missingFields });
   const result = await UserOwnerModel.createNewUserOwner(body);
+  await audit(req, A.CREATE, E.USER_OWNER, result?.id, null, result);
   try {
     await EmailService.sendUserMobileCredentialEmail({ to: result.email, username: result.username, role: result.role });
   } catch (emailError) {
@@ -27,25 +29,31 @@ const getUserOwnerById = async (req, res) => {
 };
 
 const updateUserOwner = async (req, res) => {
+  const oldValues = await getAuditSnapshot(UserOwnerModel, "getUserOwnerById", req.params.id);
   const body = withAuthenticatedAuditUsername(req.body, req.user, "updatedBy");
   const missingFields = getMissingRequiredFields(body, ["namaLengkap", "noTelp", "email", "updatedBy"]);
   if (missingFields.length > 0) return res.status(400).json({ message: "Bad request, missing required fields", missingFields });
   const data = await UserOwnerModel.updateUserOwner(req.params.id, body);
+  await audit(req, A.UPDATE, E.USER_OWNER, req.params.id, oldValues, data);
   return res.status(200).json({ message: "UPDATE User Owner success", data });
 };
 
 const deleteUserOwner = async (req, res) => {
+  const oldValues = await getAuditSnapshot(UserOwnerModel, "getUserOwnerById", req.params.id);
   await UserOwnerModel.deleteUserOwner(req.params.id, req.user.username);
+  await audit(req, A.DELETE, E.USER_OWNER, req.params.id, oldValues, { statusAktif: false });
   return res.status(200).json({ message: "Delete User Owner success", data: null });
 };
 
 const restoreUserOwner = async (req, res) => {
   await UserOwnerModel.restoreUserOwner(req.params.id, req.user.username);
+  await audit(req, A.RESTORE, E.USER_OWNER, req.params.id, { statusAktif: false }, { statusAktif: true });
   return res.status(200).json({ message: "Restore User Owner success", data: null });
 };
 
 const resetDeviceId = async (req, res) => {
   const username = await UserOwnerModel.resetDeviceId(req.params.id, req.body, req.user.username);
+  await audit(req, A.RESET_DEVICE, E.USER_OWNER, req.params.id, null, { username, deviceId: null });
   return res.status(200).json({ message: "Reset Device ID success", data: { username } });
 };
 
@@ -56,6 +64,7 @@ const changePassword = async (req, res) => {
   if (req.body.newPassword !== req.body.ConfirmNewPassword) return res.status(400).json({ error: "Password baru dan konfirmasi tidak cocok" });
   if (req.body.oldPassword === req.body.newPassword) return res.status(400).json({ error: "Password baru tidak boleh sama dengan password lama" });
   const username = await UserOwnerModel.changePassword(req.params.id, req.body, req.user.username);
+  await audit(req, A.CHANGE_PASSWORD, E.USER_OWNER, req.params.id, null, { username });
   return res.status(200).json({ message: "Password changed successfully", data: { username } });
 };
 

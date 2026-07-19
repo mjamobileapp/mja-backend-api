@@ -10,6 +10,7 @@ const { catchAsync } = require("./utils/catchAsync");
 
 const usersRoutes = require("./routes/users");
 const loginRoutes = require("./routes/login");
+const logoutRoutes = require("./routes/logout");
 const roleRoutes = require("./routes/roles");
 const menuRoutes = require("./routes/menus");
 const { getMenuHeader } = require("./controller/menus");
@@ -58,6 +59,7 @@ const createApp = ({ environment = process.env } = {}) => {
 
   app.use("/api/backoffice/users", usersRoutes);
   app.use("/api/backoffice/login", loginRoutes);
+  app.use("/api/backoffice/logout", logoutRoutes);
   app.use("/api/backoffice/roles", roleRoutes);
   app.use("/api/backoffice/menus", menuRoutes);
   app.get("/api/backoffice/getMenuHeader", authenticate, catchAsync(getMenuHeader));

@@ -1,24 +1,30 @@
 const CabangModel = require("../models/cabang");
 const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
+const { audit, getAuditSnapshot, A, E } = require("../utils/auditBackoffice");
 
 const createNewCabang = async (req, res) => {
   const body = withAuthenticatedAuditUsername(req.body, req.user, "createdBy");
   const missingFields = getMissingRequiredFields(body, ["idMitra", "namaCabang", "alamatCabang", "createdBy"]);
   if (missingFields.length > 0) return res.status(400).json({ message: "Bad request, missing required fields", missingFields });
   const result = await CabangModel.createNewCabang(body);
+  await audit(req, A.CREATE, E.CABANG, result?.id, null, result);
   return res.status(201).json({ message: "CREATE new Cabang success", data: result });
 };
 
 const updateCabang = async (req, res) => {
+  const oldValues = await getAuditSnapshot(CabangModel, "getCabangById", req.params.id);
   const body = withAuthenticatedAuditUsername(req.body, req.user, "updatedBy");
   const missingFields = getMissingRequiredFields(body, ["namaCabang", "alamatCabang", "updatedBy"]);
   if (missingFields.length > 0) return res.status(400).json({ message: "Bad request, missing required fields", missingFields });
   const data = await CabangModel.updateCabang(req.params.id, body);
+  await audit(req, A.UPDATE, E.CABANG, req.params.id, oldValues, data);
   return res.status(200).json({ message: "UPDATE Cabang success", data });
 };
 
 const deleteCabang = async (req, res) => {
+  const oldValues = await getAuditSnapshot(CabangModel, "getCabangById", req.params.id);
   await CabangModel.deleteCabang(req.params.id, req.user.username);
+  await audit(req, A.DELETE, E.CABANG, req.params.id, oldValues, { statusAktif: false });
   return res.status(200).json({ message: "Delete Cabang success", data: null });
 };
 
@@ -39,12 +45,14 @@ const getCabangByIdMitra = async (req, res) => {
 
 const restoreCabang = async (req, res) => {
   await CabangModel.restoreCabang(req.params.id, req.user.username);
+  await audit(req, A.RESTORE, E.CABANG, req.params.id, { statusAktif: false }, { statusAktif: true });
   return res.status(200).json({ message: "Restore Cabang success", data: null });
 };
 
 const resetCabang = async (req, res) => {
   if (req.body.konfirmasi !== "RESET") return res.status(400).json({ error: "konfirmasi tidak sesuai" });
   await CabangModel.resetCabang(req.params.id);
+  await audit(req, A.RESET_DATA, E.CABANG, req.params.id, null, { reset: true });
   return res.status(200).json({ success: "Reset Data Cabang Success" });
 };
 

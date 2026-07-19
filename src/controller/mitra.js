@@ -1,5 +1,6 @@
 const MitraModel = require("../models/mitra");
 const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
+const { audit, getAuditSnapshot, A, E } = require("../utils/auditBackoffice");
 
 const createNewMitra = async (req, res) => {
   const body = withAuthenticatedAuditUsername(req.body, req.user, "createdBy");
@@ -14,11 +15,13 @@ const createNewMitra = async (req, res) => {
   }
 
   const result = await MitraModel.createNewMitra(body);
+  await audit(req, A.CREATE, E.MITRA, result?.id, null, result);
   return res.status(201).json({ message: "CREATE new Mitra success", data: result });
 };
 
 const updateMitra = async (req, res) => {
   const { id } = req.params;
+  const oldValues = await getAuditSnapshot(MitraModel, "getMitraById", id);
   const body = withAuthenticatedAuditUsername(req.body, req.user, "updatedBy");
 
   const missingFields = getMissingRequiredFields(body, ["namaMitra", "alamatMitra", "updatedBy"]);
@@ -31,15 +34,18 @@ const updateMitra = async (req, res) => {
   }
 
   const data = await MitraModel.updateMitra(id, body);
+  await audit(req, A.UPDATE, E.MITRA, id, oldValues, data);
   return res.status(200).json({ message: "UPDATE Mitra success", data });
 };
 
 const deleteMitra = async (req, res) => {
   const { id } = req.params;
+  const oldValues = await getAuditSnapshot(MitraModel, "getMitraById", id);
   // Mengambil username dari middleware authenticate (req.user)
   const username = req.user.username;
 
   await MitraModel.deleteMitra(id, username);
+  await audit(req, A.DELETE, E.MITRA, id, oldValues, { statusAktif: false });
   return res.status(200).json({ message: "Delete Mitra success", data: null });
 };
 
@@ -62,6 +68,7 @@ const restoreMitra = async (req, res) => {
   const username = req.user.username;
 
   await MitraModel.restoreMitra(id, username);
+  await audit(req, A.RESTORE, E.MITRA, id, { statusAktif: false }, { statusAktif: true });
   return res.status(200).json({ message: "Restore Mitra success", data: null });
 };
 

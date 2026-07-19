@@ -1,5 +1,6 @@
 const MasterMenuModel = require("../models/menus");
 const { withAuthenticatedAuditUsername } = require("../utils/validation");
+const { audit, getAuditSnapshot, A, E } = require("../utils/auditBackoffice");
 
 const getAll = async (req, res) => {
   const [data] = await MasterMenuModel.getAll();
@@ -38,18 +39,24 @@ const getById = async (req, res) => {
 const createNewMenu = async (req, res) => {
   const body = withAuthenticatedAuditUsername(req.body, req.user, "createdBy");
   if (!body.namaMenu || !body.url) return res.status(400).json({ message: "Anda mengirimkan data yang salah", data: null });
-  await MasterMenuModel.createNewMenu(body);
+  const resultTuple = await MasterMenuModel.createNewMenu(body);
+  const result = resultTuple?.[0] || {};
+  await audit(req, A.CREATE, E.MENU, result.insertId, null, { id: result.insertId, namaMenu: body.namaMenu, url: body.url });
   return res.status(201).json({ message: "CREATE new Menu success", data: body });
 };
 
 const updateMenu = async (req, res) => {
+  const oldValues = await getAuditSnapshot(MasterMenuModel, "getById", req.params.id);
   const body = withAuthenticatedAuditUsername(req.body, req.user, "modifiedBy");
   await MasterMenuModel.updateMenu(body, req.params.id);
+  await audit(req, A.UPDATE, E.MENU, req.params.id, oldValues, body);
   return res.json({ message: "UPDATE Menu success", data: { id: req.params.id, ...body } });
 };
 
 const deleteMenu = async (req, res) => {
+  const oldValues = await getAuditSnapshot(MasterMenuModel, "getById", req.params.id);
   await MasterMenuModel.deleteMenu(req.params.id);
+  await audit(req, A.DELETE, E.MENU, req.params.id, oldValues, null);
   return res.json({ message: "DELETE Menu success", data: null });
 };
 
