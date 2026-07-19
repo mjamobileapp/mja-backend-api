@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
 const dbPool = require("../config/database");
+const { TOKEN_TYPES } = require("../utils/jwt");
+const { createHttpError, isTypedHttpError } = require("../utils/httpError");
 
 /**
  * Memverifikasi token JWT backoffice dan memvalidasi keaktifan user secara real-time.
@@ -12,9 +14,7 @@ const verifyBackofficeToken = async (req) => {
 
   // 1. Validasi keberadaan format Bearer Token
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    const error = new Error("Akses ditolak, token tidak ditemukan");
-    error.statusCode = 401;
-    throw error;
+    throw createHttpError(401, "Akses ditolak, token tidak ditemukan", "UNAUTHORIZED");
   }
 
   const token = authHeader.split(" ")[1];
@@ -24,25 +24,25 @@ const verifyBackofficeToken = async (req) => {
     // 2. Decode JWT secara matematis (Verifikasi signature)
     decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch (err) {
-    const error = new Error(
+    const message =
       err.name === "TokenExpiredError" 
         ? "Sesi Anda telah berakhir, silakan login kembali" 
-        : "Token tidak valid atau telah kedaluwarsa"
-    );
-    error.statusCode = 401;
-    error.code = err.name === "TokenExpiredError" ? "TOKEN_EXPIRED" : "INVALID_TOKEN";
-    throw error;
+        : "Token tidak valid atau telah kedaluwarsa";
+    const code = err.name === "TokenExpiredError" ? "TOKEN_EXPIRED" : "INVALID_TOKEN";
+    throw createHttpError(401, message, code);
   }
 
-  // 3. Validasi struktur dasar token backoffice
+  // 3. Token mobile atau token JWT lain tidak boleh digunakan sebagai token backoffice.
+  if (decoded.tokenType !== TOKEN_TYPES.BACKOFFICE) {
+    throw createHttpError(401, "Token tidak valid untuk akses backoffice", "INVALID_TOKEN_TYPE");
+  }
+
+  // 4. Validasi struktur dasar token backoffice
   if (!decoded.id || !decoded.username || !decoded.role) {
-    const error = new Error("Token tidak valid untuk akses backoffice");
-    error.statusCode = 401;
-    error.code = "INVALID_TOKEN";
-    throw error;
+    throw createHttpError(401, "Token tidak valid untuk akses backoffice", "INVALID_TOKEN");
   }
 
-  // 4. Validasi real-time status User lewat database (1 Single Query ke tbl_users)
+  // 5. Validasi real-time status User lewat database (1 Single Query ke tbl_users)
   // Menghilangkan referensi ke tbl_mitra karena ini merupakan sistem internal pemilik laundry
   const [users] = await dbPool.execute(
     `SELECT 
@@ -57,20 +57,23 @@ const verifyBackofficeToken = async (req) => {
 
   // Jika user tidak ditemukan di database (kemungkinan akun telah di-hard delete)
   if (users.length === 0) {
-    const error = new Error("Akses Ditolak: Akun tidak terdaftar di sistem");
-    error.statusCode = 403;
-    error.code = "ACCOUNT_NOT_FOUND";
-    throw error;
+    throw createHttpError(403, "Akses Ditolak: Akun tidak terdaftar di sistem", "ACCOUNT_NOT_FOUND");
   }
 
   const currentUser = users[0];
 
-  // 5. Validasi Keaktifan Akun Individu
+  // Token harus tetap mewakili akun yang sama. Ini mencegah id dari tabel lain
+  // dipetakan menjadi akun backoffice yang kebetulan memakai id identik.
+  if (
+    currentUser.username !== decoded.username ||
+    String(currentUser.role) !== String(decoded.role)
+  ) {
+    throw createHttpError(401, "Token tidak valid untuk akses backoffice", "TOKEN_IDENTITY_MISMATCH");
+  }
+
+  // 6. Validasi Keaktifan Akun Individu
   if (!currentUser.statusAktif) {
-    const error = new Error("Akses Ditolak: Akun Anda telah dinonaktifkan");
-    error.statusCode = 403;
-    error.code = "USER_DEACTIVATED";
-    throw error;
+    throw createHttpError(403, "Akses Ditolak: Akun Anda telah dinonaktifkan", "USER_DEACTIVATED");
   }
 
   return currentUser;
@@ -87,11 +90,13 @@ const authenticate = async (req, res, next) => {
     req.user = await verifyBackofficeToken(req);
     next();
   } catch (err) {
-    console.error("Authentication Error:", err);
-    const statusCode = err.statusCode || 401;
-    return res.status(statusCode).json({
+    if (!isTypedHttpError(err) || Number(err.statusCode) >= 500) {
+      return next(err);
+    }
+
+    return res.status(err.statusCode).json({
       success: false,
-      code: err.code || "UNAUTHORIZED",
+      code: err.code,
       message: err.message,
     });
   }

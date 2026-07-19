@@ -1,4 +1,5 @@
 const dbPool = require("../config/database");
+const { getDatabaseTimestamp } = require("../utils/date");
 
 const getAll = () => {
   const SQLQuery = "SELECT * FROM tbl_menu order by createdDate desc";
@@ -13,10 +14,8 @@ const getById = (id) => {
 };
 
 const createNewMenu = (body) => {
-  console.log(body);
-  try {
-    const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
-    const SQLQuery = `  INSERT INTO tbl_menu
+  const dateNow = getDatabaseTimestamp();
+  const SQLQuery = `  INSERT INTO tbl_menu
       ( url,
       namaMenu,
       parentId,
@@ -44,17 +43,11 @@ const createNewMenu = (body) => {
       body.createdBy,
       dateNow,
     ];
-    return dbPool.execute(SQLQuery, values);
-  } catch (error) {
-    throw new Error("Failed to create new Code: " + error.message);
-  }
+  return dbPool.execute(SQLQuery, values);
 };
 
 const updateMenu = (body, id) => {
-  // console.log("id user: " + id);
-
-  console.log(body);
-  const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
+  const modifiedDate = getDatabaseTimestamp();
   const SQLQuery = `
   UPDATE tbl_menu
   SET 
@@ -67,8 +60,8 @@ const updateMenu = (body, id) => {
     levelMenu = ?,
     tipeMenu = ?,
     noUrut = ?,
-    createdBy =?,
-    createdDate=?
+    modifiedBy =?,
+    modifiedDate=?
   WHERE id = ?
 `;
 
@@ -82,8 +75,8 @@ const updateMenu = (body, id) => {
     body.levelMenu,
     body.tipeMenu,
     body.noUrut,
-    body.createdBy, // ganti dari createdBy ke updatedBy
-    dateNow,
+    body.modifiedBy,
+    modifiedDate,
     id, // penting! ID untuk tahu record mana yang diupdate
   ];
   // console.log(values);
@@ -91,9 +84,9 @@ const updateMenu = (body, id) => {
 };
 
 const deleteMenu = (id) => {
-  const SQLQuery = `DELETE FROM tbl_menu WHERE id=${id}`;
+  const SQLQuery = "DELETE FROM tbl_menu WHERE id = ?";
 
-  return dbPool.execute(SQLQuery);
+  return dbPool.execute(SQLQuery, [id]);
 };
 
 const getMenuHeader = () => {

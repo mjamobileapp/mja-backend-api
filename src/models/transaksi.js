@@ -1,6 +1,11 @@
 const dbPool = require("../config/database");
-const { getDateFilterCondition } = require("../utils/date");
+const { getDateFilterCondition, getTodayStringYYYYMMDD } = require("../utils/date");
+const { createHttpError } = require("../utils/httpError");
 const { publishAndWaitAck } = require("../utils/mqttClient");
+const { withTransaction } = require("../utils/transaction");
+const { calculateLineSubtotal, sumMoney } = require("../domain/transaksi");
+const { MACHINE_CONTROL_ACTOR_TYPES } = require("../domain/machineControl");
+const { MACHINE_STATUSES, normalizeMachineStatus } = require("../domain/mesin");
 
 const jenisMesinToLayanan = {
   WASHER: "cuci",
@@ -10,19 +15,10 @@ const jenisMesinToLayanan = {
 const normalizeEspId = (espId) => String(espId || "").trim().toUpperCase();
 const isMqttDebugEnabled = () => String(process.env.MQTT_DEBUG || "").toLowerCase() === "true";
 
-const createHttpError = (message, statusCode) => {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  return error;
-};
-
-const getInvoiceDate = async (connection) => {
-  const [rows] = await connection.execute("SELECT DATE_FORMAT(NOW(), '%Y%m%d') AS invoiceDate");
-  return rows[0].invoiceDate;
-};
+const getInvoiceDate = () => getTodayStringYYYYMMDD();
 
 const generateInvoiceNumber = async (connection, cabangId) => {
-  const invoiceDate = await getInvoiceDate(connection);
+  const invoiceDate = getInvoiceDate();
   const prefix = `INV-${cabangId}-${invoiceDate}-`;
 
   const [rows] = await connection.execute(
@@ -50,7 +46,7 @@ const validateMasterData = async (connection, idMitra, cabangId, idUserMobile) =
     [idMitra]
   );
   if (mitraCheck.length === 0) {
-    throw new Error("Mitra tidak ditemukan");
+    throw createHttpError(404, "Mitra tidak ditemukan", "TRANSACTION_MITRA_NOT_FOUND");
   }
 
   const [cabangCheck] = await connection.execute(
@@ -58,7 +54,7 @@ const validateMasterData = async (connection, idMitra, cabangId, idUserMobile) =
     [cabangId, idMitra]
   );
   if (cabangCheck.length === 0) {
-    throw new Error("Cabang tidak ditemukan");
+    throw createHttpError(404, "Cabang tidak ditemukan", "TRANSACTION_CABANG_NOT_FOUND");
   }
 
   const [userCheck] = await connection.execute(
@@ -66,7 +62,7 @@ const validateMasterData = async (connection, idMitra, cabangId, idUserMobile) =
     [idUserMobile]
   );
   if (userCheck.length === 0) {
-    throw new Error("User tidak ditemukan");
+    throw createHttpError(404, "User tidak ditemukan", "TRANSACTION_USER_NOT_FOUND");
   }
 
   return userCheck[0];
@@ -81,11 +77,11 @@ const validateAddonItem = async (connection, itemId) => {
   );
 
   if (itemCheck.length === 0) {
-    throw new Error("Item tidak ditemukan");
+    throw createHttpError(404, "Item tidak ditemukan", "TRANSACTION_ITEM_NOT_FOUND");
   }
 
   if (itemCheck[0].tipeItem !== "stok") {
-    throw new Error("Item addon harus bertipe stok");
+    throw createHttpError(400, "Item addon harus bertipe stok", "TRANSACTION_ITEM_TYPE_INVALID");
   }
 
   return itemCheck[0];
@@ -104,21 +100,21 @@ const reduceStockAndNotify = async (
   );
 
   if (stockRows.length === 0) {
-    throw new Error("Stok cabang tidak ditemukan");
+    throw createHttpError(400, "Stok cabang tidak ditemukan", "TRANSACTION_STOCK_NOT_CONFIGURED");
   }
 
   const currentStock = Number(stockRows[0].stokSekarang);
   const jumlah = Number(item.jumlah);
 
   if (currentStock < jumlah) {
-    throw new Error("Stok tidak mencukupi");
+    throw createHttpError(400, "Stok tidak mencukupi", "TRANSACTION_STOCK_INSUFFICIENT");
   }
 
   await connection.execute(
     `UPDATE tbl_stok_cabang
      SET stokSekarang = stokSekarang - ?,
          updatedBy = ?,
-         updatedDate = NOW()
+         updatedDate = UTC_TIMESTAMP()
      WHERE idMitra = ? AND cabangId = ? AND itemId = ?`,
     [jumlah, updatedBy, idMitra, cabangId, item.itemId]
   );
@@ -152,14 +148,34 @@ const reduceStockAndNotify = async (
 
 const createTransaksi = async (data) => {
   const { idMitra, cabangId, idUserMobile, totalBayar, metodePembayaran, items } = data;
-  const connection = await dbPool.getConnection();
-
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     const user = await validateMasterData(connection, idMitra, cabangId, idUserMobile);
     const updatedBy = user.namaLengkap || String(idUserMobile);
     const invoiceNumber = await generateInvoiceNumber(connection, cabangId);
+    const addonItems = new Map();
+    const pricedItems = [];
+
+    for (const item of items) {
+      const itemId = item.jenisLayanan === "addon_barang" ? item.itemId : null;
+      let itemData = null;
+      if (item.jenisLayanan === "addon_barang") {
+        itemData = await validateAddonItem(connection, item.itemId);
+        addonItems.set(item.itemId, itemData);
+      }
+
+      const harga = await getOfficialPrice(connection, { idMitra, cabangId, jenisLayanan: item.jenisLayanan, itemId });
+      pricedItems.push({ ...item, itemId, subtotal: calculateLineSubtotal(harga, item.jumlah) });
+    }
+
+    const serverTotal = sumMoney(pricedItems.map((item) => item.subtotal));
+    if (Number(totalBayar) !== serverTotal) {
+      throw createHttpError(
+        409,
+        "Harga transaksi telah berubah. Muat ulang harga dan coba kembali.",
+        "TRANSACTION_PRICE_CHANGED"
+      );
+    }
 
     const [orderResult] = await connection.execute(
       `INSERT INTO tbl_order_laundry (
@@ -171,21 +187,14 @@ const createTransaksi = async (data) => {
         metodePembayaran,
         statusPembayaran,
         waktuOrder
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [invoiceNumber, idMitra, cabangId, idUserMobile, totalBayar, metodePembayaran, "PAID"]
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
+      [invoiceNumber, idMitra, cabangId, idUserMobile, serverTotal, metodePembayaran, "PAID"]
     );
 
     const orderId = orderResult.insertId;
-    const addonItems = new Map();
 
-    for (const item of items) {
-      const itemId = item.jenisLayanan === "addon_barang" ? item.itemId : null;
-
-      let itemData = null;
-      if (item.jenisLayanan === "addon_barang") {
-        itemData = await validateAddonItem(connection, item.itemId);
-        addonItems.set(item.itemId, itemData);
-      }
+    for (const item of pricedItems) {
+      const itemId = item.itemId;
 
       await connection.execute(
         `INSERT INTO tbl_detail_order (
@@ -224,8 +233,6 @@ const createTransaksi = async (data) => {
       [orderId]
     );
 
-    await connection.commit();
-
     const order = orderRows[0];
     return {
       id: order.id,
@@ -243,31 +250,74 @@ const createTransaksi = async (data) => {
         subtotal: Number(item.subtotal),
       })),
     };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
+  });
+};
+
+const getOfficialPrice = async (connection, { idMitra, cabangId, jenisLayanan, itemId }) => {
+  const [rows] = await connection.execute(
+    `SELECT harga
+     FROM tbl_harga_cabang
+     WHERE idMitra = ?
+       AND cabangId = ?
+       AND jenisLayanan = ?
+       AND itemId <=> ?`,
+    [idMitra, cabangId, jenisLayanan, itemId]
+  );
+
+  const officialPrice = rows.length === 1 ? Number(rows[0].harga) : NaN;
+  if (!Number.isFinite(officialPrice) || officialPrice <= 0) {
+    throw createHttpError(409, "Harga transaksi belum dikonfigurasi untuk cabang ini", "TRANSACTION_PRICE_NOT_CONFIGURED");
   }
+
+  return officialPrice;
 };
 
 const insertLogMesin = async (
   connection,
-  { idMitra, cabangId, mesinId, kasirId, invoiceNumber, statusPerintah, errorMessage = null }
+  { idMitra, cabangId, mesinId, kasirId, actor, invoiceNumber, commandType, statusPerintah, errorMessage = null }
 ) => {
+  const auditActor = actor || { type: MACHINE_CONTROL_ACTOR_TYPES.KASIR, id: kasirId, username: null };
   await connection.execute(
     `INSERT INTO tbl_log_mesin (
       idMitra,
       cabangId,
       mesinId,
       kasirId,
+      actorType,
+      actorId,
+      actorUsername,
       invoiceNumber,
+      commandType,
       statusPerintah,
       errorMessage,
       waktuLog
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-    [idMitra, cabangId, mesinId, kasirId, invoiceNumber, statusPerintah, errorMessage]
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
+    [
+      idMitra,
+      cabangId,
+      mesinId,
+      kasirId,
+      auditActor.type,
+      auditActor.id,
+      auditActor.username || null,
+      invoiceNumber,
+      commandType,
+      statusPerintah,
+      errorMessage,
+    ]
   );
+};
+
+const isActiveCabangForMitra = async (idMitra, cabangId) => {
+  const [rows] = await dbPool.execute(
+    `SELECT c.id
+     FROM tbl_cabang c
+     JOIN tbl_mitra m ON m.id = c.idMitra
+     WHERE c.id = ? AND c.idMitra = ? AND c.statusAktif = 1 AND m.statusAktif = 1`,
+    [cabangId, idMitra]
+  );
+
+  return rows.length > 0;
 };
 
 const getMesinForStart = async (connection, { mesinId, idMitra, cabangId }) => {
@@ -290,16 +340,16 @@ const getMesinForStart = async (connection, { mesinId, idMitra, cabangId }) => {
   );
 
   if (rows.length === 0) {
-    throw createHttpError("Mesin tidak ditemukan", 404);
+    throw createHttpError(404, "Mesin tidak ditemukan", "MACHINE_NOT_FOUND");
   }
 
   const mesin = rows[0];
-  if (String(mesin.status).toUpperCase() !== "READY") {
-    throw createHttpError("Mesin tidak tersedia", 409);
+  if (normalizeMachineStatus(mesin.status) !== MACHINE_STATUSES.READY) {
+    throw createHttpError(409, "Mesin tidak tersedia", "MACHINE_NOT_READY");
   }
 
   if (!jenisMesinToLayanan[mesin.jenisMesin]) {
-    throw createHttpError("Jenis mesin tidak valid", 400);
+    throw createHttpError(400, "Jenis mesin tidak valid", "INVALID_MACHINE_TYPE");
   }
 
   return mesin;
@@ -325,16 +375,16 @@ const getMesinForStop = async (connection, { mesinId, idMitra, cabangId }) => {
   );
 
   if (rows.length === 0) {
-    throw createHttpError("Mesin tidak ditemukan", 404);
+    throw createHttpError(404, "Mesin tidak ditemukan", "MACHINE_NOT_FOUND");
   }
 
   const mesin = rows[0];
-  if (String(mesin.status).toUpperCase() !== "IN_USE") {
-    throw createHttpError("Mesin tidak sedang digunakan", 409);
+  if (normalizeMachineStatus(mesin.status) !== MACHINE_STATUSES.IN_USE) {
+    throw createHttpError(409, "Mesin tidak sedang digunakan", "MACHINE_NOT_IN_USE");
   }
 
   if (!jenisMesinToLayanan[mesin.jenisMesin]) {
-    throw createHttpError("Jenis mesin tidak valid", 400);
+    throw createHttpError(400, "Jenis mesin tidak valid", "INVALID_MACHINE_TYPE");
   }
 
   return mesin;
@@ -365,7 +415,7 @@ const getPendingDetailForStart = async (
   );
 
   if (rows.length === 0) {
-    throw createHttpError("Transaksi pending tidak ditemukan", 404);
+    throw createHttpError(404, "Transaksi pending tidak ditemukan", "PENDING_TRANSACTION_NOT_FOUND");
   }
 
   return rows[0];
@@ -383,11 +433,113 @@ const validateDryerCanStart = async (connection, orderId) => {
   const hasUnfinishedWash = rows.some((row) => row.statusEksekusi !== "selesai");
 
   if (hasUnfinishedWash) {
-    throw createHttpError("Layanan cuci belum selesai", 409);
+    throw createHttpError(409, "Layanan cuci belum selesai", "WASH_NOT_COMPLETED");
   }
 };
 
-const startMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber }) => {
+const parseDryerRecoveryRequestId = (requestId) => {
+  const match = String(requestId || "").trim().match(/^(.+)-(\d+)-(\d+)$/);
+  if (!match || !match[1]) {
+    throw createHttpError(400, "requestId recovery mesin tidak valid", "MACHINE_RECOVERY_REQUEST_INVALID");
+  }
+
+  return {
+    invoiceNumber: match[1],
+    mesinId: Number(match[2]),
+  };
+};
+
+const recoverPendingTransaksi = async ({ espId, requestId, machineType = "DRYER" }) => {
+  const normalizedMachineType = String(machineType || "").trim().toUpperCase();
+  if (normalizedMachineType !== "DRYER") {
+    throw createHttpError(400, "Recovery transaksi hanya mendukung mesin DRYER", "MACHINE_RECOVERY_TYPE_INVALID");
+  }
+
+  const normalizedEspId = normalizeEspId(espId);
+  if (!normalizedEspId) {
+    throw createHttpError(400, "espId recovery mesin tidak valid", "MACHINE_RECOVERY_ESP_INVALID");
+  }
+
+  const { invoiceNumber, mesinId } = parseDryerRecoveryRequestId(requestId);
+
+  return withTransaction(async (connection) => {
+    const [machineRows] = await connection.execute(
+      `SELECT
+        d.id AS mesinId,
+        d.jenisMesin,
+        m.idMitra,
+        m.cabangId
+       FROM tbl_mesin_detail d
+       JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
+       WHERE d.id = ?
+         AND d.jenisMesin = ?
+         AND m.espId = ?
+         AND m.statusAktif = 1
+       FOR UPDATE`,
+      [mesinId, normalizedMachineType, normalizedEspId]
+    );
+
+    if (machineRows.length === 0) {
+      throw createHttpError(404, "Mesin recovery tidak ditemukan", "MACHINE_RECOVERY_NOT_FOUND");
+    }
+
+    const machine = machineRows[0];
+    const [orderRows] = await connection.execute(
+      `SELECT id, invoiceNumber
+       FROM tbl_order_laundry
+       WHERE invoiceNumber = ?
+         AND idMitra = ?
+         AND cabangId = ?
+       FOR UPDATE`,
+      [invoiceNumber, machine.idMitra, machine.cabangId]
+    );
+
+    if (orderRows.length === 0) {
+      throw createHttpError(404, "Transaksi recovery tidak ditemukan", "TRANSACTION_RECOVERY_NOT_FOUND");
+    }
+
+    const order = orderRows[0];
+    const [detailRows] = await connection.execute(
+      `SELECT id
+       FROM tbl_detail_order
+       WHERE orderId = ?
+         AND jenisLayanan = 'kering'
+       ORDER BY id ASC
+       LIMIT 1
+       FOR UPDATE`,
+      [order.id]
+    );
+
+    if (detailRows.length === 0) {
+      throw createHttpError(404, "Detail transaksi dryer recovery tidak ditemukan", "TRANSACTION_RECOVERY_DETAIL_NOT_FOUND");
+    }
+
+    await connection.execute(
+      `UPDATE tbl_detail_order
+       SET mesinId = NULL,
+           statusEksekusi = 'pending'
+       WHERE id = ?`,
+      [detailRows[0].id]
+    );
+
+    await connection.execute(
+      `UPDATE tbl_mesin_detail
+       SET status = ?
+       WHERE id = ?`,
+      [MACHINE_STATUSES.READY, machine.mesinId]
+    );
+
+    return {
+      invoiceNumber: order.invoiceNumber,
+      idMitra: machine.idMitra,
+      cabangId: machine.cabangId,
+      mesinId: machine.mesinId,
+      machineType: normalizedMachineType,
+    };
+  });
+};
+
+const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNumber }) => {
   const connection = await dbPool.getConnection();
   let shouldRollback = false;
 
@@ -409,11 +561,12 @@ const startMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber }
     }
 
     const requestId = `${invoiceNumber}-${mesinId}-${Date.now()}`;
+    const commandType = "ON";
     const espId = normalizeEspId(mesin.espId);
     const topic = `modul/${espId}/${mesin.jenisMesin}/on`;
     const ackTopic = `modul/${espId}/${mesin.jenisMesin}/ack`;
     const mqttPayload = {
-      command: "ON",
+      command: commandType,
       requestId,
     };
 
@@ -442,14 +595,16 @@ const startMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber }
         cabangId,
         mesinId,
         kasirId,
+        actor,
         invoiceNumber,
+        commandType,
         statusPerintah: "failed",
         errorMessage: mqttError.message,
       });
 
       await connection.commit();
       shouldRollback = false;
-      throw createHttpError("Gagal mengirim perintah ke mesin", 502);
+      throw createHttpError(502, "Gagal mengirim perintah ke mesin", "MQTT_COMMAND_FAILED");
     }
 
     await connection.execute(
@@ -461,9 +616,9 @@ const startMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber }
 
     await connection.execute(
       `UPDATE tbl_mesin_detail
-       SET status = 'IN_USE'
+       SET status = ?
        WHERE id = ?`,
-      [mesinId]
+      [MACHINE_STATUSES.IN_USE, mesinId]
     );
 
     await insertLogMesin(connection, {
@@ -471,7 +626,9 @@ const startMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber }
       cabangId,
       mesinId,
       kasirId,
+      actor,
       invoiceNumber,
+      commandType,
       statusPerintah: "success",
     });
 
@@ -493,7 +650,99 @@ const startMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber }
   }
 };
 
-const stopMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber = null }) => {
+const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }) => {
+  const connection = await dbPool.getConnection();
+  let shouldRollback = false;
+
+  try {
+    await connection.beginTransaction();
+    shouldRollback = true;
+
+    const mesin = await getMesinForStart(connection, { mesinId, idMitra, cabangId });
+    const requestId = `MANUAL-${mesinId}-${Date.now()}`;
+    const commandType = "ON";
+    const espId = normalizeEspId(mesin.espId);
+    const topic = `modul/${espId}/${mesin.jenisMesin}/on`;
+    const ackTopic = `modul/${espId}/${mesin.jenisMesin}/ack`;
+    const mqttPayload = {
+      command: commandType,
+      requestId,
+    };
+
+    try {
+      if (isMqttDebugEnabled()) {
+        console.log("[TRANSAKSI] Start mesin by owner MQTT command", {
+          mesinId: Number(mesinId),
+          jenisMesin: mesin.jenisMesin,
+          espId,
+          rawEspId: mesin.espId,
+          topic,
+          ackTopic,
+          requestId,
+        });
+      }
+
+      await publishAndWaitAck({
+        topic,
+        ackTopic,
+        payload: mqttPayload,
+        requestId,
+      });
+    } catch (mqttError) {
+      await insertLogMesin(connection, {
+        idMitra,
+        cabangId,
+        mesinId,
+        kasirId,
+        actor,
+        invoiceNumber: null,
+        commandType,
+        statusPerintah: "failed",
+        errorMessage: mqttError.message,
+      });
+
+      await connection.commit();
+      shouldRollback = false;
+      throw createHttpError(502, "Gagal mengirim perintah ke mesin", "MQTT_COMMAND_FAILED");
+    }
+
+    await connection.execute(
+      `UPDATE tbl_mesin_detail
+       SET status = ?
+       WHERE id = ?`,
+      [MACHINE_STATUSES.IN_USE, mesinId]
+    );
+
+    await insertLogMesin(connection, {
+      idMitra,
+      cabangId,
+      mesinId,
+      kasirId,
+      actor,
+      invoiceNumber: null,
+      commandType,
+      statusPerintah: "success",
+    });
+
+    await connection.commit();
+    shouldRollback = false;
+    return null;
+  } catch (error) {
+    if (shouldRollback) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error("Rollback start mesin by owner gagal:", rollbackError.message);
+      }
+    }
+
+    throw error;
+  } finally {
+    connection.release();
+  }
+};
+
+const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNumber = null }) => {
   const connection = await dbPool.getConnection();
   let shouldRollback = false;
 
@@ -503,11 +752,12 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber = 
 
     const mesin = await getMesinForStop(connection, { mesinId, idMitra, cabangId });
     const requestId = `${invoiceNumber || "NO-INVOICE"}-${mesinId}-OFF-${Date.now()}`;
+    const commandType = "OFF";
     const espId = normalizeEspId(mesin.espId);
     const topic = `modul/${espId}/${mesin.jenisMesin}/off`;
     const ackTopic = `modul/${espId}/${mesin.jenisMesin}/ack`;
     const mqttPayload = {
-      command: "OFF",
+      command: commandType,
       requestId,
     };
 
@@ -536,21 +786,23 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber = 
         cabangId,
         mesinId,
         kasirId,
+        actor,
         invoiceNumber,
+        commandType,
         statusPerintah: "failed",
         errorMessage: mqttError.message,
       });
 
       await connection.commit();
       shouldRollback = false;
-      throw createHttpError("Gagal mengirim perintah off ke mesin", 502);
+      throw createHttpError(502, "Gagal mengirim perintah off ke mesin", "MQTT_COMMAND_FAILED");
     }
 
     await connection.execute(
       `UPDATE tbl_mesin_detail
-       SET status = 'READY'
+       SET status = ?
        WHERE id = ?`,
-      [mesinId]
+      [MACHINE_STATUSES.READY, mesinId]
     );
 
     await insertLogMesin(connection, {
@@ -558,7 +810,9 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber = 
       cabangId,
       mesinId,
       kasirId,
+      actor,
       invoiceNumber,
+      commandType,
       statusPerintah: "success",
     });
 
@@ -571,6 +825,98 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, mesinId, invoiceNumber = 
         await connection.rollback();
       } catch (rollbackError) {
         console.error("Rollback stop mesin gagal:", rollbackError.message);
+      }
+    }
+
+    throw error;
+  } finally {
+    connection.release();
+  }
+};
+
+const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }) => {
+  const connection = await dbPool.getConnection();
+  let shouldRollback = false;
+
+  try {
+    await connection.beginTransaction();
+    shouldRollback = true;
+
+    const mesin = await getMesinForStop(connection, { mesinId, idMitra, cabangId });
+    const requestId = `MANUAL-${mesinId}-OFF-${Date.now()}`;
+    const commandType = "OFF";
+    const espId = normalizeEspId(mesin.espId);
+    const topic = `modul/${espId}/${mesin.jenisMesin}/off`;
+    const ackTopic = `modul/${espId}/${mesin.jenisMesin}/ack`;
+    const mqttPayload = {
+      command: commandType,
+      requestId,
+    };
+
+    try {
+      if (isMqttDebugEnabled()) {
+        console.log("[TRANSAKSI] Stop mesin by owner MQTT command", {
+          mesinId: Number(mesinId),
+          jenisMesin: mesin.jenisMesin,
+          espId,
+          rawEspId: mesin.espId,
+          topic,
+          ackTopic,
+          requestId,
+        });
+      }
+
+      await publishAndWaitAck({
+        topic,
+        ackTopic,
+        payload: mqttPayload,
+        requestId,
+      });
+    } catch (mqttError) {
+      await insertLogMesin(connection, {
+        idMitra,
+        cabangId,
+        mesinId,
+        kasirId,
+        actor,
+        invoiceNumber: null,
+        commandType,
+        statusPerintah: "failed",
+        errorMessage: mqttError.message,
+      });
+
+      await connection.commit();
+      shouldRollback = false;
+      throw createHttpError(502, "Gagal mengirim perintah off ke mesin", "MQTT_COMMAND_FAILED");
+    }
+
+    await connection.execute(
+      `UPDATE tbl_mesin_detail
+       SET status = ?
+       WHERE id = ?`,
+      [MACHINE_STATUSES.READY, mesinId]
+    );
+
+    await insertLogMesin(connection, {
+      idMitra,
+      cabangId,
+      mesinId,
+      kasirId,
+      actor,
+      invoiceNumber: null,
+      commandType,
+      statusPerintah: "success",
+    });
+
+    await connection.commit();
+    shouldRollback = false;
+    return null;
+  } catch (error) {
+    if (shouldRollback) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error("Rollback stop mesin by owner gagal:", rollbackError.message);
       }
     }
 
@@ -635,6 +981,10 @@ module.exports = {
   createTransaksi,
   getPendingTransaksi,
   getJumlahTransaksi,
+  isActiveCabangForMitra,
+  recoverPendingTransaksi,
   startMesin,
+  startMesinByOwner,
   stopMesin,
+  stopMesinByOwner,
 };

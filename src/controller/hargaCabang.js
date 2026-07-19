@@ -1,11 +1,10 @@
 const HargaCabangModel = require("../models/hargaCabang");
+const { validatePriceItems } = HargaCabangModel;
 
 const createSettingHarga = async (req, res) => {
   const { cabangId, item } = req.body;
   const idMitra = req.user ? req.user.idMitra : null;
   const createdBy = req.user ? req.user.username || req.user.id : null;
-
-  console.log("CREATE SETTING HARGA REQUEST:", { idMitra, cabangId, item });
 
   if (!idMitra) {
     return res.status(400).json({
@@ -51,32 +50,21 @@ const createSettingHarga = async (req, res) => {
   }
 
   try {
-    const data = await HargaCabangModel.createSettingHarga(idMitra, cabangId, item, createdBy);
-    res.status(201).json({
-      message: "Create Setting Harga Layanan successful",
-      data: data,
-    });
+    validatePriceItems(item);
   } catch (error) {
-    if (
-      error.message === "Mitra tidak ditemukan" ||
-      error.message === "Cabang tidak ditemukan"
-    ) {
-      return res.status(404).json({
-        message: error.message,
-      });
-    }
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
+    return res.status(error.statusCode || 400).json({ message: error.message });
   }
+
+  const data = await HargaCabangModel.createSettingHarga(idMitra, cabangId, item, createdBy);
+  return res.status(201).json({
+    message: "Create Setting Harga Layanan successful",
+    data: data,
+  });
 };
 
 const getSettingHarga = async (req, res) => {
   const { cabangId } = req.query;
   const idMitra = req.user ? req.user.idMitra : null;
-
-  console.log("GET SETTING HARGA REQUEST:", { idMitra, cabangId });
 
   if (!idMitra) {
     return res.status(400).json({
@@ -90,31 +78,11 @@ const getSettingHarga = async (req, res) => {
     });
   }
 
-  try {
-    const data = await HargaCabangModel.getSettingHarga(idMitra, cabangId);
-    res.status(200).json({
-      message: "Get Data Setting Harga Layanan successful",
-      data: data,
-    });
-  } catch (error) {
-    if (
-      error.message === "Mitra tidak ditemukan" ||
-      error.message === "Cabang tidak ditemukan"
-    ) {
-      return res.status(404).json({
-        message: error.message,
-      });
-    }
-    if (error.message === "Data setting harga tidak ditemukan untuk cabang ini") {
-      return res.status(404).json({
-        message: error.message,
-      });
-    }
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  const data = await HargaCabangModel.getSettingHarga(idMitra, cabangId);
+  return res.status(200).json({
+    message: "Get Data Setting Harga Layanan successful",
+    data: data,
+  });
 };
 
 module.exports = {

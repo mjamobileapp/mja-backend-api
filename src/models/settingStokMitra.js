@@ -1,9 +1,9 @@
 const dbPool = require("../config/database");
+const { withTransaction } = require("../utils/transaction");
+const { createHttpError } = require("../utils/httpError");
 
 const createNewSetting = async (body) => {
-  const connection = await dbPool.getConnection();
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
     const { idMitra, itemId, batasMinimum, createdBy } = body;
 
     // 1. Validasi Mitra Exist dan Aktif
@@ -12,7 +12,7 @@ const createNewSetting = async (body) => {
       [idMitra]
     );
     if (existingMitra.length === 0) {
-      throw new Error("Mitra tidak ditemukan atau tidak aktif");
+      throw createHttpError(400, "Mitra tidak ditemukan atau tidak aktif", "STOCK_MITRA_INVALID");
     }
 
     // 2. Validasi Master Item Exist dan Aktif
@@ -21,7 +21,7 @@ const createNewSetting = async (body) => {
       [itemId]
     );
     if (existingItem.length === 0) {
-      throw new Error("Item tidak ditemukan atau tidak aktif");
+      throw createHttpError(400, "Item tidak ditemukan atau tidak aktif", "STOCK_ITEM_INVALID");
     }
 
     // 3. Hapus data lama filter by idMitra (Sesuai Komentar PR #70)
@@ -39,10 +39,8 @@ const createNewSetting = async (body) => {
     const values = [idMitra, itemId, batasMinimum, createdBy, dateNow];
     const [result] = await connection.execute(SQLQuery, values);
 
-    await connection.commit();
-
-    // Ambil data terbaru dengan JOIN untuk response
-    const [insertedData] = await dbPool.execute(
+    // Ambil data response sebelum commit agar kegagalan read membatalkan write.
+    const [insertedData] = await connection.execute(
       `SELECT s.*, m.namaMitra, i.namaItem 
        FROM tbl_treshold_stok_mitra s
        JOIN tbl_mitra m ON s.idMitra = m.id
@@ -51,18 +49,11 @@ const createNewSetting = async (body) => {
     );
 
     return insertedData[0];
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const createBulkSettings = async (idMitra, items, createdBy) => {
-  const connection = await dbPool.getConnection();
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     // 1. Validasi Mitra Exist dan Aktif
     const [existingMitra] = await connection.execute(
@@ -70,7 +61,7 @@ const createBulkSettings = async (idMitra, items, createdBy) => {
       [idMitra]
     );
     if (existingMitra.length === 0) {
-      throw new Error("Mitra tidak ditemukan atau tidak aktif");
+      throw createHttpError(400, "Mitra tidak ditemukan atau tidak aktif", "STOCK_MITRA_INVALID");
     }
 
     // 2. Hapus data lama filter by idMitra (Cukup sekali saja)
@@ -91,7 +82,7 @@ const createBulkSettings = async (idMitra, items, createdBy) => {
         [itemId]
       );
       if (existingItem.length === 0) {
-        throw new Error("Item tidak ditemukan atau tidak aktif");
+        throw createHttpError(400, "Item tidak ditemukan atau tidak aktif", "STOCK_ITEM_INVALID");
       }
 
       const SQLQuery = `INSERT INTO tbl_treshold_stok_mitra (
@@ -102,10 +93,8 @@ const createBulkSettings = async (idMitra, items, createdBy) => {
       await connection.execute(SQLQuery, values);
     }
 
-    await connection.commit();
-
-    // Ambil semua data terbaru milik Mitra ini untuk response
-    const [result] = await dbPool.execute(
+    // Ambil data response sebelum commit agar kegagalan read membatalkan write.
+    const [result] = await connection.execute(
       `SELECT s.*, m.namaMitra, i.namaItem 
        FROM tbl_treshold_stok_mitra s
        JOIN tbl_mitra m ON s.idMitra = m.id
@@ -114,23 +103,17 @@ const createBulkSettings = async (idMitra, items, createdBy) => {
     );
 
     return result;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const updateSetting = async (id, body) => {
-  try {
     const { batasMinimum, updatedBy } = body;
 
     const [existing] = await dbPool.execute(
       "SELECT id FROM tbl_treshold_stok_mitra WHERE id = ?",
       [id]
     );
-    if (existing.length === 0) throw new Error("data not found");
+    if (existing.length === 0) throw createHttpError(404, "data not found", "STOCK_SETTING_NOT_FOUND");
 
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = `UPDATE tbl_treshold_stok_mitra SET 
@@ -147,25 +130,17 @@ const updateSetting = async (id, body) => {
        WHERE s.id = ?`, [id]
     );
     return result[0];
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getSettingById = async (id) => {
-  try {
     const [rows] = await dbPool.execute(
       "SELECT * FROM tbl_treshold_stok_mitra WHERE id = ?",
       [id]
     );
     return rows[0];
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getAllSettings = async (idMitra) => {
-  try {
     let SQLQuery = `
       select
         i.*,
@@ -186,13 +161,9 @@ const getAllSettings = async (idMitra) => {
 
     const [rows] = await dbPool.execute(SQLQuery, [idMitra]);
     return rows;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getSettingByIdMitra = async (idMitra) => {
-  try {
     const [rows] = await dbPool.execute(
       `SELECT s.*, m.namaMitra, i.namaItem 
        FROM tbl_treshold_stok_mitra s
@@ -202,9 +173,6 @@ const getSettingByIdMitra = async (idMitra) => {
       [idMitra]
     );
     return rows;
-  } catch (error) {
-    throw error;
-  }
 };
 
 module.exports = {

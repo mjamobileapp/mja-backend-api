@@ -1,9 +1,11 @@
 const dbPool = require("../config/database");
 const bcrypt = require("bcrypt");
+const { createHttpError } = require("../utils/httpError");
 const { generateAndHashPassword } = require("../utils/password");
+const { MOBILE_ROLES } = require("../domain/auth");
+const { getJakartaSqlDate, getJakartaSqlTime } = require("../utils/date");
 
 const createNewUserKasir = async (body) => {
-  try {
     const {
       username,
       idMitra,
@@ -17,7 +19,7 @@ const createNewUserKasir = async (body) => {
     // 0. Validasi Format Email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      throw new Error("Format email tidak valid");
+      throw createHttpError(400, "Format email tidak valid", "KASIR_EMAIL_INVALID");
     }
 
     // 1. Validasi Mitra Exist
@@ -26,7 +28,7 @@ const createNewUserKasir = async (body) => {
       [idMitra]
     );
     if (existingMitra.length === 0) {
-      throw new Error("Mitra tidak ditemukan atau tidak aktif");
+      throw createHttpError(400, "Mitra tidak ditemukan atau tidak aktif", "KASIR_MITRA_INVALID");
     }
 
     // 1b. Validasi Cabang (milik idMitra yang sama)
@@ -36,7 +38,7 @@ const createNewUserKasir = async (body) => {
         [cabangId, idMitra]
       );
       if (existingCabang.length === 0) {
-        throw new Error("Cabang tidak ditemukan atau tidak sesuai dengan Mitra");
+      throw createHttpError(400, "Cabang tidak ditemukan atau tidak sesuai dengan Mitra", "KASIR_CABANG_INVALID");
       }
     }
 
@@ -56,24 +58,22 @@ const createNewUserKasir = async (body) => {
 
       // Cek duplikasi username (tidak peduli status aktif/nonaktif)
       if (duplicates.some((u) => u.username === username)) {
-        throw new Error("Username sudah terdaftar");
+        throw createHttpError(400, "Username sudah terdaftar", "KASIR_USERNAME_DUPLICATE");
       }
       
       // Cek duplikasi email HANYA JIKA statusnya aktif
       if (duplicates.some((u) => u.email === email && u.statusAktif === 1)) {
-        throw new Error("Email sudah terdaftar dan sedang aktif digunakan");
+        throw createHttpError(400, "Email sudah terdaftar dan sedang aktif digunakan", "KASIR_EMAIL_DUPLICATE");
       }
       
       // Cek duplikasi nomor telepon HANYA JIKA statusnya aktif
       if (duplicates.some((u) => u.noTelp === noTelp && u.statusAktif === 1)) {
-        throw new Error("Nomor Telepon sudah terdaftar dan sedang aktif digunakan");
+        throw createHttpError(400, "Nomor Telepon sudah terdaftar dan sedang aktif digunakan", "KASIR_PHONE_DUPLICATE");
       }
     }
 
     // 3. Generate Random Password & Hash
-    console.log("Before generateAndHashPassword");
     const { password, hashedPassword } = await generateAndHashPassword(8);
-    console.log("After generateAndHashPassword");
 
     // 4. Persiapkan timestamp
     const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -96,7 +96,7 @@ const createNewUserKasir = async (body) => {
     const values = [
       username,
       hashedPassword,
-      "kasir",
+      MOBILE_ROLES.KASIR,
       idMitra,
       cabangId,
       namaLengkap,
@@ -112,7 +112,7 @@ const createNewUserKasir = async (body) => {
     // 6. Return data sesuai spesifikasi response success
     return {
       username,
-      role: "kasir",
+      role: MOBILE_ROLES.KASIR,
       idMitra,
       cabangId,
       namaLengkap,
@@ -122,16 +122,12 @@ const createNewUserKasir = async (body) => {
       createdBy,
       statusAktif: true,
     };
-  } catch (error) {
-    throw error;
-  }
 };
 
-const getAllUserKasir = async (status) => {
-  try {
-    let SQLQuery = "SELECT * FROM tbl_users_mobile WHERE role = 'kasir'";
+const getAllUserKasir = async (status, idMitra) => {
+    let SQLQuery = "SELECT * FROM tbl_users_mobile WHERE role = ? AND idMitra = ?";
     let conditions = [];
-    let values = [];
+    let values = [MOBILE_ROLES.KASIR, idMitra];
 
     if (status === "all") {
       // No status filter
@@ -153,43 +149,35 @@ const getAllUserKasir = async (status) => {
       delete user.deviceName;
       return user;
     });
-  } catch (error) {
-    throw error;
-  }
 };
 
-const getUserKasirById = async (id) => {
-  try {
+const getUserKasirById = async (id, idMitra) => {
     const [user] = await dbPool.execute(
-      "SELECT * FROM tbl_users_mobile WHERE id = ? AND role = 'kasir'",
-      [id]
+      "SELECT * FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = ?",
+      [id, idMitra, MOBILE_ROLES.KASIR]
     );
-    if (user.length === 0) throw new Error("data not found");
+    if (user.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
     delete user[0].password;
     delete user[0].deviceId;
     delete user[0].deviceName;
     return user[0];
-  } catch (error) {
-    throw error;
-  }
 };
 
-const updateUserKasir = async (id, body) => {
-  try {
+const updateUserKasir = async (id, body, idMitra) => {
     const { namaLengkap, noTelp, email, cabangId, updatedBy } = body;
 
     // 0. Validasi Format Email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      throw new Error("Format email tidak valid");
+      throw createHttpError(400, "Format email tidak valid", "KASIR_EMAIL_INVALID");
     }
 
     // 1. Cek eksistensi
     const [existing] = await dbPool.execute(
-      "SELECT * FROM tbl_users_mobile WHERE id = ? AND role = 'kasir'",
-      [id]
+      "SELECT * FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = ?",
+      [id, idMitra, MOBILE_ROLES.KASIR]
     );
-    if (existing.length === 0) throw new Error("data not found");
+    if (existing.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     // 2. Validasi duplikasi jika data unik diubah
     const [duplicates] = await dbPool.execute(
@@ -197,8 +185,8 @@ const updateUserKasir = async (id, body) => {
       [email, noTelp, id]
     );
     if (duplicates.length > 0) {
-      if (duplicates.some((u) => u.email === email)) throw new Error("Email sudah terdaftar");
-      if (duplicates.some((u) => u.noTelp === noTelp)) throw new Error("Nomor Telepon sudah terdaftar");
+      if (duplicates.some((u) => u.email === email)) throw createHttpError(400, "Email sudah terdaftar", "KASIR_EMAIL_DUPLICATE");
+      if (duplicates.some((u) => u.noTelp === noTelp)) throw createHttpError(400, "Nomor Telepon sudah terdaftar", "KASIR_PHONE_DUPLICATE");
     }
 
     // 2b. Validasi Cabang (jika diisi)
@@ -208,7 +196,7 @@ const updateUserKasir = async (id, body) => {
         [cabangId, existing[0].idMitra]
       );
       if (existingCabang.length === 0) {
-        throw new Error("Cabang tidak ditemukan atau tidak sesuai dengan Mitra");
+      throw createHttpError(400, "Cabang tidak ditemukan atau tidak sesuai dengan Mitra", "KASIR_CABANG_INVALID");
       }
     }
 
@@ -224,91 +212,75 @@ const updateUserKasir = async (id, body) => {
 
     // Ambil data terbaru dari database untuk dikembalikan sebagai response
     const [updatedUser] = await dbPool.execute(
-      "SELECT * FROM tbl_users_mobile WHERE id = ?",
-      [id]
+      "SELECT * FROM tbl_users_mobile WHERE id = ? AND idMitra = ?",
+      [id, idMitra]
     );
     const user = updatedUser[0];
     delete user.password;
     delete user.deviceId;
     delete user.deviceName;
     return user;
-  } catch (error) {
-    throw error;
-  }
 };
 
-const deleteUserKasir = async (id, updatedBy) => {
-  try {
+const deleteUserKasir = async (id, updatedBy, idMitra) => {
     const [existing] = await dbPool.execute(
-      "SELECT id FROM tbl_users_mobile WHERE id = ? AND role = 'kasir' AND statusAktif = 1",
-      [id]
+      "SELECT id FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = ? AND statusAktif = 1",
+      [id, idMitra, MOBILE_ROLES.KASIR]
     );
-    if (existing.length === 0) throw new Error("data not found");
+    if (existing.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = "UPDATE tbl_users_mobile SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
     
     return await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
-  } catch (error) {
-    throw error;
-  }
 };
 
-const restoreUserKasir = async (id, updatedBy) => {
-  try {
+const restoreUserKasir = async (id, updatedBy, idMitra) => {
     const [existing] = await dbPool.execute(
-      "SELECT id FROM tbl_users_mobile WHERE id = ? AND role = 'kasir' AND statusAktif = 0",
-      [id]
+      "SELECT id FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = ? AND statusAktif = 0",
+      [id, idMitra, MOBILE_ROLES.KASIR]
     );
-    if (existing.length === 0) throw new Error("data not found");
+    if (existing.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = "UPDATE tbl_users_mobile SET statusAktif = 1, updatedBy = ?, updatedDate = ? WHERE id = ?";
     
     return await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
-  } catch (error) {
-    throw error;
-  }
 };
 
-const resetDeviceId = async (id, body, updatedBy) => {
-  try {
+const resetDeviceId = async (id, body, updatedBy, idMitra) => {
     // 1. Validasi eksistensi berdasarkan id dan mitra
     const [existing] = await dbPool.execute(
-      "SELECT username FROM tbl_users_mobile WHERE id = ? AND role = 'kasir' AND statusAktif = 1",
-      [id]
+      "SELECT username FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = ? AND statusAktif = 1",
+      [id, idMitra, MOBILE_ROLES.KASIR]
     );
 
-    if (existing.length === 0) throw new Error("data not found");
+    if (existing.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     const SQLQuery = "UPDATE tbl_users_mobile SET deviceId = NULL, deviceName = NULL, updatedBy = ?, updatedDate = ? WHERE id = ?";
 
     await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
     return existing[0].username;
-  } catch (error) {
-    throw error;
-  }
 };
 
-const changePassword = async (id, body, updatedBy) => {
-  try {
+const changePassword = async (id, body, updatedBy, idMitra) => {
     const { oldPassword, newPassword } = body;
 
     // 1. Ambil data user termasuk password hashed
     const [rows] = await dbPool.execute(
-      "SELECT username, password FROM tbl_users_mobile WHERE id = ? AND role = 'kasir' AND statusAktif = 1",
-      [id]
+      "SELECT username, password FROM tbl_users_mobile WHERE id = ? AND idMitra = ? AND role = ? AND statusAktif = 1",
+      [id, idMitra, MOBILE_ROLES.KASIR]
     );
 
-    if (rows.length === 0) throw new Error("data not found");
+    if (rows.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     const user = rows[0];
 
     // 2. Verifikasi password lama
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      throw new Error("Password lama salah");
+      throw createHttpError(400, "Password lama salah", "KASIR_OLD_PASSWORD_INVALID");
     }
 
     // 3. Hash password baru
@@ -320,43 +292,46 @@ const changePassword = async (id, body, updatedBy) => {
     await dbPool.execute(SQLQuery, [hashedPassword, updatedBy, updatedDate, id]);
 
     return user.username;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const resetPassword = async (email) => {
-  try {
     // 1. Validasi eksistensi email
     const [rows] = await dbPool.execute(
-      "SELECT username, email FROM tbl_users_mobile WHERE email = ? AND role = 'kasir' AND statusAktif = 1",
-      [email]
+      "SELECT username, email FROM tbl_users_mobile WHERE email = ? AND role = ? AND statusAktif = 1",
+      [email, MOBILE_ROLES.KASIR]
     );
 
-    if (rows.length === 0) throw new Error("data not found");
+    if (rows.length === 0) throw createHttpError(404, "data not found", "KASIR_NOT_FOUND");
 
     return { username: rows[0].username, email: rows[0].email };
-  } catch (error) {
-    throw error;
-  }
 };
 
-const getAbsensiKasir = ({ cabangId, tanggal, namaKasir }) => {
+const isCabangOwnedByMitra = async (cabangId, idMitra) => {
+  const [rows] = await dbPool.execute(
+    "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ?",
+    [cabangId, idMitra]
+  );
+
+  return rows.length > 0;
+};
+
+const getAbsensiKasir = ({ cabangId, idMitra, tanggal, namaKasir }) => {
   let SQLQuery = `
     SELECT
       a.id AS absensiId,
       u.namaLengkap AS namaKasir,
-      DATE(a.waktuLogin) AS tanggalShift,
-      DATE_FORMAT(a.waktuLogin, '%H:%i') AS jamMasuk,
-      IF(a.waktuLogout IS NOT NULL, DATE_FORMAT(a.waktuLogout, '%H:%i'), 'Belum') AS jamPulang
+      ${getJakartaSqlDate("a.waktuLogin")} AS tanggalShift,
+      ${getJakartaSqlTime("a.waktuLogin")} AS jamMasuk,
+      IF(a.waktuLogout IS NOT NULL, ${getJakartaSqlTime("a.waktuLogout")}, 'Belum') AS jamPulang
     FROM tbl_absensi a
-    JOIN tbl_users_mobile u ON a.idUserMobile = u.id
-    WHERE a.cabangId = ?
+    JOIN tbl_cabang c ON a.cabangId = c.id
+    JOIN tbl_users_mobile u ON a.idUserMobile = u.id AND u.idMitra = c.idMitra
+    WHERE a.cabangId = ? AND c.idMitra = ?
   `;
-  const values = [cabangId];
+  const values = [cabangId, idMitra];
 
   if (tanggal) {
-    SQLQuery += " AND DATE(a.waktuLogin) = ?";
+    SQLQuery += ` AND ${getJakartaSqlDate("a.waktuLogin")} = ?`;
     values.push(tanggal);
   }
 
@@ -380,6 +355,7 @@ module.exports = {
   resetDeviceId,
   changePassword,
   resetPassword,
+  isCabangOwnedByMitra,
   getAbsensiKasir,
 };
 

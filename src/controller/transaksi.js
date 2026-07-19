@@ -1,20 +1,64 @@
 const TransaksiModel = require("../models/transaksi");
-
-const validJenisLayanan = ["cuci", "kering", "addon_barang"];
-
-const isPositiveNumber = (value) => {
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) && numberValue > 0;
-};
-
-const isNonNegativeNumber = (value) => {
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) && numberValue >= 0;
-};
+const { normalizeTransaksiPayload } = require("../domain/transaksi");
+const { MACHINE_CONTROL_ACTOR_TYPES } = require("../domain/machineControl");
+const { MOBILE_ROLES, normalizeMobileRole } = require("../domain/auth");
+const TransaksiService = require("../services/transaksi");
+const { createHttpError } = require("../utils/httpError");
 
 const isPositiveInteger = (value) => Number.isInteger(Number(value)) && Number(value) > 0;
 
 const getRequestDateFilter = (req) => req.query.filter ?? req.query.periode ?? req.query.tanggal ?? "";
+
+const getMachineControlContext = async (req) => {
+  const actor = req.machineControlActor;
+  let idMitra;
+  let cabangId;
+
+  if (actor?.type === MACHINE_CONTROL_ACTOR_TYPES.OWNER) {
+    idMitra = Number(req.user.idMitra);
+    cabangId = Number(req.body.cabangId);
+
+    if (req.body.idMitra !== undefined && Number(req.body.idMitra) !== idMitra) {
+      throw createHttpError(403, "Owner hanya dapat mengontrol mesin mitra sendiri", "BRANCH_SCOPE_FORBIDDEN");
+    }
+  } else if (actor?.type === MACHINE_CONTROL_ACTOR_TYPES.BACKOFFICE) {
+    idMitra = Number(req.body.idMitra);
+    cabangId = Number(req.body.cabangId);
+  } else {
+    idMitra = Number(req.user?.idMitra);
+    cabangId = Number(req.user?.cabang_id || req.user?.cabangId);
+  }
+
+  if (!isPositiveInteger(idMitra) || !isPositiveInteger(cabangId)) {
+    throw createHttpError(
+      400,
+      "idMitra dan cabangId wajib diisi dan harus integer lebih dari 0",
+      "MACHINE_CONTROL_VALIDATION_ERROR"
+    );
+  }
+
+  const cabangValid = await TransaksiModel.isActiveCabangForMitra(idMitra, cabangId);
+  if (!cabangValid) {
+    throw createHttpError(403, "Cabang tidak sesuai dengan mitra atau tidak aktif", "BRANCH_SCOPE_FORBIDDEN");
+  }
+
+  const resolvedActor = actor || {
+    type: MACHINE_CONTROL_ACTOR_TYPES.KASIR,
+    id: req.user?.id,
+    username: req.user?.username,
+  };
+
+  if (!isPositiveInteger(resolvedActor.id)) {
+    throw createHttpError(401, "Token tidak valid", "UNAUTHORIZED");
+  }
+
+  return {
+    idMitra,
+    cabangId,
+    kasirId: resolvedActor.type === MACHINE_CONTROL_ACTOR_TYPES.KASIR ? Number(resolvedActor.id) : null,
+    actor: resolvedActor,
+  };
+};
 
 const getJumlahTransaksi = async (req, res) => {
   const idMitra = req.user ? req.user.idMitra : null;
@@ -33,25 +77,16 @@ const getJumlahTransaksi = async (req, res) => {
     });
   }
 
-  try {
-    const data = await TransaksiModel.getJumlahTransaksi(cabangId, idMitra, filter);
-
-    res.status(200).json({
-      success: "Get Data Transaksi Success",
-      data: data,
-    });
-  } catch (error) {
-    console.error("Error Get Jumlah Transaksi:", error);
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  const data = await TransaksiModel.getJumlahTransaksi(cabangId, idMitra, filter);
+  return res.status(200).json({ success: "Get Data Transaksi Success", data });
 };
 
 const getPendingTransaksi = async (req, res) => {
   const idMitra = req.user ? req.user.idMitra : null;
-  const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
+  const role = normalizeMobileRole(req.user?.role);
+  const cabangId = role === MOBILE_ROLES.OWNER
+    ? req.query.cabangId
+    : (req.user ? (req.user.cabang_id || req.user.cabangId) : null);
 
   if (!idMitra) {
     return res.status(401).json({
@@ -65,8 +100,14 @@ const getPendingTransaksi = async (req, res) => {
     });
   }
 
-  try {
-    const rows = await TransaksiModel.getPendingTransaksi(cabangId, idMitra);
+  if (role === MOBILE_ROLES.OWNER && !await TransaksiModel.isActiveCabangForMitra(idMitra, cabangId)) {
+    return res.status(403).json({
+      error: "Cabang tidak sesuai dengan mitra atau tidak aktif",
+      code: "BRANCH_SCOPE_FORBIDDEN",
+    });
+  }
+
+  const rows = await TransaksiModel.getPendingTransaksi(cabangId, idMitra);
 
     const data = rows.map((row) => {
       const layananPending = row.layananPending || "";
@@ -83,21 +124,10 @@ const getPendingTransaksi = async (req, res) => {
       };
     });
 
-    res.status(200).json({
-      success: "Get Data Antrian Transaksi Success",
-      data: data,
-    });
-  } catch (error) {
-    console.error("Error Get Antrean:", error);
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  return res.status(200).json({ success: "Get Data Antrian Transaksi Success", data });
 };
 
 const createTransaksi = async (req, res) => {
-  const { totalBayar, metodePembayaran, items } = req.body;
   const idMitra = req.user ? req.user.idMitra : null;
   const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
   const idUserMobile = req.user ? req.user.id : null;
@@ -108,120 +138,30 @@ const createTransaksi = async (req, res) => {
     });
   }
 
-  if (!isPositiveNumber(totalBayar)) {
-    return res.status(400).json({
-      error: "totalBayar wajib diisi dan harus lebih dari 0",
-    });
-  }
-
-  if (!metodePembayaran) {
-    return res.status(400).json({
-      error: "metodePembayaran wajib diisi",
-    });
-  }
-
-  if (!Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({
-      error: "items wajib diisi dan minimal 1 item",
-    });
-  }
-
-  for (const item of items) {
-    if (!item || typeof item !== "object") {
-      return res.status(400).json({
-        error: "Format item tidak valid",
-      });
-    }
-
-    if (!validJenisLayanan.includes(item.jenisLayanan)) {
-      return res.status(400).json({
-        error: "jenisLayanan tidak valid",
-      });
-    }
-
-    if (!Number.isInteger(Number(item.jumlah)) || Number(item.jumlah) <= 0) {
-      return res.status(400).json({
-        error: "jumlah wajib diisi dan harus integer lebih dari 0",
-      });
-    }
-
-    if (!isNonNegativeNumber(item.subtotal)) {
-      return res.status(400).json({
-        error: "subtotal wajib diisi dan tidak boleh negatif",
-      });
-    }
-
-    if (
-      item.jenisLayanan === "addon_barang" &&
-      (!Number.isInteger(Number(item.itemId)) || Number(item.itemId) <= 0)
-    ) {
-      return res.status(400).json({
-        error: "itemId wajib diisi untuk addon_barang",
-      });
-    }
-  }
-
-  const totalSubtotal = items.reduce((sum, item) => sum + Number(item.subtotal), 0);
-  if (Math.abs(Number(totalBayar) - totalSubtotal) > 0.01) {
-    return res.status(400).json({
-      error: "totalBayar harus sama dengan total subtotal items",
-    });
-  }
-
+  let payload;
   try {
-    const data = await TransaksiModel.createTransaksi({
-      idMitra,
-      cabangId,
-      idUserMobile,
-      totalBayar,
-      metodePembayaran,
-      items,
-    });
-
-    res.status(201).json({
-      success: "Create Data Transaksi Success",
-      data: data,
-    });
+    payload = req.validatedBody || normalizeTransaksiPayload(req.body);
   } catch (error) {
-    if (
-      error.message === "Mitra tidak ditemukan" ||
-      error.message === "Cabang tidak ditemukan" ||
-      error.message === "User tidak ditemukan" ||
-      error.message === "Item tidak ditemukan"
-    ) {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-
-    if (
-      error.message === "Item addon harus bertipe stok" ||
-      error.message === "Stok cabang tidak ditemukan" ||
-      error.message === "Stok tidak mencukupi"
-    ) {
-      return res.status(400).json({
-        error: error.message,
-      });
-    }
-
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
+    return res.status(400).json({
+      error: error.message,
     });
   }
+
+  const data = await TransaksiService.createTransaksi({
+    idMitra,
+    cabangId,
+    idUserMobile,
+    payload,
+  });
+
+  res.status(201).json({
+    success: "Create Data Transaksi Success",
+    data: data,
+  });
 };
 
 const startMesin = async (req, res) => {
   const { mesinId, invoiceNumber } = req.body;
-  const idMitra = req.user ? req.user.idMitra : null;
-  const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
-  const kasirId = req.user ? req.user.id : null;
-
-  if (!idMitra || !cabangId || !kasirId) {
-    return res.status(401).json({
-      error: "Token tidak valid",
-    });
-  }
 
   if (!isPositiveInteger(mesinId)) {
     return res.status(400).json({
@@ -235,45 +175,42 @@ const startMesin = async (req, res) => {
     });
   }
 
-  try {
-    await TransaksiModel.startMesin({
-      idMitra,
-      cabangId,
-      kasirId,
-      mesinId: Number(mesinId),
-      invoiceNumber: invoiceNumber.trim(),
-    });
+  const context = await getMachineControlContext(req);
+  await TransaksiModel.startMesin({
+    ...context,
+    mesinId: Number(mesinId),
+    invoiceNumber: invoiceNumber.trim(),
+  });
 
-    return res.status(200).json({
-      success: "Start Mesin Success",
-      data: null,
-    });
-  } catch (error) {
-    if (error.statusCode) {
-      return res.status(error.statusCode).json({
-        error: error.message,
-      });
-    }
+  return res.status(200).json({
+    success: "Start Mesin Success",
+    data: null,
+  });
+};
 
-    console.error("Error Start Mesin:", error);
-    return res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
+const startMesinByOwner = async (req, res) => {
+  const { mesinId } = req.body;
+
+  if (!isPositiveInteger(mesinId)) {
+    return res.status(400).json({
+      error: "mesinId wajib diisi dan harus integer lebih dari 0",
     });
   }
+
+  const context = await getMachineControlContext(req);
+  await TransaksiModel.startMesinByOwner({
+    ...context,
+    mesinId: Number(mesinId),
+  });
+
+  return res.status(200).json({
+    success: "Start Mesin By Owner Success",
+    data: null,
+  });
 };
 
 const stopMesin = async (req, res) => {
   const { mesinId, invoiceNumber } = req.body;
-  const idMitra = req.user ? req.user.idMitra : null;
-  const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
-  const kasirId = req.user ? req.user.id : null;
-
-  if (!idMitra || !cabangId || !kasirId) {
-    return res.status(401).json({
-      error: "Token tidak valid",
-    });
-  }
 
   if (!isPositiveInteger(mesinId)) {
     return res.status(400).json({
@@ -287,32 +224,38 @@ const stopMesin = async (req, res) => {
     });
   }
 
-  try {
-    await TransaksiModel.stopMesin({
-      idMitra,
-      cabangId,
-      kasirId,
-      mesinId: Number(mesinId),
-      invoiceNumber: invoiceNumber ? invoiceNumber.trim() : null,
-    });
+  const context = await getMachineControlContext(req);
+  await TransaksiModel.stopMesin({
+    ...context,
+    mesinId: Number(mesinId),
+    invoiceNumber: invoiceNumber ? invoiceNumber.trim() : null,
+  });
 
-    return res.status(200).json({
-      success: "Stop Mesin Success",
-      data: null,
-    });
-  } catch (error) {
-    if (error.statusCode) {
-      return res.status(error.statusCode).json({
-        error: error.message,
-      });
-    }
+  return res.status(200).json({
+    success: "Stop Mesin Success",
+    data: null,
+  });
+};
 
-    console.error("Error Stop Mesin:", error);
-    return res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
+const stopMesinByOwner = async (req, res) => {
+  const { mesinId } = req.body;
+
+  if (!isPositiveInteger(mesinId)) {
+    return res.status(400).json({
+      error: "mesinId wajib diisi dan harus integer lebih dari 0",
     });
   }
+
+  const context = await getMachineControlContext(req);
+  await TransaksiModel.stopMesinByOwner({
+    ...context,
+    mesinId: Number(mesinId),
+  });
+
+  return res.status(200).json({
+    success: "Stop Mesin By Owner Success",
+    data: null,
+  });
 };
 
 module.exports = {
@@ -320,5 +263,7 @@ module.exports = {
   getPendingTransaksi,
   createTransaksi,
   startMesin,
+  startMesinByOwner,
   stopMesin,
+  stopMesinByOwner,
 };

@@ -1,5 +1,7 @@
 const dbPool = require("../config/database");
-const { formatTanggalJamWIB, getDateFilterCondition } = require("../utils/date");
+const { formatTanggalJamWIB, getDateFilterCondition, getJakartaSqlDate } = require("../utils/date");
+const { withTransaction } = require("../utils/transaction");
+const { createHttpError } = require("../utils/httpError");
 
 const getCashflow = (cabangId, idMitra, cabangId2, idMitra2, filter) => {
   const pemasukanDateFilter = getDateFilterCondition("waktuOrder", filter);
@@ -31,12 +33,11 @@ CROSS JOIN
 };
 
 const getPendapatan = async (cabangId, idMitra, filter) => {
-  try {
     const dateFilter = getDateFilterCondition("o.waktuOrder", filter);
     const [rows] = await dbPool.execute(
       `SELECT 
         o.id AS idTransaksi,
-        DATE(o.waktuOrder) AS tanggalGroup,
+        ${getJakartaSqlDate("o.waktuOrder")} AS tanggalGroup,
         o.waktuOrder AS waktuDetail,
         o.totalBayar AS nominal,
         k.namaLengkap AS namaKasir
@@ -51,7 +52,7 @@ const getPendapatan = async (cabangId, idMitra, filter) => {
     );
 
     if (rows.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "CASHFLOW_NOT_FOUND");
     }
 
     // Grouping per tanggal
@@ -87,18 +88,14 @@ const getPendapatan = async (cabangId, idMitra, filter) => {
     });
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getPengeluaran = async (cabangId, idMitra, filter) => {
-  try {
     const dateFilter = getDateFilterCondition("p.waktuPengeluaran", filter);
     const [rows] = await dbPool.execute(
       `SELECT 
         p.id AS idPengeluaran,
-        DATE(p.waktuPengeluaran) AS tanggalGroup,
+        ${getJakartaSqlDate("p.waktuPengeluaran")} AS tanggalGroup,
         p.waktuPengeluaran AS waktuDetail,
         CONCAT(i.namaItem, ' (x', p.jumlahBarang, ')') AS deskripsi,
         p.nominal,
@@ -115,7 +112,7 @@ const getPengeluaran = async (cabangId, idMitra, filter) => {
     );
 
     if (rows.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "CASHFLOW_NOT_FOUND");
     }
 
     // Grouping per tanggal
@@ -152,13 +149,9 @@ const getPengeluaran = async (cabangId, idMitra, filter) => {
     });
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
-const getListPengeluaran = async (cabangId, filter) => {
-  try {
+const getListPengeluaran = async (cabangId, idMitra, filter) => {
     const dateFilter = getDateFilterCondition("p.waktuPengeluaran", filter);
     const [rows] = await dbPool.execute(
       `SELECT 
@@ -171,14 +164,15 @@ const getListPengeluaran = async (cabangId, filter) => {
       LEFT JOIN tbl_users_mobile u ON p.idUserMobile = u.id
       LEFT JOIN tbl_master_item_expense i ON p.itemId = i.id
       WHERE p.cabangId = ? 
+        AND p.idMitra = ?
         AND p.statusAktif = 1
         AND ${dateFilter}
       ORDER BY p.waktuPengeluaran DESC`,
-      [cabangId]
+      [cabangId, idMitra]
     );
 
     if (rows.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "CASHFLOW_NOT_FOUND");
     }
 
     const formattedData = rows.map(row => ({
@@ -192,14 +186,22 @@ const getListPengeluaran = async (cabangId, filter) => {
     }));
 
     return formattedData;
-  } catch (error) {
-    throw error;
-  }
 };
 
-const getPengeluaranById = async (id, idMitra, filter) => {
-  try {
+const isCabangOwnedByMitra = async (cabangId, idMitra) => {
+  const [rows] = await dbPool.execute(
+    "SELECT id FROM tbl_cabang WHERE id = ? AND idMitra = ?",
+    [cabangId, idMitra]
+  );
+
+  return rows.length > 0;
+};
+
+const getPengeluaranById = async (id, idMitra, filter, cabangId = null) => {
     const dateFilter = getDateFilterCondition("p.waktuPengeluaran", filter);
+    const cabangFilter = cabangId ? " AND p.cabangId = ?" : "";
+    const values = [id, idMitra];
+    if (cabangId) values.push(cabangId);
     const [rows] = await dbPool.execute(
       `SELECT 
         p.id,
@@ -221,12 +223,13 @@ const getPengeluaranById = async (id, idMitra, filter) => {
       WHERE p.id = ?
         AND p.idMitra = ?
         AND p.statusAktif = 1
+        ${cabangFilter}
         AND ${dateFilter}`,
-      [id, idMitra]
+      values
     );
 
     if (rows.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "CASHFLOW_NOT_FOUND");
     }
 
     const row = rows[0];
@@ -245,17 +248,11 @@ const getPengeluaranById = async (id, idMitra, filter) => {
       waktuPengeluaran: row.waktuPengeluaran ? new Date(row.waktuPengeluaran).toISOString() : "",
       createdDate: row.createdDate ? new Date(row.createdDate).toISOString() : "",
     };
-  } catch (error) {
-    throw error;
-  }
 };
 
 const createPengeluaran = async (data) => {
   const { idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal } = data;
-  const connection = await dbPool.getConnection();
-
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     // 1. Validasi idMitra
     const [mitraCheck] = await connection.execute(
@@ -263,7 +260,7 @@ const createPengeluaran = async (data) => {
       [idMitra]
     );
     if (mitraCheck.length === 0) {
-      throw new Error("Mitra tidak ditemukan");
+      throw createHttpError(404, "Mitra tidak ditemukan", "CASHFLOW_MITRA_NOT_FOUND");
     }
 
     // 2. Validasi cabangId (cek juga milik mitra yang sama)
@@ -272,7 +269,7 @@ const createPengeluaran = async (data) => {
       [cabangId, idMitra]
     );
     if (cabangCheck.length === 0) {
-      throw new Error("Cabang tidak ditemukan");
+      throw createHttpError(404, "Cabang tidak ditemukan", "CASHFLOW_CABANG_NOT_FOUND");
     }
 
     // 3. Validasi idUserMobile
@@ -281,7 +278,7 @@ const createPengeluaran = async (data) => {
       [idUserMobile]
     );
     if (userCheck.length === 0) {
-      throw new Error("User tidak ditemukan");
+      throw createHttpError(404, "User tidak ditemukan", "CASHFLOW_USER_NOT_FOUND");
     }
 
     // 4. Validasi itemId
@@ -290,14 +287,14 @@ const createPengeluaran = async (data) => {
       [itemId]
     );
     if (itemCheck.length === 0) {
-      throw new Error("Item tidak ditemukan");
+      throw createHttpError(404, "Item tidak ditemukan", "CASHFLOW_ITEM_NOT_FOUND");
     }
 
     // 5. INSERT pengeluaran
     const jumlahBarangValue = jumlahBarang || 0;
     const [result] = await connection.execute(
       `INSERT INTO tbl_pengeluaran (idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal, waktuPengeluaran)
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+       VALUES (?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
       [idMitra, cabangId, idUserMobile, itemId, jumlahBarangValue, nominal]
     );
 
@@ -311,7 +308,7 @@ const createPengeluaran = async (data) => {
          ON DUPLICATE KEY UPDATE
            stokSekarang = stokSekarang + VALUES(stokSekarang),
            updatedBy = VALUES(updatedBy),
-           updatedDate = CURRENT_TIMESTAMP`,
+           updatedDate = UTC_TIMESTAMP()`,
         [idMitra, cabangId, itemId, jumlahBarangValue, createdBy, createdBy]
       );
     }
@@ -324,12 +321,10 @@ const createPengeluaran = async (data) => {
     );
 
     if (newData.length === 0) {
-      throw new Error("Gagal mengambil data pengeluaran");
+      throw createHttpError(500, "Gagal mengambil data pengeluaran", "CASHFLOW_READ_FAILED");
     }
 
     const row = newData[0];
-
-    await connection.commit();
 
     return {
       id: row.id,
@@ -342,25 +337,22 @@ const createPengeluaran = async (data) => {
       waktuPengeluaran: row.waktuPengeluaran ? new Date(row.waktuPengeluaran).toISOString() : "",
       createdDate: row.createdDate ? new Date(row.createdDate).toISOString() : "",
     };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
-const updatePengeluaran = async (body, id, idMitra) => {
-  try {
+const updatePengeluaran = async (body, id, idMitra, cabangId = null) => {
     const { itemId, jumlahBarang, nominal } = body;
+    const cabangFilter = cabangId ? " AND cabangId = ?" : "";
+    const scopedValues = [id, idMitra];
+    if (cabangId) scopedValues.push(cabangId);
 
     const [existingPengeluaran] = await dbPool.execute(
-      "SELECT id FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1",
-      [id, idMitra]
+      `SELECT id FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1${cabangFilter}`,
+      scopedValues
     );
 
     if (existingPengeluaran.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "CASHFLOW_NOT_FOUND");
     }
 
     const [itemCheck] = await dbPool.execute(
@@ -369,20 +361,20 @@ const updatePengeluaran = async (body, id, idMitra) => {
     );
 
     if (itemCheck.length === 0) {
-      throw new Error("Item tidak ditemukan");
+      throw createHttpError(404, "Item tidak ditemukan", "CASHFLOW_ITEM_NOT_FOUND");
     }
 
     await dbPool.execute(
       `UPDATE tbl_pengeluaran
-       SET itemId = ?, jumlahBarang = ?, nominal = ?
-       WHERE id = ? AND idMitra = ?`,
-      [itemId, jumlahBarang, nominal, id, idMitra]
+        SET itemId = ?, jumlahBarang = ?, nominal = ?
+       WHERE id = ? AND idMitra = ?${cabangFilter}`,
+      [itemId, jumlahBarang, nominal, ...scopedValues]
     );
 
     const [updatedData] = await dbPool.execute(
       `SELECT id, idMitra, cabangId, idUserMobile, itemId, jumlahBarang, nominal, waktuPengeluaran, createdDate
-       FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1`,
-      [id, idMitra]
+       FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1${cabangFilter}`,
+      scopedValues
     );
 
     const row = updatedData[0];
@@ -398,27 +390,23 @@ const updatePengeluaran = async (body, id, idMitra) => {
       waktuPengeluaran: row.waktuPengeluaran ? new Date(row.waktuPengeluaran).toISOString() : "",
       createdDate: row.createdDate ? new Date(row.createdDate).toISOString() : "",
     };
-  } catch (error) {
-    throw error;
-  }
 };
 
-const deletePengeluaran = async (id, idMitra) => {
-  try {
+const deletePengeluaran = async (id, idMitra, cabangId = null) => {
+    const cabangFilter = cabangId ? " AND cabangId = ?" : "";
+    const scopedValues = [id, idMitra];
+    if (cabangId) scopedValues.push(cabangId);
     const [existingPengeluaran] = await dbPool.execute(
-      "SELECT id FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1",
-      [id, idMitra]
+      `SELECT id FROM tbl_pengeluaran WHERE id = ? AND idMitra = ? AND statusAktif = 1${cabangFilter}`,
+      scopedValues
     );
 
     if (existingPengeluaran.length === 0) {
-      throw new Error("Data tidak ditemukan");
+      throw createHttpError(404, "Data tidak ditemukan", "CASHFLOW_NOT_FOUND");
     }
 
-    const SQLQuery = "UPDATE tbl_pengeluaran SET statusAktif = 0 WHERE id = ? AND idMitra = ?";
-    return dbPool.execute(SQLQuery, [id, idMitra]);
-  } catch (error) {
-    throw error;
-  }
+    const SQLQuery = `UPDATE tbl_pengeluaran SET statusAktif = 0 WHERE id = ? AND idMitra = ?${cabangFilter}`;
+    return dbPool.execute(SQLQuery, scopedValues);
 };
 
 module.exports = {
@@ -426,6 +414,7 @@ module.exports = {
   getPendapatan,
   getPengeluaran,
   getListPengeluaran,
+  isCabangOwnedByMitra,
   getPengeluaranById,
   createPengeluaran,
   updatePengeluaran,

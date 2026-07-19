@@ -3,11 +3,12 @@
     "_postman_id": "f23f9549-dbf0-4c78-a3c8-e612ab36a625",
     "name": "API MJA Project",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "3586619"
+    "_exporter_id": "3586619",
+    "description": "Koleksi API MJA Project. Folder route catalog tersinkron dengan route aktif; folder verified memiliki bukti test."
   },
   "item": [
     {
-      "name": "Backoffice",
+      "name": "Backoffice route catalog",
       "item": [
         {
           "name": "Auth",
@@ -15,9 +16,6 @@
             {
               "name": "Login",
               "request": {
-                "auth": {
-                  "type": "noauth"
-                },
                 "method": "POST",
                 "header": [
                   {
@@ -29,16 +27,9 @@
                   "mode": "raw",
                   "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
                 },
-                "url": {
-                  "raw": "{{baseUrl}}/api/backoffice/login",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "backoffice",
-                    "login"
-                  ]
+                "url": "{{baseUrl}}/api/backoffice/login",
+                "auth": {
+                  "type": "noauth"
                 }
               },
               "response": []
@@ -51,19 +42,11 @@
             {
               "name": "Root",
               "request": {
-                "auth": {
-                  "type": "noauth"
-                },
                 "method": "GET",
                 "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    ""
-                  ]
+                "url": "{{baseUrl}}/",
+                "auth": {
+                  "type": "noauth"
                 }
               },
               "response": []
@@ -73,19 +56,7 @@
               "request": {
                 "method": "GET",
                 "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/backoffice/akses/role/51",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "backoffice",
-                    "akses",
-                    "role",
-                    "51"
-                  ]
-                }
+                "url": "{{baseUrl}}/api/backoffice/akses/role/{{roleId}}"
               },
               "response": []
             },
@@ -103,19 +74,7 @@
                   "mode": "raw",
                   "raw": "[\n  {\n    \"id\": 17,\n    \"name\": \"Dashboard\",\n    \"checked\": true,\n    \"children\": [\n      {\n        \"id\": 18,\n        \"name\": \"Master Data\",\n        \"checked\": true\n      },\n      {\n        \"id\": 19,\n        \"name\": \"Master Mitra\",\n        \"checked\": true\n      },\n      {\n        \"id\": 20,\n        \"name\": \"Master Cabang\",\n        \"checked\": true\n      },\n      {\n        \"id\": 21,\n        \"name\": \"Master Mesin\",\n        \"checked\": true\n      },\n      {\n        \"id\": 22,\n        \"name\": \"Master User Owner\",\n        \"checked\": true\n      },\n      {\n        \"id\": 23,\n        \"name\": \"Master List Item Expense\",\n        \"checked\": true\n      },\n      {\n        \"id\": 24,\n        \"name\": \"Setting\",\n        \"checked\": true\n      },\n      {\n        \"id\": 25,\n        \"name\": \"User Backoffice\",\n        \"checked\": true\n      },\n      {\n        \"id\": 26,\n        \"name\": \"Menu\",\n        \"checked\": true\n      },\n      {\n        \"id\": 27,\n        \"name\": \"Role\",\n        \"checked\": true\n      }\n    ]\n  }\n]"
                 },
-                "url": {
-                  "raw": "{{baseUrl}}/api/backoffice/akses/role/2",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "backoffice",
-                    "akses",
-                    "role",
-                    "2"
-                  ]
-                }
+                "url": "{{baseUrl}}/api/backoffice/akses/role/{{roleId}}"
               },
               "response": []
             },
@@ -124,19 +83,7 @@
               "request": {
                 "method": "GET",
                 "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/backoffice/akses/user/shandy@gmail.com",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "backoffice",
-                    "akses",
-                    "user",
-                    "shandy@gmail.com"
-                  ]
-                }
+                "url": "{{baseUrl}}/api/backoffice/akses/user/{{backofficeUsername}}"
               },
               "response": []
             }
@@ -160,19 +107,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"namaMitra\": \"Fast Laundry\",\n    \"alamatMitra\": \"Yasmin Bogor\",\n    \"createdBy\": \"system\"\n}"
+                      "raw": "{\n  \"namaMitra\": \"Fast Laundry\",\n  \"alamatMitra\": \"Yasmin Bogor\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mitra",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mitra"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mitra"
                   },
                   "response": [
                     {
@@ -325,20 +262,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"namaMitra\": \"Faster Laundry\",\n    \"alamatMitra\": \"Perumahan Vila Bogor Indah X\",\n    \"updatedBy\": \"system\"\n}"
+                      "raw": "{\n  \"namaMitra\": \"Faster Laundry\",\n  \"alamatMitra\": \"Perumahan Vila Bogor Indah X\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mitra/12",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mitra",
-                        "12"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mitra/{{mitraId}}"
                   },
                   "response": [
                     {
@@ -486,18 +412,7 @@
                   "request": {
                     "method": "DELETE",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mitra/14",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mitra",
-                        "14"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mitra/{{mitraId}}"
                   },
                   "response": [
                     {
@@ -636,19 +551,7 @@
                       "mode": "raw",
                       "raw": ""
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mitra/14/restore",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mitra",
-                        "14",
-                        "restore"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mitra/{{mitraId}}/restore"
                   },
                   "response": [
                     {
@@ -730,18 +633,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mitra/12",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mitra",
-                        "12"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mitra/{{mitraId}}"
                   },
                   "response": [
                     {
@@ -871,17 +763,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mitra",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mitra"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mitra"
                   },
                   "response": [
                     {
@@ -1009,23 +891,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mitra?status=inactive",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mitra"
-                      ],
-                      "query": [
-                        {
-                          "key": "status",
-                          "value": "inactive"
-                        }
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mitra?status=inactive"
                   },
                   "response": []
                 }
@@ -1046,19 +912,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"idMitra\": 10,\n  \"namaCabang\": \"Sakinah Laundry 03\",\n  \"alamatCabang\": \"Leuwiliang\",\n  \"createdBy\": \"system\"\n}"
+                      "raw": "{\n  \"idMitra\": \"{{mitraId}}\",\n  \"namaCabang\": \"Sakinah Laundry 03\",\n  \"alamatCabang\": \"Leuwiliang\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/cabang",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "cabang"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/cabang"
                   },
                   "response": [
                     {
@@ -1211,20 +1067,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"namaCabang\": \"Sakinah Laundry 04\",\n  \"alamatCabang\": \"Laladon Terminal\",\n  \"updatedBy\": \"system\"\n}"
+                      "raw": "{\n  \"namaCabang\": \"Sakinah Laundry 04\",\n  \"alamatCabang\": \"Laladon Terminal\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/cabang/7",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "cabang",
-                        "7"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/cabang/{{cabangId}}"
                   },
                   "response": [
                     {
@@ -1372,18 +1217,7 @@
                   "request": {
                     "method": "DELETE",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/cabang/6",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "cabang",
-                        "6"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/cabang/{{cabangId}}"
                   },
                   "response": [
                     {
@@ -1522,19 +1356,7 @@
                       "mode": "raw",
                       "raw": ""
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/cabang/8/restore",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "cabang",
-                        "8",
-                        "restore"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/cabang/{{cabangId}}/restore"
                   },
                   "response": [
                     {
@@ -1616,18 +1438,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/cabang/1",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "cabang",
-                        "1"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/cabang/{{cabangId}}"
                   },
                   "response": [
                     {
@@ -1757,19 +1568,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/cabang/mitra/10",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "cabang",
-                        "mitra",
-                        "10"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/cabang/mitra/{{mitraId}}"
                   },
                   "response": [
                     {
@@ -1901,17 +1700,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/cabang",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "cabang"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/cabang"
                   },
                   "response": [
                     {
@@ -1980,23 +1769,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/cabang?status=inactive",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "cabang"
-                      ],
-                      "query": [
-                        {
-                          "key": "status",
-                          "value": "inactive"
-                        }
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/cabang?status=inactive"
                   },
                   "response": [
                     {
@@ -2207,19 +1980,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"idMitra\": 9,\n  \"cabangId\": 3,\n  \"namaMesin\": \"Mesin 01\",\n  \"tipeMesin\": \"washer\", //enum('washer','dryer') DEFAULT 'washer'\n  \"kapasitas\": \"15kg\",  //optional\n  \"ipAddressEsp\": \"192.168.002\",\n  \"macAddress\": \"45654745745754\",\n  \"status\": \"ready\", //enum('ready','in_use','error')\n  \"createdBy\": \"system\"\n}"
+                      "raw": "{\n  \"idMitra\": \"{{mitraId}}\",\n  \"cabangId\": \"{{cabangId}}\",\n  \"espId\": \"{{espId}}\",\n  \"washer\": 1,\n  \"dryer\": 0\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mesin",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mesin"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mesin"
                   },
                   "response": [
                     {
@@ -2516,20 +2279,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"namaMesin\": \"Mesin 02\",\n  \"tipeMesin\": \"dryer\", //enum('washer','dryer') DEFAULT 'washer'\n  \"kapasitas\": \"10kg\",  //optional\n  \"ipAddressEsp\": \"192.168.001\",\n  \"macAddress\": \"45654745745754\",\n  \"updatedBy\": \"system\"\n}"
+                      "raw": "{\n  \"idMitra\": \"{{mitraId}}\",\n  \"cabangId\": \"{{cabangId}}\",\n  \"espId\": \"{{espId}}\",\n  \"washer\": 1,\n  \"dryer\": 1\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mesin/6",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mesin",
-                        "6"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mesin/{{mesinId}}"
                   },
                   "response": [
                     {
@@ -2681,18 +2433,7 @@
                   "request": {
                     "method": "DELETE",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mesin/6",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mesin",
-                        "6"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mesin/{{mesinId}}"
                   },
                   "response": [
                     {
@@ -2835,19 +2576,7 @@
                       "mode": "raw",
                       "raw": ""
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mesin/6/restore",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mesin",
-                        "6",
-                        "restore"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mesin/{{mesinId}}/restore"
                   },
                   "response": [
                     {
@@ -2929,18 +2658,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mesin/2",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mesin",
-                        "2"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mesin/{{mesinId}}"
                   },
                   "response": [
                     {
@@ -3074,19 +2792,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mesin/mitra/9",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mesin",
-                        "mitra",
-                        "9"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mesin/mitra/{{mitraId}}"
                   },
                   "response": [
                     {
@@ -3159,19 +2865,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mesin/cabang/3",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mesin",
-                        "cabang",
-                        "3"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mesin/cabang/{{cabangId}}"
                   },
                   "response": [
                     {
@@ -3307,17 +3001,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mesin",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mesin"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mesin"
                   },
                   "response": [
                     {
@@ -3449,23 +3133,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/mesin?status=all",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "mesin"
-                      ],
-                      "query": [
-                        {
-                          "key": "status",
-                          "value": "all"
-                        }
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/mesin?status=all"
                   },
                   "response": [
                     {
@@ -3621,19 +3289,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"namaItem\": \"Air Galon\",\n  \"tipeItem\": \"non_stok\", // enum('stok','non_stok')\n  \"createdBy\": \"system\"\n}"
+                      "raw": "{\n  \"namaItem\": \"Air Galon\",\n  \"tipeItem\": \"non_stok\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/item",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "item"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/item"
                   },
                   "response": [
                     {
@@ -3790,20 +3448,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"namaItem\": \"Air Galon\",\n  \"tipeItem\": \"stok\", // enum('stok','non_stok')\n  \"updatedBy\": \"system\"\n}"
+                      "raw": "{\n  \"namaItem\": \"Air Galon\",\n  \"tipeItem\": \"stok\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/item/1",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "item",
-                        "1"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/item/{{itemId}}"
                   },
                   "response": [
                     {
@@ -3955,18 +3602,7 @@
                   "request": {
                     "method": "DELETE",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/item/1",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "item",
-                        "1"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/item/{{itemId}}"
                   },
                   "response": [
                     {
@@ -4109,19 +3745,7 @@
                       "mode": "raw",
                       "raw": ""
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/item/1/restore",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "item",
-                        "1",
-                        "restore"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/item/{{itemId}}/restore"
                   },
                   "response": [
                     {
@@ -4203,18 +3827,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/item/20",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "item",
-                        "20"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/item/{{itemId}}"
                   },
                   "response": [
                     {
@@ -4348,17 +3961,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/item",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "item"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/item"
                   },
                   "response": [
                     {
@@ -4429,23 +4032,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/item?status=all",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "item"
-                      ],
-                      "query": [
-                        {
-                          "key": "status",
-                          "value": "all"
-                        }
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/item?status=all"
                   },
                   "response": [
                     {
@@ -4601,19 +4188,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"username\": \"Hamka123\",\n    \"role\": \"owner\",\n    \"idMitra\": \"14\",\n    \"namaLengkap\": \"Hamka Ramadhan\",\n    \"noTelp\": \"098767890909\",\n    \"email\": \"hamka@gmail.com\",\n    \"createdBy\": \"system\"\n}"
+                      "raw": "{\n  \"username\": \"Hamka123\",\n  \"role\": \"owner\",\n  \"idMitra\": \"{{mitraId}}\",\n  \"namaLengkap\": \"Hamka Ramadhan\",\n  \"noTelp\": \"098767890909\",\n  \"email\": \"hamka@gmail.com\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/userowner",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "userowner"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/userowner"
                   },
                   "response": [
                     {
@@ -4840,20 +4417,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"namaLengkap\": \"Rifki Maulana\",\n    \"noTelp\": \"085714062347\",\n    \"email\": \"rifki@gmail.com\",\n    \"updatedBy\": \"system\"\n}"
+                      "raw": "{\n  \"namaLengkap\": \"Rifki Maulana\",\n  \"noTelp\": \"085714062347\",\n  \"email\": \"rifki@gmail.com\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/userowner/2",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "userowner",
-                        "2"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/userowner/{{ownerId}}"
                   },
                   "response": [
                     {
@@ -5005,18 +4571,7 @@
                   "request": {
                     "method": "DELETE",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/userowner/2",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "userowner",
-                        "2"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/userowner/{{ownerId}}"
                   },
                   "response": [
                     {
@@ -5159,19 +4714,7 @@
                       "mode": "raw",
                       "raw": ""
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/userowner/2/restore",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "userowner",
-                        "2",
-                        "restore"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/userowner/{{ownerId}}/restore"
                   },
                   "response": [
                     {
@@ -5260,21 +4803,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"oldPassword\": \"O2jrcSoN\",\n    \"newPassword\": \"Admin123\",\n    \"ConfirmNewPassword\": \"Admin123\"\n}"
+                      "raw": "{\n  \"oldPassword\": \"O2jrcSoN\",\n  \"newPassword\": \"Admin123\",\n  \"ConfirmNewPassword\": \"Admin123\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/userowner/7/changepassword",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "userowner",
-                        "7",
-                        "changepassword"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/userowner/{{ownerId}}/changepassword"
                   },
                   "response": [
                     {
@@ -5505,22 +5036,9 @@
                         "value": "application/json"
                       }
                     ],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n    \"username\": \"Hamka123\"\n}"
-                    },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/userowner/7/resetpassword",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "userowner",
-                        "7",
-                        "resetpassword"
-                      ]
+                    "url": "{{baseUrl}}/api/backoffice/userowner/{{ownerEmail}}/resetpassword",
+                    "auth": {
+                      "type": "noauth"
                     }
                   },
                   "response": []
@@ -5537,21 +5055,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"deviceId\": \"Fast Laundry\",\n    \"deviceName\": \"Yasmin Bogor\"\n}"
+                      "raw": "{\n  \"deviceId\": \"Fast Laundry\",\n  \"deviceName\": \"Yasmin Bogor\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/userowner/2/resetdeviceid",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "userowner",
-                        "2",
-                        "resetdeviceid"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/userowner/{{ownerId}}/resetdeviceid"
                   },
                   "response": [
                     {
@@ -5705,18 +5211,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/userowner/20",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "userowner",
-                        "20"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/userowner/{{ownerId}}"
                   },
                   "response": [
                     {
@@ -5850,17 +5345,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/userowner",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "userowner"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/userowner"
                   },
                   "response": [
                     {
@@ -5931,23 +5416,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/userowner?status=all",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "userowner"
-                      ],
-                      "query": [
-                        {
-                          "key": "status",
-                          "value": "all"
-                        }
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/userowner?status=all"
                   },
                   "response": [
                     {
@@ -6101,17 +5570,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/users",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "users"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/users"
                   },
                   "response": []
                 },
@@ -6120,23 +5579,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/users?status=inactive",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "users"
-                      ],
-                      "query": [
-                        {
-                          "key": "status",
-                          "value": "inactive"
-                        }
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/users?status=inactive"
                   },
                   "response": [
                     {
@@ -6292,18 +5735,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/users/2",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "users",
-                        "2"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/users/{{backofficeUserId}}"
                   },
                   "response": []
                 },
@@ -6319,19 +5751,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"nama\": \"Hamdan\",\n  \"roleId\": 1,\n  \"username\": \"hamdanfresh@gmail.com\",\n  \"password\": \"mja12345\",\n  \"createdBy\": \"system\"\n}"
+                      "raw": "{\n  \"nama\": \"Hamdan\",\n  \"roleId\": \"{{roleId}}\",\n  \"username\": \"hamdanfresh@gmail.com\",\n  \"password\": \"mja12345\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/users",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "users"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/users"
                   },
                   "response": []
                 },
@@ -6347,20 +5769,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"nama\": \"Hamdan\",\n  \"roleId\": 1,\n  \"username\": \"hamdanfresh@gmail.com\",\n  \"password\": \"mja12345\",\n  \"createdBy\": \"system\"\n}"
+                      "raw": "{\n  \"nama\": \"Hamdan\",\n  \"roleId\": \"{{roleId}}\",\n  \"username\": \"hamdanfresh@gmail.com\",\n  \"password\": \"mja12345\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/users/5",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "users",
-                        "5"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/users/{{backofficeUserId}}"
                   },
                   "response": []
                 },
@@ -6369,18 +5780,7 @@
                   "request": {
                     "method": "DELETE",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/users/2",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "users",
-                        "2"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/users/{{backofficeUserId}}"
                   },
                   "response": []
                 },
@@ -6394,23 +5794,7 @@
                         "value": "application/json"
                       }
                     ],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n    \"namaMitra\": \"Fast Laundry\",\n    \"alamatMitra\": \"Yasmin Bogor\",\n    \"createdBy\": \"system\"\n}"
-                    },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/users/5/restore",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "users",
-                        "5",
-                        "restore"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/users/{{backofficeUserId}}/restore"
                   },
                   "response": [
                     {
@@ -6497,17 +5881,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/roles",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "roles"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/roles"
                   },
                   "response": []
                 },
@@ -6516,18 +5890,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/roles/1",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "roles",
-                        "1"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/roles/{{roleId}}"
                   },
                   "response": []
                 },
@@ -6543,19 +5906,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"namaRole\": \"Super Admin\",\n  \"description\": \"Pengelola Aplikasi Tingkat Tinggi\",\n  \"createdBy\": \"system\"\n}"
+                      "raw": "{\n  \"namaRole\": \"Super Admin\",\n  \"description\": \"Pengelola Aplikasi Tingkat Tinggi\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/roles",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "roles"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/roles"
                   },
                   "response": []
                 },
@@ -6571,20 +5924,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"namaRole\": \"Admin\",\n  \"description\": \"Administrator updated\",\n  \"createdBy\": \"system\"\n}"
+                      "raw": "{\n  \"namaRole\": \"Admin\",\n  \"description\": \"Administrator updated\"\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/roles/1",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "roles",
-                        "1"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/roles/{{roleId}}"
                   },
                   "response": []
                 },
@@ -6593,18 +5935,7 @@
                   "request": {
                     "method": "DELETE",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/roles/1",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "roles",
-                        "1"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/roles/{{roleId}}"
                   },
                   "response": []
                 }
@@ -6618,17 +5949,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/menus",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "menus"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/menus"
                   },
                   "response": []
                 },
@@ -6637,18 +5958,7 @@
                   "request": {
                     "method": "GET",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/menus/1",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "menus",
-                        "1"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/menus/{{menuId}}"
                   },
                   "response": []
                 },
@@ -6664,19 +5974,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"url\": \"/dashboard\",\n  \"namaMenu\": \"Dashboard\",\n  \"parentId\": null,\n  \"menuParent\": null,\n  \"menuSubParent\": null,\n  \"iconMenu\": \"LayoutDashboard\",\n  \"levelMenu\": 1,\n  \"tipeMenu\": \"Header\",\n  \"noUrut\": 1,\n  \"createdBy\": \"system\"\n}"
+                      "raw": "{\n  \"url\": \"/dashboard\",\n  \"namaMenu\": \"Dashboard\",\n  \"parentId\": null,\n  \"menuParent\": null,\n  \"menuSubParent\": null,\n  \"iconMenu\": \"LayoutDashboard\",\n  \"levelMenu\": 1,\n  \"tipeMenu\": \"Header\",\n  \"noUrut\": 1\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/menus",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "menus"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/menus"
                   },
                   "response": []
                 },
@@ -6692,20 +5992,9 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"url\": \"/dashboard\",\n  \"namaMenu\": \"Dashboard\",\n  \"parentId\": null,\n  \"menuParent\": null,\n  \"menuSubParent\": null,\n  \"iconMenu\": \"LayoutDashboard\",\n  \"levelMenu\": 1,\n  \"tipeMenu\": \"Header\",\n  \"noUrut\": 1,\n  \"createdBy\": \"system\"\n}"
+                      "raw": "{\n  \"url\": \"/dashboard\",\n  \"namaMenu\": \"Dashboard\",\n  \"parentId\": null,\n  \"menuParent\": null,\n  \"menuSubParent\": null,\n  \"iconMenu\": \"LayoutDashboard\",\n  \"levelMenu\": 1,\n  \"tipeMenu\": \"Header\",\n  \"noUrut\": 1\n}"
                     },
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/menus/1",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "menus",
-                        "1"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/menus/{{menuId}}"
                   },
                   "response": []
                 },
@@ -6714,22 +6003,459 @@
                   "request": {
                     "method": "DELETE",
                     "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/api/backoffice/menus/1",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "api",
-                        "backoffice",
-                        "menus",
-                        "1"
-                      ]
-                    }
+                    "url": "{{baseUrl}}/api/backoffice/menus/{{menuId}}"
                   },
                   "response": []
                 }
               ]
+            }
+          ]
+        },
+        {
+          "name": "Route source coverage",
+          "description": "Request yang ditambahkan untuk menjaga cakupan route source.",
+          "item": [
+            {
+              "name": "POST /api/backoffice/users/:id/changepassword",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/users/{{backofficeUserId}}/changepassword"
+              },
+              "response": []
+            },
+            {
+              "name": "POST /api/backoffice/users/:email/resetpassword",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/users/{{resetEmail}}/resetpassword",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /api/backoffice/cabang/:id",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/cabang/{{cabangId}}"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/mesin/list/cabang/:cabangId",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/mesin/list/cabang/{{cabangId}}"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/mesin/master",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/mesin/master"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/mesin/esp/:espId",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/mesin/esp/{{espId}}"
+              },
+              "response": []
+            },
+            {
+              "name": "PUT /api/backoffice/mesin/maintenance/:idMesinDetail",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/mesin/maintenance/{{mesinDetailId}}"
+              },
+              "response": []
+            },
+            {
+              "name": "PUT /api/backoffice/mesin/ready/:idMesinDetail",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/mesin/ready/{{mesinDetailId}}"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/item/tipe/:tipeItem",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/item/tipe/{{tipeItem}}"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/dashboard/getmitra",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/dashboard/getmitra"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/dashboard/getcabang",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/dashboard/getcabang"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/dashboard/getmesin",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/dashboard/getmesin"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /api/backoffice/getMenuHeader",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/getMenuHeader"
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "description": "Katalog route backoffice dibandingkan dua arah dengan mount dan file route aktif. Isi variable koleksi sebelum mengirim request. Request katalog tervalidasi terhadap contract path/method dan payload JSON, tetapi tidak diklaim sebagai smoke test runtime satu per satu. Gunakan folder Verified core API contract untuk request yang memiliki bukti controller atau integration test.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{backofficeToken}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Verified core API contract",
+      "description": "Request di folder ini memiliki bukti controller atau integration test. Gunakan token sesuai domain dan ganti placeholder ID sebelum mengirim request.",
+      "item": [
+        {
+          "name": "Backoffice - List mesin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/backoffice/mesin?status=all",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Backoffice - Dashboard mesin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/backoffice/dashboard/getmesin",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Backoffice - Get akses role",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/backoffice/akses/role/{{roleId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Kasir - Create transaksi",
+          "description": "Harga dihitung server-side. HTTP 409 TRANSACTION_PRICE_CHANGED mengharuskan mobile memuat ulang harga lalu meminta konfirmasi sebelum submit ulang; TRANSACTION_PRICE_NOT_CONFIGURED menghentikan submit sampai harga cabang dilengkapi.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"totalBayar\": 20000,\n  \"metodePembayaran\": \"CASH\",\n  \"items\": [{ \"jenisLayanan\": \"cuci\", \"jumlah\": 1, \"subtotal\": 20000 }]\n}"
+            },
+            "url": "{{baseUrl}}/api/kasir/transaksi",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{kasirToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "409 - TRANSACTION_PRICE_CHANGED",
+              "status": "Conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"TRANSACTION_PRICE_CHANGED\",\n  \"message\": \"Harga transaksi telah berubah. Muat ulang harga dan coba kembali.\",\n  \"error\": \"Harga transaksi telah berubah. Muat ulang harga dan coba kembali.\"\n}"
+            },
+            {
+              "name": "409 - TRANSACTION_PRICE_NOT_CONFIGURED",
+              "status": "Conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"TRANSACTION_PRICE_NOT_CONFIGURED\",\n  \"message\": \"Harga transaksi belum dikonfigurasi untuk cabang ini\",\n  \"error\": \"Harga transaksi belum dikonfigurasi untuk cabang ini\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Kasir - Pending transaksi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/kasir/transaksi/pending",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{kasirToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Owner - Cashflow cabang",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/owner/cashflow?cabangId={{cabangId}}&filter=hari_ini",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Owner - Pendapatan cabang",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/owner/cashflow/pendapatan?cabangId={{cabangId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Kasir - Create pengeluaran",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": {{itemId}},\n  \"jumlahBarang\": 1,\n  \"nominal\": 5000\n}"
+            },
+            "url": "{{baseUrl}}/api/owner/cashflow/pengeluaran",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{kasirToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Owner - History transaksi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/owner/history/transaksi?cabangId={{cabangId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Kasir - History transaksi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/kasir/history/transaksi",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{kasirToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Public - Reset password backoffice",
+          "description": "Rate limited. Selalu mengembalikan HTTP 202 dan respons generik, baik email terdaftar maupun tidak.",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/backoffice/users/{{resetEmail}}/resetpassword"
+          },
+          "response": [
+            {
+              "name": "Accepted response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/users/{{resetEmail}}/resetpassword"
+              },
+              "status": "Accepted",
+              "code": 202,
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Jika akun terdaftar, tautan reset password akan dikirim ke email terdaftar.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Public - Reset password user owner",
+          "description": "Rate limited. Selalu mengembalikan HTTP 202 dan respons generik, baik email terdaftar maupun tidak.",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/backoffice/userowner/{{resetEmail}}/resetpassword"
+          },
+          "response": [
+            {
+              "name": "Accepted response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/userowner/{{resetEmail}}/resetpassword"
+              },
+              "status": "Accepted",
+              "code": 202,
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Jika akun terdaftar, tautan reset password akan dikirim ke email terdaftar.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Public - Reset password kasir",
+          "description": "Rate limited. Selalu mengembalikan HTTP 202 dan respons generik, baik email terdaftar maupun tidak.",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/owner/kasir/{{resetEmail}}/resetpassword"
+          },
+          "response": [
+            {
+              "name": "Accepted response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/owner/kasir/{{resetEmail}}/resetpassword"
+              },
+              "status": "Accepted",
+              "code": 202,
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Jika akun terdaftar, tautan reset password akan dikirim ke email terdaftar.\"\n}"
             }
           ]
         }
@@ -6745,14 +6471,7 @@
     }
   ],
   "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{token}}",
-        "type": "string"
-      }
-    ]
+    "type": "noauth"
   },
   "variable": [
     {
@@ -6760,8 +6479,80 @@
       "value": "http://localhost:9090"
     },
     {
-      "key": "token",
+      "key": "backofficeToken",
       "value": ""
+    },
+    {
+      "key": "ownerToken",
+      "value": ""
+    },
+    {
+      "key": "kasirToken",
+      "value": ""
+    },
+    {
+      "key": "username",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "roleId",
+      "value": ""
+    },
+    {
+      "key": "mitraId",
+      "value": ""
+    },
+    {
+      "key": "cabangId",
+      "value": ""
+    },
+    {
+      "key": "mesinId",
+      "value": ""
+    },
+    {
+      "key": "espId",
+      "value": ""
+    },
+    {
+      "key": "mesinDetailId",
+      "value": ""
+    },
+    {
+      "key": "tipeItem",
+      "value": ""
+    },
+    {
+      "key": "itemId",
+      "value": ""
+    },
+    {
+      "key": "ownerId",
+      "value": ""
+    },
+    {
+      "key": "ownerEmail",
+      "value": "owner@example.test"
+    },
+    {
+      "key": "backofficeUserId",
+      "value": ""
+    },
+    {
+      "key": "backofficeUsername",
+      "value": ""
+    },
+    {
+      "key": "menuId",
+      "value": ""
+    },
+    {
+      "key": "resetEmail",
+      "value": "user@example.test"
     }
   ]
 }

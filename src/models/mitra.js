@@ -1,10 +1,10 @@
 const dbPool = require("../config/database");
 const { getTodayStringYYYYMMDD } = require("../utils/date");
+const { withTransaction } = require("../utils/transaction");
+const { createHttpError } = require("../utils/httpError");
 
 const createNewMitra = async (body) => {
-  const connection = await dbPool.getConnection();
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     // 1. Generate Kode Otomatis
     const todayStr = getTodayStringYYYYMMDD();
@@ -33,7 +33,7 @@ const createNewMitra = async (body) => {
     );
 
     if (existingMitra.length > 0) {
-      throw new Error("Mitra sudah terdaftar");
+      throw createHttpError(400, "Mitra sudah terdaftar", "MITRA_DUPLICATE");
     }
 
     const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -51,19 +51,12 @@ const createNewMitra = async (body) => {
     const values = [kodeMitra, namaMitra, alamatMitra, createdBy, dateNow, true];
 
     await connection.execute(SQLQuery, values);
-    await connection.commit();
 
     return { kodeMitra, ...body, statusAktif: true };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const updateMitra = async (id, body) => {
-  try {
     const { namaMitra, alamatMitra, updatedBy } = body;
 
     // Check if mitra exists
@@ -72,7 +65,7 @@ const updateMitra = async (id, body) => {
       [id]
     );
     if (existingMitra.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MITRA_NOT_FOUND");
     }
 
     // Get current timestamp
@@ -102,20 +95,16 @@ const updateMitra = async (id, body) => {
     result.updatedDate = updatedDate;
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const deleteMitra = async (id, updatedBy) => {
-  try {
     // Check if mitra exists
     const [existingMitra] = await dbPool.execute(
       "SELECT kodeMitra FROM tbl_mitra WHERE id = ? AND statusAktif = 1",
       [id]
     );
     if (existingMitra.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MITRA_NOT_FOUND");
     }
 
     // Get current timestamp
@@ -126,28 +115,20 @@ const deleteMitra = async (id, updatedBy) => {
     const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getMitraById = async (id) => {
-  try {
     const [mitra] = await dbPool.execute(
       "SELECT * FROM tbl_mitra WHERE id = ?",
       [id]
     );
     if (mitra.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MITRA_NOT_FOUND");
     }
     return mitra[0];
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getAllMitra = async (status) => {
-  try {
     let SQLQuery = "SELECT * FROM tbl_mitra";
 
     if (status === "all") {
@@ -162,20 +143,16 @@ const getAllMitra = async (status) => {
 
     const [mitras] = await dbPool.execute(SQLQuery);
     return mitras;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const restoreMitra = async (id, updatedBy) => {
-  try {
     // Check if mitra exists and is currently inactive (statusAktif = 0)
     const [existingMitra] = await dbPool.execute(
       "SELECT id FROM tbl_mitra WHERE id = ? AND statusAktif = 0",
       [id]
     );
     if (existingMitra.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "MITRA_NOT_FOUND");
     }
 
     // Get current timestamp
@@ -186,9 +163,6 @@ const restoreMitra = async (id, updatedBy) => {
     const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 module.exports = {

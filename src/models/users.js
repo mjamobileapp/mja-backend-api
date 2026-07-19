@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const bcrypt = require("bcrypt");
+const { createHttpError } = require("../utils/httpError");
 
 const getAllUser = (status) => {
   let SQLQuery = `Select 
@@ -50,34 +51,32 @@ const getUserById = (id) => {
 };
 
 const createNewUser = async (body) => {
-  try {
-    const dataPegawai = {
-      nama: body.nama,
-      roleId: body.roleId,
-      username: body.username,
-      password: body.password,
-      createdBy: body.createdBy,
-      statusAktif: true,
-    };
+  const dataPegawai = {
+    nama: body.nama,
+    roleId: body.roleId,
+    username: body.username,
+    password: body.password,
+    createdBy: body.createdBy,
+    statusAktif: true,
+  };
 
-    console.log(dataPegawai);
 
-    if (!body.password) {
-      throw new Error("Password is required");
-    }
+  if (!body.password) {
+    throw createHttpError(400, "Password is required", "USER_PASSWORD_REQUIRED");
+  }
 
-    const [existingUser] = await dbPool.execute(
-      "SELECT id FROM tbl_users WHERE username = ?",
-      [dataPegawai.username]
-    );
+  const [existingUser] = await dbPool.execute(
+    "SELECT id FROM tbl_users WHERE username = ?",
+    [dataPegawai.username]
+  );
 
-    if (existingUser.length > 0) {
-      throw new Error("User sudah terdaftar");
-    }
+  if (existingUser.length > 0) {
+    throw createHttpError(400, "User sudah terdaftar", "USER_DUPLICATE");
+  }
 
-    const hashedPassword = await bcrypt.hash(body.password, 10); // Hash the password
-    const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
-    const SQLQuery = `INSERT INTO tbl_users (
+  const hashedPassword = await bcrypt.hash(body.password, 10); // Hash the password
+  const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
+  const SQLQuery = `INSERT INTO tbl_users (
       nama,
       roleId,
       username,
@@ -88,22 +87,18 @@ const createNewUser = async (body) => {
      )
       VALUES (?,?,?,?,?,?,?)`;
 
-    const values = [
-      dataPegawai.nama,
-      dataPegawai.roleId,
-      dataPegawai.username,
-      hashedPassword,
-      dataPegawai.createdBy,
-      dateNow,
-      dataPegawai.statusAktif,
-    ];
-    // console.log(values);
-    await dbPool.execute(SQLQuery, values);
-    return { ...body, statusAktif: true };
-  } catch (error) {
-    console.error("Failed to create new user:", error.message);
-    throw error;
-  }
+  const values = [
+    dataPegawai.nama,
+    dataPegawai.roleId,
+    dataPegawai.username,
+    hashedPassword,
+    dataPegawai.createdBy,
+    dateNow,
+    dataPegawai.statusAktif,
+  ];
+  // console.log(values);
+  await dbPool.execute(SQLQuery, values);
+  return { ...body, statusAktif: true };
 };
 
 const validateUser = (username) => {
@@ -125,40 +120,39 @@ where username = ? AND a.statusAktif = 1`;
 };
 
 const updateUser = async (body, id) => {
-  try {
-    // ambil data body
-    const { nama, username, roleId, password, updatedBy } = body;
+  // ambil data body
+  const { nama, username, roleId, password, updatedBy } = body;
 
-    const [existingUser] = await dbPool.execute(
+  const [existingUser] = await dbPool.execute(
       "SELECT username FROM tbl_users WHERE id = ? AND statusAktif = 1",
       [id]
     );
 
-    if (existingUser.length === 0) {
-      throw new Error("data not found");
-    }
+  if (existingUser.length === 0) {
+    throw createHttpError(404, "data not found", "USER_NOT_FOUND");
+  }
 
-    if (username !== existingUser[0].username) {
-      const [duplicate] = await dbPool.execute(
+  if (username !== existingUser[0].username) {
+    const [duplicate] = await dbPool.execute(
         "SELECT id FROM tbl_users WHERE username = ? AND id != ?",
         [username, id]
       );
 
-      if (duplicate.length > 0) {
-        throw new Error("User sudah terdaftar");
-      }
+    if (duplicate.length > 0) {
+      throw createHttpError(400, "User sudah terdaftar", "USER_DUPLICATE");
     }
+  }
 
-    const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
-    // --- cek apakah password diisi ---
-    let hashedPassword = null;
-    if (password && password.trim() !== "") {
-      hashedPassword = await bcrypt.hash(password, 10);
-    }
+  const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
+  // --- cek apakah password diisi ---
+  let hashedPassword = null;
+  if (password && password.trim() !== "") {
+    hashedPassword = await bcrypt.hash(password, 10);
+  }
 
     // --- susun query dinamis ---
     // jika password tidak diisi, jangan ubah kolom password
-    let SQLQuery = `
+  let SQLQuery = `
       UPDATE tbl_users 
       SET 
         nama = ?, 
@@ -167,111 +161,90 @@ const updateUser = async (body, id) => {
         updatedBy = ?,
         updatedDate = ?
     `;
-    const values = [nama, roleId, username, updatedBy, dateNow];
+  const values = [nama, roleId, username, updatedBy, dateNow];
 
-    if (hashedPassword) {
-      SQLQuery += `, password = ?`;
-      values.push(hashedPassword);
-    }
-
-    SQLQuery += ` WHERE id = ?`;
-    values.push(id);
-
-    console.log("Update query values:", values);
-
-    const [result] = await dbPool.execute(SQLQuery, values);
-    return result;
-  } catch (error) {
-    console.error("Failed to update user:", error.message);
-    throw error;
+  if (hashedPassword) {
+    SQLQuery += `, password = ?`;
+    values.push(hashedPassword);
   }
+
+  SQLQuery += ` WHERE id = ?`;
+  values.push(id);
+
+
+  const [result] = await dbPool.execute(SQLQuery, values);
+  return result;
 };
 
 const deleteUser = async (id, updatedBy) => {
-  try {
-    const [existingUser] = await dbPool.execute(
-      "SELECT id FROM tbl_users WHERE id = ? AND statusAktif = 1",
-      [id]
-    );
+  const [existingUser] = await dbPool.execute(
+    "SELECT id FROM tbl_users WHERE id = ? AND statusAktif = 1",
+    [id]
+  );
 
-    if (existingUser.length === 0) {
-      throw new Error("data not found");
-    }
-
-    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
-    const SQLQuery = "UPDATE tbl_users SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
-    return dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
-  } catch (error) {
-    throw error;
+  if (existingUser.length === 0) {
+    throw createHttpError(404, "data not found", "USER_NOT_FOUND");
   }
+
+  const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+  const SQLQuery = "UPDATE tbl_users SET statusAktif = 0, updatedBy = ?, updatedDate = ? WHERE id = ?";
+  return dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 };
 
 const restoreUser = async (id, updatedBy) => {
-  try {
-    const [existingUser] = await dbPool.execute(
-      "SELECT id FROM tbl_users WHERE id = ? AND statusAktif = 0",
-      [id]
-    );
+  const [existingUser] = await dbPool.execute(
+    "SELECT id FROM tbl_users WHERE id = ? AND statusAktif = 0",
+    [id]
+  );
 
-    if (existingUser.length === 0) {
-      throw new Error("data not found");
-    }
-
-    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
-    const SQLQuery = "UPDATE tbl_users SET statusAktif = 1, updatedBy = ?, updatedDate = ? WHERE id = ?";
-    return dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
-  } catch (error) {
-    throw error;
+  if (existingUser.length === 0) {
+    throw createHttpError(404, "data not found", "USER_NOT_FOUND");
   }
+
+  const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+  const SQLQuery = "UPDATE tbl_users SET statusAktif = 1, updatedBy = ?, updatedDate = ? WHERE id = ?";
+  return dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 };
 
 const changePassword = async (id, body, updatedBy) => {
-  try {
-    const { oldPassword, newPassword } = body;
+  const { oldPassword, newPassword } = body;
 
-    // 1. Ambil data user termasuk password hashed
-    const [rows] = await dbPool.execute(
-      "SELECT id, username, password FROM tbl_users WHERE id = ? AND statusAktif = 1",
-      [id]
-    );
+  // 1. Ambil data user termasuk password hashed
+  const [rows] = await dbPool.execute(
+    "SELECT id, username, password FROM tbl_users WHERE id = ? AND statusAktif = 1",
+    [id]
+  );
 
-    if (rows.length === 0) throw new Error("data not found");
+  if (rows.length === 0) throw createHttpError(404, "data not found", "USER_NOT_FOUND");
 
-    const user = rows[0];
+  const user = rows[0];
 
-    // 2. Verifikasi password lama
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
-    if (!isMatch) {
-      throw new Error("Password lama salah");
-    }
-
-    // 3. Hash password baru
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
-
-    // 4. Update password di database
-    const SQLQuery = "UPDATE tbl_users SET password = ?, updatedBy = ?, updatedDate = ? WHERE id = ?";
-    await dbPool.execute(SQLQuery, [hashedPassword, updatedBy, updatedDate, id]);
-
-    return user.username;
-  } catch (error) {
-    throw error;
+  // 2. Verifikasi password lama
+  const isMatch = await bcrypt.compare(oldPassword, user.password);
+  if (!isMatch) {
+    throw createHttpError(400, "Password lama salah", "USER_OLD_PASSWORD_INVALID");
   }
+
+  // 3. Hash password baru
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+
+  // 4. Update password di database
+  const SQLQuery = "UPDATE tbl_users SET password = ?, updatedBy = ?, updatedDate = ? WHERE id = ?";
+  await dbPool.execute(SQLQuery, [hashedPassword, updatedBy, updatedDate, id]);
+
+  return user.username;
 };
 
 const resetPassword = async (email) => {
-  try {
-    const [rows] = await dbPool.execute(
-      "SELECT username FROM tbl_users WHERE username = ? AND statusAktif = 1",
-      [email]
-    );
+  const [rows] = await dbPool.execute(
+    "SELECT username FROM tbl_users WHERE username = ? AND statusAktif = 1",
+    [email]
+  );
 
-    if (rows.length === 0) throw new Error("Email tidak ditemukan");
+  if (rows.length === 0) throw new Error("Email tidak ditemukan");
 
-    return { username: rows[0].username, email: rows[0].username };
-  } catch (error) {
-    throw error;
-  }
+  return { username: rows[0].username, email: rows[0].username };
 };
 
 const getUserByUsername = (username) => {

@@ -6,8 +6,8 @@ const getAllRole = () => {
 };
 
 const getRoleById = (idRole) => {
-  const SQLQuery = `select * from tbl_role where id=${idRole}`;
-  return dbPool.execute(SQLQuery);
+  const SQLQuery = "SELECT * FROM tbl_role WHERE id = ?";
+  return dbPool.execute(SQLQuery, [idRole]);
 };
 
 const createNewRole = (body) => {
@@ -47,10 +47,9 @@ const updateRole = (body, idRole) => {
 };
 
 const deleteRole = (idRole) => {
-  const SQLQuery = `Delete from tbl_role 
-    where id=${idRole}`;
+  const SQLQuery = "DELETE FROM tbl_role WHERE id = ?";
 
-  return dbPool.execute(SQLQuery);
+  return dbPool.execute(SQLQuery, [idRole]);
 };
 
 module.exports = {

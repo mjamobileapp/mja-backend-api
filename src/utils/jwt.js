@@ -1,8 +1,15 @@
 const jwt = require("jsonwebtoken");
 
-const generateToken = (user) => {
-  console.log(user);
-  
+const TOKEN_TYPES = Object.freeze({
+  BACKOFFICE: "backoffice",
+  MOBILE: "mobile",
+});
+
+const generateToken = (user, tokenType) => {
+  if (!Object.values(TOKEN_TYPES).includes(tokenType)) {
+    throw new Error("Tipe token tidak valid");
+  }
+
   const userId = user.id ?? user.id_user;
 
   // Bangun payload JWT
@@ -10,6 +17,7 @@ const generateToken = (user) => {
     id: userId,
     username: user.username,
     role: user.id_role,
+    tokenType,
   };
   
     // Tambahkan idMitra jika ada
@@ -29,4 +37,4 @@ const generateToken = (user) => {
   );
 };
 
-module.exports = { generateToken };
+module.exports = { generateToken, TOKEN_TYPES };

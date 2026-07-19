@@ -1,223 +1,51 @@
 const CabangModel = require("../models/cabang");
+const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
 
 const createNewCabang = async (req, res) => {
-  const { body } = req;
-  console.log("BODY REQUEST:", body);
-
-    const requiredFields = ['idMitra', 'namaCabang', 'alamatCabang', 'createdBy'];
-  const missingFields = requiredFields.filter(field => !body[field]);
-
-  if (missingFields.length > 0) {
-    return res.status(400).json({
-      message: "Bad request, missing required fields",
-      missingFields: missingFields,
-    });
-  }
-
-  try {
-    const result = await CabangModel.createNewCabang(body);
-
-    res.status(201).json({
-      message: "CREATE new Cabang success",
-      data: result,
-    });
-  } catch (error) {
-    if (error.message === "Mitra tidak ditemukan atau tidak aktif" || error.message === "Cabang sudah terdaftar") {
-      return res.status(400).json({
-        error: error.message,
-      });
-    }
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  const body = withAuthenticatedAuditUsername(req.body, req.user, "createdBy");
+  const missingFields = getMissingRequiredFields(body, ["idMitra", "namaCabang", "alamatCabang", "createdBy"]);
+  if (missingFields.length > 0) return res.status(400).json({ message: "Bad request, missing required fields", missingFields });
+  const result = await CabangModel.createNewCabang(body);
+  return res.status(201).json({ message: "CREATE new Cabang success", data: result });
 };
 
 const updateCabang = async (req, res) => {
-  const { id } = req.params;
-  const { body } = req;
-
-  console.log("UPDATE REQUEST:", { id, body });
-
-    // Validate required fields
-  const requiredFields = ['namaCabang', 'alamatCabang', 'updatedBy'];
-  const missingFields = requiredFields.filter(field => !body[field]);
-
-  if (missingFields.length > 0) {
-    return res.status(400).json({
-      message: "Bad request, missing required fields",
-      missingFields: missingFields,
-    });
-  }
-
-  try {
-    const data = await CabangModel.updateCabang(id, body);
-    res.status(200).json({
-      message: "UPDATE Cabang success",
-      data: data,
-    });
-  } catch (error) {
-    if (error.message === "data not found") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  const body = withAuthenticatedAuditUsername(req.body, req.user, "updatedBy");
+  const missingFields = getMissingRequiredFields(body, ["namaCabang", "alamatCabang", "updatedBy"]);
+  if (missingFields.length > 0) return res.status(400).json({ message: "Bad request, missing required fields", missingFields });
+  const data = await CabangModel.updateCabang(req.params.id, body);
+  return res.status(200).json({ message: "UPDATE Cabang success", data });
 };
 
 const deleteCabang = async (req, res) => {
-  const { id } = req.params;
-  // Mengambil username dari middleware authenticate (req.user)
-  const username = req.user.username;
-
-  console.log("DELETE REQUEST:", { id, updatedBy: username });
-
-  try {
-    await CabangModel.deleteCabang(id, username);
-    res.status(200).json({
-      message: "Delete Cabang success",
-      data: null,
-    });
-  } catch (error) {
-    if (error.message === "data not found") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  await CabangModel.deleteCabang(req.params.id, req.user.username);
+  return res.status(200).json({ message: "Delete Cabang success", data: null });
 };
 
 const getCabangById = async (req, res) => {
-  const { id } = req.params;
-
-  console.log("GET BY ID REQUEST:", { id });
-
-  try {
-    const data = await CabangModel.getCabangById(id);
-    res.status(200).json({
-      message: "Get by Id Cabang success",
-      data: data,
-    });
-  } catch (error) {
-    if (error.message === "data not found") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  const data = await CabangModel.getCabangById(req.params.id);
+  return res.status(200).json({ message: "Get by Id Cabang success", data });
 };
 
 const getAllCabang = async (req, res) => {
-  const { status } = req.query;
-  console.log("GET ALL REQUEST - Status Filter:", status || "active (default)");
-
-  try {
-    const data = await CabangModel.getAllCabang(status);
-    res.status(200).json({
-      message: "Get All Cabang success",
-      data: data,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  const data = await CabangModel.getAllCabang(req.query.status);
+  return res.status(200).json({ message: "Get All Cabang success", data });
 };
 
 const getCabangByIdMitra = async (req, res) => {
-  const { idMitra } = req.params;
-  console.log("GET BY ID MITRA REQUEST:", { idMitra });
-
-  try {
-    const data = await CabangModel.getCabangByIdMitra(idMitra);
-    res.status(200).json({
-      message: "Get Cabang by Id Mitra success",
-      data: data,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  const data = await CabangModel.getCabangByIdMitra(req.params.idMitra);
+  return res.status(200).json({ message: "Get Cabang by Id Mitra success", data });
 };
 
 const restoreCabang = async (req, res) => {
-  const { id } = req.params;
-  const username = req.user.username;
-
-  console.log("RESTORE CABANG REQUEST:", { id, updatedBy: username });
-
-  try {
-    await CabangModel.restoreCabang(id, username);
-    res.status(200).json({
-      message: "Restore Cabang success",
-      data: null,
-    });
-  } catch (error) {
-    if (error.message === "data not found") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  await CabangModel.restoreCabang(req.params.id, req.user.username);
+  return res.status(200).json({ message: "Restore Cabang success", data: null });
 };
 
 const resetCabang = async (req, res) => {
-  const { id } = req.params;
-  const { konfirmasi } = req.body;
-
-  console.log("RESET CABANG REQUEST:", { id, konfirmasi });
-
-  if (konfirmasi !== "RESET") {
-    return res.status(400).json({
-      error: "konfirmasi tidak sesuai",
-    });
-  }
-
-  try {
-    await CabangModel.resetCabang(id);
-    res.status(200).json({
-      success: "Reset Data Cabang Success",
-    });
-  } catch (error) {
-    if (error.message === "data not found") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
+  if (req.body.konfirmasi !== "RESET") return res.status(400).json({ error: "konfirmasi tidak sesuai" });
+  await CabangModel.resetCabang(req.params.id);
+  return res.status(200).json({ success: "Reset Data Cabang Success" });
 };
 
-module.exports = {
-  createNewCabang,
-  updateCabang,
-  deleteCabang,
-  restoreCabang,
-  resetCabang,
-  getCabangById,
-  getAllCabang,
-  getCabangByIdMitra,
-};
+module.exports = { createNewCabang, updateCabang, deleteCabang, restoreCabang, resetCabang, getCabangById, getAllCabang, getCabangByIdMitra };

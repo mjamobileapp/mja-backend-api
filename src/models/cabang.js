@@ -1,14 +1,14 @@
 const dbPool = require("../config/database");
+const { withTransaction } = require("../utils/transaction");
+const { createHttpError } = require("../utils/httpError");
 
 const createNewCabang = async (body) => {
-  const connection = await dbPool.getConnection();
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     // 1. Validasi Mitra Exist
     const { idMitra, namaCabang, alamatCabang, createdBy } = body;
     const [mitra] = await connection.execute("SELECT id, namaMitra FROM tbl_mitra WHERE id = ? AND statusAktif = TRUE", [idMitra]);
-    if (mitra.length === 0) throw new Error("Mitra tidak ditemukan atau tidak aktif");
+    if (mitra.length === 0) throw createHttpError(400, "Mitra tidak ditemukan atau tidak aktif", "CABANG_MITRA_INVALID");
 
     // 2. Generate Kode Otomatis
     const prefix = `CBG-${idMitra}-`;
@@ -33,7 +33,7 @@ const createNewCabang = async (body) => {
     );
 
     if (existingCabang.length > 0) {
-      throw new Error("Cabang sudah terdaftar");
+      throw createHttpError(400, "Cabang sudah terdaftar", "CABANG_DUPLICATE");
     }
 
     const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -52,19 +52,12 @@ const createNewCabang = async (body) => {
     const values = [idMitra, kodeCabang, namaCabang, alamatCabang, true, createdBy, dateNow];
 
     await connection.execute(SQLQuery, values);
-    await connection.commit();
 
     return { kodeCabang, ...body, namaMitra: mitra[0].namaMitra, statusAktif: true };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 const updateCabang = async (id, body) => {
-  try {
     const {namaCabang, alamatCabang, updatedBy } = body;
 
     // Check if cabang exists
@@ -73,7 +66,7 @@ const updateCabang = async (id, body) => {
       [id]
     );
     if (existingCabang.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "CABANG_NOT_FOUND");
     }
 
     // Get current timestamp
@@ -106,20 +99,16 @@ const updateCabang = async (id, body) => {
     result.updatedDate = updatedDate;
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const deleteCabang = async (id, updatedBy) => {
-  try {
     // Check if cabang exists
     const [existingCabang] = await dbPool.execute(
       "SELECT kodeCabang FROM tbl_cabang WHERE id = ? AND statusAktif = 1",
       [id]
     );
     if (existingCabang.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "CABANG_NOT_FOUND");
     }
 
     // Get current timestamp
@@ -130,13 +119,9 @@ const deleteCabang = async (id, updatedBy) => {
     const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getCabangById = async (id) => {
-  try {
     const [cabang] = await dbPool.execute(
       `SELECT c.*, m.namaMitra 
        FROM tbl_cabang c
@@ -145,16 +130,12 @@ const getCabangById = async (id) => {
       [id]
     );
     if (cabang.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "CABANG_NOT_FOUND");
     }
     return cabang[0];
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getAllCabang = async (status) => {
-  try {
     let SQLQuery = `
       SELECT c.*, m.namaMitra 
       FROM tbl_cabang c
@@ -172,13 +153,9 @@ const getAllCabang = async (status) => {
 
     const [cabangs] = await dbPool.execute(SQLQuery);
     return cabangs;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const getCabangByIdMitra = async (idMitra) => {
-  try {
     const [cabangs] = await dbPool.execute(
       `SELECT c.*, m.namaMitra 
        FROM tbl_cabang c
@@ -187,20 +164,16 @@ const getCabangByIdMitra = async (idMitra) => {
       [idMitra]
     );
     return cabangs;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const restoreCabang = async (id, updatedBy) => {
-  try {
     // Check if cabang exists and is currently inactive
     const [existingCabang] = await dbPool.execute(
       "SELECT id FROM tbl_cabang WHERE id = ? AND statusAktif = 0",
       [id]
     );
     if (existingCabang.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "CABANG_NOT_FOUND");
     }
 
     // Get current timestamp
@@ -211,16 +184,10 @@ const restoreCabang = async (id, updatedBy) => {
     const result = await dbPool.execute(SQLQuery, [updatedBy, updatedDate, id]);
 
     return result;
-  } catch (error) {
-    throw error;
-  }
 };
 
 const resetCabang = async (id) => {
-  const connection = await dbPool.getConnection();
-
-  try {
-    await connection.beginTransaction();
+  return withTransaction(async (connection) => {
 
     const [existingCabang] = await connection.execute(
       "SELECT id FROM tbl_cabang WHERE id = ? AND statusAktif = 1",
@@ -228,7 +195,7 @@ const resetCabang = async (id) => {
     );
 
     if (existingCabang.length === 0) {
-      throw new Error("data not found");
+      throw createHttpError(404, "data not found", "CABANG_NOT_FOUND");
     }
 
     await connection.execute(
@@ -245,15 +212,8 @@ const resetCabang = async (id) => {
     await connection.execute("DELETE FROM tbl_absensi WHERE cabangId = ?", [id]);
     await connection.execute("DELETE FROM tbl_notifikasi WHERE cabangId = ?", [id]);
 
-    await connection.commit();
-
     return true;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 module.exports = {
