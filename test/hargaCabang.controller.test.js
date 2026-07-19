@@ -13,14 +13,14 @@ const createResponse = () => ({
 
 test("branch price controller preserves success response and forwards typed errors", async () => {
   const original = HargaCabangModel.getSettingHarga;
-  HargaCabangModel.getSettingHarga = async () => [{ jenisLayanan: "cuci", harga: 20000, stokSekarang: 0 }];
+  HargaCabangModel.getSettingHarga = async () => [{ jenisLayanan: "cuci", harga: 20000, stokSekarang: 0, batasMinimum: 3 }];
 
   try {
     const response = createResponse();
     await HargaCabangController.getSettingHarga({ query: { cabangId: "2" }, user: { idMitra: 1 } }, response);
     assert.deepEqual(response.body, {
       message: "Get Data Setting Harga Layanan successful",
-      data: [{ jenisLayanan: "cuci", harga: 20000, stokSekarang: 0 }],
+      data: [{ jenisLayanan: "cuci", harga: 20000, stokSekarang: 0, batasMinimum: 3 }],
     });
 
     const expectedError = createHttpError(404, "Cabang tidak ditemukan", "CABANG_NOT_FOUND");
