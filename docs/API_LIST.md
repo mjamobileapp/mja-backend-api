@@ -33,6 +33,9 @@ Base URL: `http://localhost:9090`. Semua endpoint selain yang ditandai **public*
 | History owner | `/api/owner/history` | `GET /transaksi`, `GET /mesin` (owner) |
 | History kasir | `/api/kasir/history` | `GET /transaksi` (kasir, cabang token) |
 | Harga cabang owner | `/api/owner/settingharga` | `GET /`, `POST /` (owner) |
+| Backoffice logout | `/api/backoffice/logout` | `POST /` (Bearer backoffice) |
+
+Semua operasi autentikasi dan perubahan data backoffice dicatat secara best-effort ke `tbl_audit_backoffice`; kegagalan pencatatan tidak mengubah response bisnis.
 
 Payload dan response detail harus mengikuti controller masing-masing. Koleksi Postman memiliki `Backoffice route catalog` berisi 76 request yang disinkronkan terhadap route aktif, variable auth/ID, dan body JSON valid. Folder `Verified core API contract` memuat 13 request dengan bukti integration atau controller test, termasuk reset password publik yang selalu merespons HTTP 202 secara generik. Route catalog tidak menyatakan bahwa setiap request telah smoke-tested satu per satu.
 

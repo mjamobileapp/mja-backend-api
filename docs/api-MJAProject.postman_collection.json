@@ -33,6 +33,15 @@
                 }
               },
               "response": []
+            },
+            {
+              "name": "Logout",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/backoffice/logout"
+              },
+              "response": []
             }
           ]
         },

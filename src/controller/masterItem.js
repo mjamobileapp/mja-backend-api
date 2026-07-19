@@ -1,5 +1,6 @@
 const MasterItemModel = require("../models/masterItem");
 const { getMissingRequiredFields, withAuthenticatedAuditUsername } = require("../utils/validation");
+const { audit, getAuditSnapshot, A, E } = require("../utils/auditBackoffice");
 
 const createMasterItemController = (model = MasterItemModel) => {
   const createNewMasterItem = async (req, res) => {
@@ -14,6 +15,7 @@ const createMasterItemController = (model = MasterItemModel) => {
     }
 
     const result = await model.createNewMasterItem(payload);
+    await audit(req, A.CREATE, E.MASTER_ITEM, result?.id, null, result);
     return res.status(201).json({ message: "CREATE new Master Item success", data: result });
   };
 
@@ -40,6 +42,7 @@ const createMasterItemController = (model = MasterItemModel) => {
   };
 
   const updateMasterItem = async (req, res) => {
+    const oldValues = await getAuditSnapshot(model, "getMasterItemById", req.params.id);
     const payload = withAuthenticatedAuditUsername(req.body, req.user, "updatedBy");
     const missingFields = getMissingRequiredFields(payload, ["namaItem", "tipeItem", "updatedBy"]);
 
@@ -51,16 +54,20 @@ const createMasterItemController = (model = MasterItemModel) => {
     }
 
     const data = await model.updateMasterItem(req.params.id, payload);
+    await audit(req, A.UPDATE, E.MASTER_ITEM, req.params.id, oldValues, data);
     return res.status(200).json({ message: "UPDATE Master Item success", data });
   };
 
   const deleteMasterItem = async (req, res) => {
+    const oldValues = await getAuditSnapshot(model, "getMasterItemById", req.params.id);
     await model.deleteMasterItem(req.params.id, req.user.username);
+    await audit(req, A.DELETE, E.MASTER_ITEM, req.params.id, oldValues, null);
     return res.status(200).json({ message: "Delete Master Item success", data: null });
   };
 
   const restoreMasterItem = async (req, res) => {
     await model.restoreMasterItem(req.params.id, req.user.username);
+    await audit(req, A.RESTORE, E.MASTER_ITEM, req.params.id, null, { statusAktif: true });
     return res.status(200).json({ message: "Restore Master Item success", data: null });
   };
 

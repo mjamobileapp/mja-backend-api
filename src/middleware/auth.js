@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const dbPool = require("../config/database");
 const { TOKEN_TYPES } = require("../utils/jwt");
 const { createHttpError, isTypedHttpError } = require("../utils/httpError");
+const { ACCOUNT_TYPES } = require("../domain/auth");
 
 /**
  * Memverifikasi token JWT backoffice dan memvalidasi keaktifan user secara real-time.
@@ -46,12 +47,14 @@ const verifyBackofficeToken = async (req) => {
   // Menghilangkan referensi ke tbl_mitra karena ini merupakan sistem internal pemilik laundry
   const [users] = await dbPool.execute(
     `SELECT 
-        id, 
-        roleId AS role, 
-        username, 
-        statusAktif
-     FROM tbl_users 
-     WHERE id = ?`,
+        u.id,
+        u.roleId AS role,
+        r.namaRole AS roleName,
+        u.username,
+        u.statusAktif
+     FROM tbl_users u
+     INNER JOIN tbl_role r ON r.id = u.roleId
+     WHERE u.id = ?`,
     [decoded.id]
   );
 
@@ -75,6 +78,8 @@ const verifyBackofficeToken = async (req) => {
   if (!currentUser.statusAktif) {
     throw createHttpError(403, "Akses Ditolak: Akun Anda telah dinonaktifkan", "USER_DEACTIVATED");
   }
+
+  currentUser.accountType = ACCOUNT_TYPES.BACKOFFICE;
 
   return currentUser;
 };
