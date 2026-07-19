@@ -149,6 +149,11 @@ test.before(async () => {
      VALUES (?, ?, ?, ?, ?, ?)`,
     [mitra.insertId, cabang.insertId, item.insertId, 7, "integration-test", "integration-test"]
   );
+  await db.execute(
+    `INSERT INTO tbl_treshold_stok_mitra (idMitra, itemId, batasMinimum, createdBy, createdDate)
+     VALUES (?, ?, ?, ?, UTC_TIMESTAMP())`,
+    [mitra.insertId, item.insertId, 3, "integration-test"]
+  );
   const [mesinMaster] = await db.execute(
     `INSERT INTO tbl_mesin_master (idMitra, cabangId, espId, namaGroupMesin, createdBy, statusAktif)
      VALUES (?, ?, ?, ?, ?, 1)`,
@@ -209,6 +214,7 @@ test.after(async () => {
   await db.execute("DELETE FROM tbl_order_laundry WHERE idMitra = ?", [fixture.idMitra]);
   await db.execute("DELETE FROM tbl_pengeluaran WHERE idMitra = ?", [fixture.idMitra]);
   await db.execute("DELETE FROM tbl_notifikasi WHERE idMitra = ?", [fixture.idMitra]);
+  await db.execute("DELETE FROM tbl_treshold_stok_mitra WHERE idMitra = ?", [fixture.idMitra]);
   await db.execute("DELETE FROM tbl_stok_cabang WHERE idMitra = ?", [fixture.idMitra]);
   await db.execute("DELETE FROM tbl_harga_cabang WHERE idMitra = ?", [fixture.idMitra]);
   for (const masterId of masterIds) {
@@ -455,7 +461,8 @@ test("core domains complete their HTTP flows on the isolated integration schema"
   await t.test("akses tree can be read, saved, and resolved for a user", async () => {
     const initial = await request(server, { path: `/api/backoffice/akses/role/${fixture.roleId}`, token: backofficeToken() });
     assert.equal(initial.statusCode, 200);
-    assert.equal(initial.body[0].checked, false);
+    const initialParent = initial.body.find((menu) => Number(menu.id) === Number(fixture.parentMenuId));
+    assert.equal(initialParent?.checked, false);
 
     const save = await request(server, {
       method: "POST",
@@ -472,7 +479,8 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       token: backofficeToken(),
     });
     assert.equal(save.statusCode, 200);
-    assert.equal(roleAccess.body[0].checked, true);
+    const savedParent = roleAccess.body.find((menu) => Number(menu.id) === Number(fixture.parentMenuId));
+    assert.equal(savedParent?.checked, true);
     assert.equal(userAccess.statusCode, 200);
     assert.equal(userAccess.body[0].items[0].children[0].link, "/integration/child");
   });
@@ -699,6 +707,7 @@ test("core domains complete their HTTP flows on the isolated integration schema"
         (row) => row.jenisLayanan === "addon_barang" && Number(row.itemId) === Number(fixture.itemId)
       );
       assert.equal(hargaAddon.stokSekarang, 7);
+      assert.equal(hargaAddon.batasMinimum, 3);
       assert.equal(kasirHargaCabangLain.statusCode, 403);
       for (const response of [kasirOtherExpenseDetail, kasirOtherExpenseUpdate, kasirOtherExpenseDelete]) {
         assert.equal(response.statusCode, 404);

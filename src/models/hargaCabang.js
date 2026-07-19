@@ -153,7 +153,8 @@ SELECT
     t.jenisLayanan, 
     t.itemId, 
     IFNULL(h.harga, 0) AS harga,
-    IFNULL(s.stokSekarang, 0) AS stokSekarang
+    IFNULL(s.stokSekarang, 0) AS stokSekarang,
+    IFNULL(ts.batasMinimum, 0) AS batasMinimum
 FROM TemplateLayanan t
 LEFT JOIN tbl_harga_cabang h ON 
     h.cabangId = ? AND 
@@ -164,6 +165,9 @@ LEFT JOIN tbl_stok_cabang s ON
     s.idMitra = ? AND
     s.cabangId = ? AND
     s.itemId = t.itemId
+LEFT JOIN tbl_treshold_stok_mitra ts ON
+    ts.idMitra = ? AND
+    ts.itemId = t.itemId
 ORDER BY 
     CASE t.jenisLayanan
         WHEN 'cuci' THEN 1
@@ -171,7 +175,7 @@ ORDER BY
         WHEN 'addon_barang' THEN 3
     END,
     t.itemId`,
-      [cabangId, idMitra, idMitra, cabangId]
+      [cabangId, idMitra, idMitra, cabangId, idMitra]
     );
 
     if (rows.length === 0) {
