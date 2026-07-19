@@ -186,31 +186,23 @@ const restoreCabang = async (id, updatedBy) => {
     return result;
 };
 
-const resetCabang = async (id) => {
+const resetCabang = async (cabangId) => {
   return withTransaction(async (connection) => {
 
     const [existingCabang] = await connection.execute(
       "SELECT id FROM tbl_cabang WHERE id = ? AND statusAktif = 1",
-      [id]
+      [cabangId]
     );
 
     if (existingCabang.length === 0) {
       throw createHttpError(404, "data not found", "CABANG_NOT_FOUND");
     }
 
-    await connection.execute(
-      `DELETE d FROM tbl_detail_order d
-       JOIN tbl_order_laundry o ON d.orderId = o.id
-       WHERE o.cabangId = ?`,
-      [id]
-    );
-
-    await connection.execute("DELETE FROM tbl_stok_cabang WHERE cabangId = ?", [id]);
-    await connection.execute("DELETE FROM tbl_log_mesin WHERE cabangId = ?", [id]);
-    await connection.execute("DELETE FROM tbl_order_laundry WHERE cabangId = ?", [id]);
-    await connection.execute("DELETE FROM tbl_pengeluaran WHERE cabangId = ?", [id]);
-    await connection.execute("DELETE FROM tbl_absensi WHERE cabangId = ?", [id]);
-    await connection.execute("DELETE FROM tbl_notifikasi WHERE cabangId = ?", [id]);
+    await connection.execute("DELETE FROM tbl_stok_cabang WHERE cabangId = ?", [cabangId]);
+    await connection.execute("DELETE FROM tbl_order_laundry WHERE cabangId = ?", [cabangId]);
+    await connection.execute("DELETE FROM tbl_pengeluaran WHERE cabangId = ?", [cabangId]);
+    await connection.execute("DELETE FROM tbl_absensi WHERE cabangId = ?", [cabangId]);
+    await connection.execute("DELETE FROM tbl_notifikasi WHERE cabangId = ?", [cabangId]);
 
     return true;
   });
