@@ -7,6 +7,7 @@ const { getMissingRequiredFields } = require("../utils/validation");
 const { getRequiredJwtSecret } = require("../config/environment");
 const { createHttpError } = require("../utils/httpError");
 const { ACCOUNT_TYPES, MOBILE_ROLES, normalizeMobileRole } = require("../domain/auth");
+const EmailTokenModel = require("../models/emailToken");
 
 const loginUser = async (req, res) => {
   const { body } = req;
@@ -134,6 +135,22 @@ const activateAccount = async (req, res) => {
 
       const { username, role } = decoded;
       const isBackoffice = role === ACCOUNT_TYPES.BACKOFFICE;
+
+      // Token activation/reset baru memiliki jti dan dikonsumsi secara atomik
+      // satu kali. Token lama tanpa jti tetap kompatibel selama transisi.
+      if (["activation", "reset_password"].includes(decoded.type) && decoded.jti) {
+        const consumed = await EmailTokenModel.consumeOneTimeToken({
+          jti: decoded.jti,
+          username,
+          tokenType: decoded.type,
+        });
+        if (!consumed) {
+          const errorCode = decoded.type === "reset_password"
+            ? "ACCOUNT_RESET_TOKEN_USED"
+            : "ACCOUNT_ACTIVATION_TOKEN_USED";
+          throw createHttpError(400, "Token tidak valid atau sudah digunakan", errorCode);
+        }
+      }
 
       // 5. Cari user di database
       let user;

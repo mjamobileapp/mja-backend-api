@@ -38,6 +38,8 @@ Base URL: `http://localhost:9090`. Semua endpoint selain yang ditandai **public*
 
 Semua operasi autentikasi dan perubahan data backoffice dicatat secara best-effort ke `tbl_audit_backoffice`; kegagalan pencatatan tidak mengubah response bisnis.
 
+Link aktivasi akun mobile dan reset password menggunakan token one-time yang disimpan pada `tbl_email_one_time_token`. Migration `docs/DB_EMAIL_ONE_TIME_TOKEN.sql` harus dijalankan sebelum deployment fitur email.
+
 Payload dan response detail harus mengikuti controller masing-masing. Koleksi Postman memiliki `Backoffice route catalog` berisi 76 request yang disinkronkan terhadap route aktif, variable auth/ID, dan body JSON valid. Folder `Verified core API contract` memuat 13 request dengan bukti integration atau controller test, termasuk reset password publik yang selalu merespons HTTP 202 secara generik. Route catalog tidak menyatakan bahwa setiap request telah smoke-tested satu per satu.
 
 ## Kontrak harga resmi transaksi

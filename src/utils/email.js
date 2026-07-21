@@ -3,6 +3,8 @@ const EmailTemplateModel = require("../models/emailTemplate");
 const jwt = require("jsonwebtoken");
 const { getEmailSendTimeoutMs, getRequiredJwtSecret } = require("../config/environment");
 const { ACCOUNT_TYPES, MOBILE_ROLES } = require("../domain/auth");
+const { randomUUID } = require("node:crypto");
+const EmailTokenModel = require("../models/emailToken");
 
 const getTransporter = () => {
   const requiredConfig = [
@@ -93,11 +95,19 @@ const sendUserMobileCredentialEmail = async ({ to, username, role }) => {
   if (!template) throw new Error(`Email template ${kodeTemplate} not found`);
 
   // Generate Token dengan masa berlaku dari .env
+  const jti = randomUUID();
   const token = jwt.sign(
-    { username, type: 'activation', role }, 
+    { username, type: 'activation', role, jti },
     getRequiredJwtSecret(),
     { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) }
   );
+  const decodedToken = jwt.decode(token);
+  await EmailTokenModel.registerOneTimeToken({
+    jti,
+    username,
+    tokenType: "activation",
+    expiresAt: new Date(decodedToken.exp * 1000),
+  });
 
   const placeholders = {
     APP_NAME: process.env.APP_NAME,
@@ -133,11 +143,19 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
   if (!template) throw new Error(`Email template ${kodeTemplate} not found`);
 
   // Generate Token dengan masa berlaku dari .env
+  const jti = randomUUID();
   const token = jwt.sign(
-    { username, type: 'reset_password', role }, 
+    { username, type: 'reset_password', role, jti },
     getRequiredJwtSecret(),
     { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) }
   );
+  const decodedToken = jwt.decode(token);
+  await EmailTokenModel.registerOneTimeToken({
+    jti,
+    username,
+    tokenType: "reset_password",
+    expiresAt: new Date(decodedToken.exp * 1000),
+  });
 
   const placeholders = {
     APP_NAME: process.env.APP_NAME,
