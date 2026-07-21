@@ -21,6 +21,11 @@ const createResponse = () => ({
   },
 });
 
+const createRequest = (email) => ({
+  params: { email },
+  log: { info() {}, warn() {}, error() {} },
+});
+
 test("reset password returns the same accepted response for existing and unknown accounts", async () => {
   const original = {
     sendResetPasswordEmail: EmailService.sendResetPasswordEmail,
@@ -46,7 +51,7 @@ test("reset password returns the same accepted response for existing and unknown
 
     for (const { controller, model, notFoundMessage } of controllers) {
       const existingAccountResponse = createResponse();
-      await controller.resetPassword({ params: { email: "user@example.test" } }, existingAccountResponse);
+      await controller.resetPassword(createRequest("user@example.test"), existingAccountResponse);
 
       assert.equal(existingAccountResponse.statusCode, 202);
       assert.deepEqual(existingAccountResponse.body, { message: RESET_PASSWORD_ACCEPTED_MESSAGE });
@@ -57,7 +62,7 @@ test("reset password returns the same accepted response for existing and unknown
       };
 
       const unknownAccountResponse = createResponse();
-      await controller.resetPassword({ params: { email: "unknown@example.test" } }, unknownAccountResponse);
+      await controller.resetPassword(createRequest("unknown@example.test"), unknownAccountResponse);
 
       assert.equal(unknownAccountResponse.statusCode, 202);
       assert.deepEqual(unknownAccountResponse.body, existingAccountResponse.body);

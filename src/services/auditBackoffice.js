@@ -1,7 +1,8 @@
 const { BACKOFFICE_AUDIT_ACTIONS, BACKOFFICE_AUDIT_ENTITIES, sanitizeAuditValue, normalizeActor, normalizeEntityId } = require("../domain/auditBackoffice");
 const { insertAudit } = require("../models/auditBackoffice");
+const globalLogger = require("../utils/logger");
 
-const createBackofficeAuditRecorder = ({ insertAudit: save = insertAudit, logger = console } = {}) => async (event = {}) => {
+const createBackofficeAuditRecorder = ({ insertAudit: save = insertAudit, logger = globalLogger } = {}) => async (event = {}) => {
   const actionType = event.actionType;
   const entityName = event.entityName;
   if (!Object.values(BACKOFFICE_AUDIT_ACTIONS).includes(actionType) || !Object.values(BACKOFFICE_AUDIT_ENTITIES).includes(entityName)) return false;
@@ -15,7 +16,17 @@ const createBackofficeAuditRecorder = ({ insertAudit: save = insertAudit, logger
       ipAddress: limit(req?.ip || req?.socket?.remoteAddress, 45), userAgent: limit(req?.get?.("user-agent"), 1000),
     }));
   } catch (error) {
-    logger.error("Backoffice audit insert failed", { actionType, entityName, entityId: normalizeEntityId(event.entityId), message: error.message });
+    const requestLogger = event.logger || event.req?.log || logger;
+    requestLogger.error(
+      {
+        err: error,
+        event: "backoffice_audit_insert_failed",
+        actionType,
+        entityName,
+        entityId: normalizeEntityId(event.entityId),
+      },
+      "Backoffice audit insert failed"
+    );
     return false;
   }
 };

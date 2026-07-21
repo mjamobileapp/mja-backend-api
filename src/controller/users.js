@@ -92,11 +92,11 @@ const resetPassword = async (req, res) => {
     try {
       await EmailService.sendResetPasswordEmail({ to: result.email, username: result.username, role: ACCOUNT_TYPES.BACKOFFICE });
     } catch (emailError) {
-      console.error("Gagal mengirim email reset password backoffice:", emailError.message);
+      req.log.error({ err: emailError, event: "backoffice_password_reset_email_failed" }, "Gagal mengirim email reset password backoffice");
     }
   } catch (error) {
     await recordBackofficeAudit({ req, actor: { username: req.params.email || "unknown", role: "unknown", accountType: "backoffice" }, actionType: BACKOFFICE_AUDIT_ACTIONS.RESET_PASSWORD, entityName: BACKOFFICE_AUDIT_ENTITIES.AUTHENTICATION, newValues: { reason: "ACCOUNT_NOT_FOUND" } });
-    console.error("Gagal memproses permintaan reset password backoffice:", error.message);
+    req.log.error({ err: error, event: "backoffice_password_reset_failed" }, "Gagal memproses permintaan reset password backoffice");
   }
   return sendResetPasswordAccepted(res);
 };

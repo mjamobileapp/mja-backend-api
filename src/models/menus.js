@@ -8,7 +8,6 @@ const getAll = () => {
 };
 
 const getById = (id) => {
-  // console.log(id);
   const SQLQuery = `Select * from tbl_menu where id=?`;
   return dbPool.execute(SQLQuery, [id]);
 };
@@ -79,7 +78,6 @@ const updateMenu = (body, id) => {
     modifiedDate,
     id, // penting! ID untuk tahu record mana yang diupdate
   ];
-  // console.log(values);
   return dbPool.execute(SQLQuery, values);
 };
 

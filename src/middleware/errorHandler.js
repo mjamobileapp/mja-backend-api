@@ -21,12 +21,16 @@ const errorHandler = (error, req, res, next) => {
   const isServerError = statusCode >= 500;
 
   if (isServerError) {
-    console.error("Unhandled request error", {
-      method: req.method,
-      path: req.originalUrl,
-      code: error.code || "INTERNAL_SERVER_ERROR",
-      message: error.message,
-    });
+    req.log.error(
+      {
+        err: error,
+        event: "unhandled_request_error",
+        method: req.method,
+        path: req.originalUrl,
+        code: error.code || "INTERNAL_SERVER_ERROR",
+      },
+      "Unhandled request error"
+    );
   }
 
   const response = {
