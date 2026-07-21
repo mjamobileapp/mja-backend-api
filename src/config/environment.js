@@ -42,9 +42,8 @@ const getAllowedOrigins = (environment = process.env) => {
   return [
     "http://localhost:3000",
     "http://localhost:3100",
-    "http://dev.appadentis.cloud",
-    "http://appadentis.cloud",
-    "https://appadentis.cloud",
+    "http://dev.mjasmartlaundry.cloud",
+    "https://mjasmartlaundry.cloud",
     "http://148.230.102.45:3100",
   ];
 };
