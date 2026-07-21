@@ -31,6 +31,7 @@ const historyKasirRoutes = require("./routes/historyKasir");
 const hargaCabangRoutes = require("./routes/hargaCabang");
 const transaksiRoutes = require("./routes/transaksi");
 const transaksiStartMesinRoutes = require("./routes/transaksiStartMesin");
+const reportRoutes = require("./routes/report");
 
 const createApp = ({ environment = process.env } = {}) => {
   const app = express();
@@ -69,6 +70,7 @@ const createApp = ({ environment = process.env } = {}) => {
   app.use("/api/backoffice/mesin", mesinRoutes);
   app.use("/api/backoffice/item", masterItemRoutes);
   app.use("/api/backoffice/userowner", userOwnerRoutes);
+  app.use("/api/report", reportRoutes);
   app.use("/api/mobile", mobileRoutes);
   app.use("/api/transaksi", transaksiStartMesinRoutes);
   app.use("/api/kasir/transaksi", transaksiRoutes);

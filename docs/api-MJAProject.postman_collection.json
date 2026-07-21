@@ -99,6 +99,20 @@
           ]
         },
         {
+          "name": "Report",
+          "item": [
+            {
+              "name": "Get Audit Logs",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/report/audit-logs?page=1&limit=10&actionType=UPDATE&entityName=tbl_harga_cabang&startDate=2026-07-01&endDate=2026-07-31"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
           "name": "Master Data",
           "item": [
             {

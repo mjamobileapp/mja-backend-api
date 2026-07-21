@@ -118,7 +118,7 @@ const getCatalogSourceRoutes = () => {
   );
   const sourceRoutes = [];
 
-  for (const match of appSource.matchAll(/app\.use\(\s*["'](\/api\/backoffice\/[^"']+)["']\s*,\s*(\w+)\s*\);/g)) {
+  for (const match of appSource.matchAll(/app\.use\(\s*["'](\/api\/(?:backoffice\/[^"']+|report(?:\/[^"']*)?))["']\s*,\s*(\w+)\s*\);/g)) {
     const [, mountPath, routeVariable] = match;
     const routeFile = importedRouteFiles.get(routeVariable);
     assert(routeFile, `Route source untuk mount ${mountPath} tidak dapat ditemukan.`);
