@@ -33,6 +33,7 @@ Base URL: `http://localhost:9090`. Semua endpoint selain yang ditandai **public*
 | History owner | `/api/owner/history` | `GET /transaksi`, `GET /mesin` (owner) |
 | History kasir | `/api/kasir/history` | `GET /transaksi` (kasir, cabang token) |
 | Harga cabang owner | `/api/owner/settingharga` | `GET /`, `POST /` (owner) |
+| Audit trail backoffice | `/api/report` | `GET /audit-logs` (Bearer backoffice; pagination dan filter action/entity/tanggal) |
 | Backoffice logout | `/api/backoffice/logout` | `POST /` (Bearer backoffice) |
 
 Semua operasi autentikasi dan perubahan data backoffice dicatat secara best-effort ke `tbl_audit_backoffice`; kegagalan pencatatan tidak mengubah response bisnis.
