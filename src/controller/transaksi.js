@@ -152,7 +152,7 @@ const createTransaksi = async (req, res) => {
     cabangId,
     idUserMobile,
     payload,
-  });
+  }, req.log);
 
   res.status(201).json({
     success: "Create Data Transaksi Success",
@@ -180,7 +180,7 @@ const startMesin = async (req, res) => {
     ...context,
     mesinId: Number(mesinId),
     invoiceNumber: invoiceNumber.trim(),
-  });
+  }, req.log);
 
   return res.status(200).json({
     success: "Start Mesin Success",
@@ -201,7 +201,7 @@ const startMesinByOwner = async (req, res) => {
   await TransaksiModel.startMesinByOwner({
     ...context,
     mesinId: Number(mesinId),
-  });
+  }, req.log);
 
   return res.status(200).json({
     success: "Start Mesin By Owner Success",
@@ -229,7 +229,7 @@ const stopMesin = async (req, res) => {
     ...context,
     mesinId: Number(mesinId),
     invoiceNumber: invoiceNumber ? invoiceNumber.trim() : null,
-  });
+  }, req.log);
 
   return res.status(200).json({
     success: "Stop Mesin Success",
@@ -250,7 +250,7 @@ const stopMesinByOwner = async (req, res) => {
   await TransaksiModel.stopMesinByOwner({
     ...context,
     mesinId: Number(mesinId),
-  });
+  }, req.log);
 
   return res.status(200).json({
     success: "Stop Mesin By Owner Success",

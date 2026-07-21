@@ -45,7 +45,7 @@ test("graceful shutdown closes HTTP, MQTT, and database once before exit", async
     exit(code) {
       events.push(`exit:${code}`);
     },
-    logger: { log() {}, error() {} },
+    logger: { info() {}, error() {} },
   });
 
   await shutdown("SIGTERM");

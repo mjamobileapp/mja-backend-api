@@ -63,7 +63,6 @@ const createNewRole = async (req, res) => {
     createdDate: getDatabaseTimestamp(),
   };
 
-  // console.log(mapData);
   const missingFields = getMissingRequiredFields(body, ["namaRole", "description", "createdBy"]);
 
   if (missingFields.length > 0) {

@@ -3,6 +3,7 @@ const { getDateFilterCondition, getTodayStringYYYYMMDD } = require("../utils/dat
 const { createHttpError } = require("../utils/httpError");
 const { publishAndWaitAck } = require("../utils/mqttClient");
 const { withTransaction } = require("../utils/transaction");
+const globalLogger = require("../utils/logger");
 const { calculateLineSubtotal, sumMoney } = require("../domain/transaksi");
 const { MACHINE_CONTROL_ACTOR_TYPES } = require("../domain/machineControl");
 const { MACHINE_STATUSES, normalizeMachineStatus } = require("../domain/mesin");
@@ -146,7 +147,7 @@ const reduceStockAndNotify = async (
   }
 };
 
-const createTransaksi = async (data) => {
+const createTransaksi = async (data, requestLogger = globalLogger) => {
   const { idMitra, cabangId, idUserMobile, totalBayar, metodePembayaran, items } = data;
   return withTransaction(async (connection) => {
 
@@ -250,7 +251,7 @@ const createTransaksi = async (data) => {
         subtotal: Number(item.subtotal),
       })),
     };
-  });
+  }, requestLogger);
 };
 
 const getOfficialPrice = async (connection, { idMitra, cabangId, jenisLayanan, itemId }) => {
@@ -449,7 +450,7 @@ const parseDryerRecoveryRequestId = (requestId) => {
   };
 };
 
-const recoverPendingTransaksi = async ({ espId, requestId, machineType = "DRYER" }) => {
+const recoverPendingTransaksi = async ({ espId, requestId, machineType = "DRYER" }, requestLogger = globalLogger) => {
   const normalizedMachineType = String(machineType || "").trim().toUpperCase();
   if (normalizedMachineType !== "DRYER") {
     throw createHttpError(400, "Recovery transaksi hanya mendukung mesin DRYER", "MACHINE_RECOVERY_TYPE_INVALID");
@@ -536,10 +537,10 @@ const recoverPendingTransaksi = async ({ espId, requestId, machineType = "DRYER"
       mesinId: machine.mesinId,
       machineType: normalizedMachineType,
     };
-  });
+  }, requestLogger);
 };
 
-const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNumber }) => {
+const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNumber }, requestLogger = globalLogger) => {
   const connection = await dbPool.getConnection();
   let shouldRollback = false;
 
@@ -572,7 +573,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceN
 
     try {
       if (isMqttDebugEnabled()) {
-        console.log("[TRANSAKSI] Start mesin MQTT command", {
+        requestLogger.info({
           mesinId: Number(mesinId),
           jenisMesin: mesin.jenisMesin,
           espId,
@@ -580,7 +581,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceN
           topic,
           ackTopic,
           requestId,
-        });
+        }, "[TRANSAKSI] Start mesin MQTT command");
       }
 
       await publishAndWaitAck({
@@ -588,6 +589,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceN
         ackTopic,
         payload: mqttPayload,
         requestId,
+        logger: requestLogger,
       });
     } catch (mqttError) {
       await insertLogMesin(connection, {
@@ -640,7 +642,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceN
       try {
         await connection.rollback();
       } catch (rollbackError) {
-        console.error("Rollback start mesin gagal:", rollbackError.message);
+        requestLogger.error({ err: rollbackError, event: "start_machine_rollback_failed" }, "Rollback start mesin gagal");
       }
     }
 
@@ -650,7 +652,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceN
   }
 };
 
-const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }) => {
+const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }, requestLogger = globalLogger) => {
   const connection = await dbPool.getConnection();
   let shouldRollback = false;
 
@@ -671,7 +673,7 @@ const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId })
 
     try {
       if (isMqttDebugEnabled()) {
-        console.log("[TRANSAKSI] Start mesin by owner MQTT command", {
+        requestLogger.info({
           mesinId: Number(mesinId),
           jenisMesin: mesin.jenisMesin,
           espId,
@@ -679,7 +681,7 @@ const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId })
           topic,
           ackTopic,
           requestId,
-        });
+        }, "[TRANSAKSI] Start mesin by owner MQTT command");
       }
 
       await publishAndWaitAck({
@@ -687,6 +689,7 @@ const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId })
         ackTopic,
         payload: mqttPayload,
         requestId,
+        logger: requestLogger,
       });
     } catch (mqttError) {
       await insertLogMesin(connection, {
@@ -732,7 +735,7 @@ const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId })
       try {
         await connection.rollback();
       } catch (rollbackError) {
-        console.error("Rollback start mesin by owner gagal:", rollbackError.message);
+        requestLogger.error({ err: rollbackError, event: "start_machine_owner_rollback_failed" }, "Rollback start mesin by owner gagal");
       }
     }
 
@@ -742,7 +745,7 @@ const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId })
   }
 };
 
-const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNumber = null }) => {
+const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNumber = null }, requestLogger = globalLogger) => {
   const connection = await dbPool.getConnection();
   let shouldRollback = false;
 
@@ -763,7 +766,7 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
 
     try {
       if (isMqttDebugEnabled()) {
-        console.log("[TRANSAKSI] Stop mesin MQTT command", {
+        requestLogger.info({
           mesinId: Number(mesinId),
           jenisMesin: mesin.jenisMesin,
           espId,
@@ -771,7 +774,7 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
           topic,
           ackTopic,
           requestId,
-        });
+        }, "[TRANSAKSI] Stop mesin MQTT command");
       }
 
       await publishAndWaitAck({
@@ -779,6 +782,7 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
         ackTopic,
         payload: mqttPayload,
         requestId,
+        logger: requestLogger,
       });
     } catch (mqttError) {
       await insertLogMesin(connection, {
@@ -824,7 +828,7 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
       try {
         await connection.rollback();
       } catch (rollbackError) {
-        console.error("Rollback stop mesin gagal:", rollbackError.message);
+        requestLogger.error({ err: rollbackError, event: "stop_machine_rollback_failed" }, "Rollback stop mesin gagal");
       }
     }
 
@@ -834,7 +838,7 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
   }
 };
 
-const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }) => {
+const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }, requestLogger = globalLogger) => {
   const connection = await dbPool.getConnection();
   let shouldRollback = false;
 
@@ -855,7 +859,7 @@ const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }) 
 
     try {
       if (isMqttDebugEnabled()) {
-        console.log("[TRANSAKSI] Stop mesin by owner MQTT command", {
+        requestLogger.info({
           mesinId: Number(mesinId),
           jenisMesin: mesin.jenisMesin,
           espId,
@@ -863,7 +867,7 @@ const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }) 
           topic,
           ackTopic,
           requestId,
-        });
+        }, "[TRANSAKSI] Stop mesin by owner MQTT command");
       }
 
       await publishAndWaitAck({
@@ -871,6 +875,7 @@ const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }) 
         ackTopic,
         payload: mqttPayload,
         requestId,
+        logger: requestLogger,
       });
     } catch (mqttError) {
       await insertLogMesin(connection, {
@@ -916,7 +921,7 @@ const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }) 
       try {
         await connection.rollback();
       } catch (rollbackError) {
-        console.error("Rollback stop mesin by owner gagal:", rollbackError.message);
+        requestLogger.error({ err: rollbackError, event: "stop_machine_owner_rollback_failed" }, "Rollback stop mesin by owner gagal");
       }
     }
 

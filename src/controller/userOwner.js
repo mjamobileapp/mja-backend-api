@@ -13,7 +13,7 @@ const createNewUserOwner = async (req, res) => {
   try {
     await EmailService.sendUserMobileCredentialEmail({ to: result.email, username: result.username, role: result.role });
   } catch (emailError) {
-    console.error("Gagal mengirim email create owner:", emailError.message);
+    req.log.error({ err: emailError, event: "create_owner_email_failed" }, "Gagal mengirim email create owner");
   }
   return res.status(201).json({ message: "CREATE new User Owner success", data: result });
 };
@@ -74,10 +74,10 @@ const resetPassword = async (req, res) => {
     try {
       await EmailService.sendResetPasswordEmail({ to: result.email, username: result.username, role: result.role });
     } catch (emailError) {
-      console.error("Gagal mengirim email reset password:", emailError.message);
+      req.log.error({ err: emailError, event: "owner_password_reset_email_failed" }, "Gagal mengirim email reset password");
     }
   } catch (error) {
-    console.error("Gagal memproses permintaan reset password owner:", error.message);
+    req.log.error({ err: error, event: "owner_password_reset_failed" }, "Gagal memproses permintaan reset password owner");
   }
   return sendResetPasswordAccepted(res);
 };

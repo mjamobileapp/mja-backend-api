@@ -18,6 +18,12 @@ const createResponse = () => ({
   },
 });
 
+const createRequest = () => ({
+  method: "GET",
+  originalUrl: "/item",
+  log: { info() {}, warn() {}, error() {} },
+});
+
 test("catchAsync forwards the original rejected error", async () => {
   const expectedError = new Error("expected failure");
   let receivedError;
@@ -54,13 +60,13 @@ test("global error handler preserves typed 4xx errors with the legacy error alia
     [409, "MASTER_ITEM_DUPLICATE", "already exists"],
   ]) {
     const typedResponse = createResponse();
-    errorHandler(createHttpError(statusCode, message, code), { method: "GET", originalUrl: "/item" }, typedResponse, () => {});
+    errorHandler(createHttpError(statusCode, message, code), createRequest(), typedResponse, () => {});
     assert.equal(typedResponse.statusCode, statusCode);
     assert.deepEqual(typedResponse.body, { success: false, code, message, error: message });
   }
 
   const serverResponse = createResponse();
-  errorHandler(new Error("database secret"), { method: "GET", originalUrl: "/item" }, serverResponse, () => {});
+  errorHandler(new Error("database secret"), createRequest(), serverResponse, () => {});
   assert.equal(serverResponse.statusCode, 500);
   assert.deepEqual(serverResponse.body, {
     success: false,
@@ -75,7 +81,7 @@ test("global error handler delegates when headers were sent", () => {
   const error = new Error("late failure");
   let forwardedError;
 
-  errorHandler(error, { method: "GET", originalUrl: "/item" }, res, (receivedError) => {
+  errorHandler(error, createRequest(), res, (receivedError) => {
     forwardedError = receivedError;
   });
 

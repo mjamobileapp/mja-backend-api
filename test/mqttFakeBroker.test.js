@@ -9,7 +9,7 @@ const {
   stopMqttStatusListener,
 } = require("../src/utils/mqttStatusListener");
 
-const silentLogger = { log() {}, error() {} };
+const silentLogger = { info() {}, error() {} };
 const waitForAsyncHandler = () =>
   new Promise((resolve) => {
     setTimeout(resolve, 0);

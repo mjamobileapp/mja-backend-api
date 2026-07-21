@@ -4,6 +4,7 @@ const { createApp } = require("./app");
 const { validateServerEnvironment } = require("./config/environment");
 const dbPool = require("./config/database");
 const { startMqttStatusListener, stopMqttStatusListener } = require("./utils/mqttStatusListener");
+const logger = require("./utils/logger");
 
 const closeHttpServer = (server) =>
   new Promise((resolve, reject) => {
@@ -23,7 +24,7 @@ const createGracefulShutdown = ({
   stopListener = stopMqttStatusListener,
   pool = dbPool,
   exit = process.exit,
-  logger = console,
+  logger: shutdownLogger = logger,
 } = {}) => {
   let isShuttingDown = false;
 
@@ -33,7 +34,7 @@ const createGracefulShutdown = ({
     }
 
     isShuttingDown = true;
-    logger.log(`Menerima ${signal}, menghentikan server...`);
+    shutdownLogger.info({ event: "server_shutdown_started", signal }, "Menghentikan server");
     let hasError = false;
 
     for (const closeResource of [
@@ -45,7 +46,7 @@ const createGracefulShutdown = ({
         await closeResource();
       } catch (error) {
         hasError = true;
-        logger.error("Graceful shutdown gagal:", error.message);
+        shutdownLogger.error({ err: error, event: "server_shutdown_failed", signal }, "Graceful shutdown gagal");
       }
     }
 
@@ -65,7 +66,7 @@ const startServer = ({ environment = process.env, registerShutdown = true } = {}
   const app = createApp({ environment });
   const port = Number(environment.PORT) || 9090;
   const server = app.listen(port, () => {
-    console.log(`Server berhasil di running di port ${port}`);
+    logger.info({ event: "server_started", port }, "Server berjalan");
     startMqttStatusListener();
   });
 

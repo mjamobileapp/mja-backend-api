@@ -1,5 +1,6 @@
 const dbPool = require("../config/database");
 const { connectClient, isMqttDebugEnabled } = require("./mqttClient");
+const logger = require("./logger");
 const { MACHINE_STATUSES, normalizeMachineStatus } = require("../domain/mesin");
 const TransaksiModel = require("../models/transaksi");
 
@@ -74,7 +75,7 @@ const updateMesinReadyByEspId = async ({ espId, machineType = null }) => {
   return result.affectedRows || 0;
 };
 
-const createStatusMessageHandler = ({ updateReady = updateMesinReadyByEspId, logger = console } = {}) =>
+const createStatusMessageHandler = ({ updateReady = updateMesinReadyByEspId, logger: statusLogger = logger } = {}) =>
   async (topic, message) => {
     const topicData = parseStatusTopic(topic);
     if (!topicData) return;
@@ -90,18 +91,18 @@ const createStatusMessageHandler = ({ updateReady = updateMesinReadyByEspId, log
       machineType,
     });
 
-    logger.log("[MQTT STATUS] Mesin READY diterima", {
+    statusLogger.info({
       espId: topicData.espId,
       machineType: machineType || "ALL",
       affectedRows,
-    });
+    }, "[MQTT STATUS] Mesin READY diterima");
   };
 
 const handleStatusMessage = createStatusMessageHandler();
 
 const createPendingTransactionMessageHandler = ({
   recoverPending = TransaksiModel.recoverPendingTransaksi,
-  logger = console,
+  logger: recoveryLogger = logger,
 } = {}) => async (topic, message) => {
   const topicData = parsePendingTransactionTopic(topic);
   if (!topicData) return;
@@ -118,12 +119,12 @@ const createPendingTransactionMessageHandler = ({
     machineType,
   });
 
-  logger.log("[MQTT RECOVERY] Transaksi pending dipulihkan", {
+  recoveryLogger.info({
     espId: topicData.espId,
     requestId: String(payload.requestId),
     machineType,
     recovery,
-  });
+  }, "[MQTT RECOVERY] Transaksi pending dipulihkan");
 };
 
 const handlePendingTransactionMessage = createPendingTransactionMessageHandler();
@@ -139,7 +140,7 @@ const handleMqttMessage = async (topic, message) => {
   }
 };
 
-const startMqttStatusListener = ({ clientFactory = connectClient, messageHandler = handleMqttMessage, logger = console } = {}) => {
+const startMqttStatusListener = ({ clientFactory = connectClient, messageHandler = handleMqttMessage, logger: listenerLogger = logger } = {}) => {
   if (statusListenerClient) {
     return statusListenerClient;
   }
@@ -150,43 +151,43 @@ const startMqttStatusListener = ({ clientFactory = connectClient, messageHandler
       reconnectPeriod: Number(process.env.MQTT_RECONNECT_PERIOD_MS) || 5000,
     });
   } catch (error) {
-    logger.error("[MQTT STATUS] Listener tidak bisa dimulai:", error.message);
+    listenerLogger.error({ err: error }, "[MQTT STATUS] Listener tidak bisa dimulai");
     return null;
   }
 
   statusListenerClient.on("connect", () => {
     statusListenerClient.subscribe(MQTT_TOPICS, { qos: 1 }, (error) => {
       if (error) {
-        logger.error("[MQTT STATUS] Gagal subscribe topic status/recovery:", error.message);
+        listenerLogger.error({ err: error }, "[MQTT STATUS] Gagal subscribe topic status/recovery");
         return;
       }
 
-      logger.log("[MQTT STATUS] Subscribed:", MQTT_TOPICS);
+      listenerLogger.info({ topics: MQTT_TOPICS }, "[MQTT STATUS] Subscribed");
     });
   });
 
   statusListenerClient.on("message", (topic, message) => {
     Promise.resolve(messageHandler(topic, message)).catch((error) => {
-      logger.error("[MQTT STATUS] Gagal memproses status/recovery mesin:", {
+      listenerLogger.error({
         topic,
-        error: error.message,
-      });
+        err: error,
+      }, "[MQTT STATUS] Gagal memproses status/recovery mesin");
     });
   });
 
   statusListenerClient.on("error", (error) => {
-    logger.error("[MQTT STATUS] Client error:", error.message);
+    listenerLogger.error({ err: error }, "[MQTT STATUS] Client error");
   });
 
   statusListenerClient.on("reconnect", () => {
     if (isMqttDebugEnabled()) {
-      logger.log("[MQTT STATUS] Reconnecting...");
+      listenerLogger.info("[MQTT STATUS] Reconnecting...");
     }
   });
 
   statusListenerClient.on("close", () => {
     if (isMqttDebugEnabled()) {
-      logger.log("[MQTT STATUS] Connection closed");
+      listenerLogger.info("[MQTT STATUS] Connection closed");
     }
   });
 
@@ -210,7 +211,7 @@ const stopMqttStatusListener = async () => {
       });
     }
   } catch (error) {
-    console.error("[MQTT STATUS] Gagal menghentikan listener:", error.message);
+    logger.error({ err: error }, "[MQTT STATUS] Gagal menghentikan listener");
   }
 
   return true;

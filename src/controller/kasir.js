@@ -14,7 +14,7 @@ const createNewUserKasir = async (req, res) => {
   const result = await KasirModel.createNewUserKasir({ ...body, idMitra, createdBy: usernameToken });
   try {
     await EmailService.sendUserMobileCredentialEmail({ to: result.email, username: result.username, role: MOBILE_ROLES.KASIR });
-  } catch (emailError) { console.error("Gagal mengirim email create kasir:", emailError.message); }
+  } catch (emailError) { req.log.error({ err: emailError, event: "create_kasir_email_failed" }, "Gagal mengirim email create kasir"); }
   return res.status(201).json({ message: "CREATE new Kasir success", data: result });
 };
 
@@ -44,8 +44,8 @@ const resetPassword = async (req, res) => {
   try {
     const result = await KasirModel.resetPassword(req.params.email);
     try { await EmailService.sendResetPasswordEmail({ to: result.email, username: result.username, role: MOBILE_ROLES.KASIR }); }
-    catch (emailError) { console.error("Gagal mengirim email reset password:", emailError.message); }
-  } catch (error) { console.error("Gagal memproses permintaan reset password kasir:", error.message); }
+    catch (emailError) { req.log.error({ err: emailError, event: "kasir_password_reset_email_failed" }, "Gagal mengirim email reset password"); }
+  } catch (error) { req.log.error({ err: error, event: "kasir_password_reset_failed" }, "Gagal memproses permintaan reset password kasir"); }
   return sendResetPasswordAccepted(res);
 };
 

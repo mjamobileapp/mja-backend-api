@@ -96,7 +96,6 @@ const createNewUser = async (body) => {
     dateNow,
     dataPegawai.statusAktif,
   ];
-  // console.log(values);
   await dbPool.execute(SQLQuery, values);
   return { ...body, statusAktif: true };
 };

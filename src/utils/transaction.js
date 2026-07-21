@@ -1,6 +1,7 @@
 const dbPool = require("../config/database");
+const globalLogger = require("./logger");
 
-const createWithTransaction = (pool) => async (work) => {
+const createWithTransaction = (pool) => async (work, logger = globalLogger) => {
   if (typeof work !== "function") {
     throw new TypeError("Transaction work must be a function");
   }
@@ -23,10 +24,10 @@ const createWithTransaction = (pool) => async (work) => {
       try {
         await connection.rollback();
       } catch (rollbackError) {
-        console.error("Database rollback failed", {
-          message: rollbackError.message,
-          originalError: error.message,
-        });
+        logger.error(
+          { err: rollbackError, originalErrorMessage: error.message, event: "database_rollback_failed" },
+          "Database rollback failed"
+        );
       }
     }
 
