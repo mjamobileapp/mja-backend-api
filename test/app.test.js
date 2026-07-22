@@ -8,6 +8,7 @@ const { sanitizeServerErrorPayload, sanitizeServerErrorResponse } = require("../
 const dbPool = require("../src/config/database");
 const MasterMenuModel = require("../src/models/menus");
 const UserMobileModel = require("../src/models/userMobile");
+const AppVersionModel = require("../src/models/appVersion");
 const { createHttpError } = require("../src/utils/httpError");
 
 const request = (server, path, { method = "GET", headers = {}, body } = {}) =>
@@ -79,6 +80,20 @@ test("mobile route without token returns the authentication status instead of 50
       error: "Akses ditolak, token tidak ditemukan",
     });
   });
+});
+
+test("public app version GET does not require a JWT", async () => {
+  const originalGetAllAppVersions = AppVersionModel.getAllAppVersions;
+  AppVersionModel.getAllAppVersions = async () => [];
+  try {
+    await withServer(async (server) => {
+      const response = await request(server, "/api/backoffice/appversion");
+      assert.equal(response.statusCode, 200);
+      assert.deepEqual(JSON.parse(response.body), { success: true, data: {} });
+    });
+  } finally {
+    AppVersionModel.getAllAppVersions = originalGetAllAppVersions;
+  }
 });
 
 test("unknown route returns a consistent 404 response", async () => {
@@ -245,6 +260,7 @@ test("server environment validator identifies only missing required values", () 
 
 test("protected user and mobile routes reject requests without a token before accessing database", async () => {
   const protectedRoutes = [
+    { method: "PUT", path: "/api/backoffice/appversion" },
     { method: "POST", path: "/api/backoffice/users" },
     { method: "POST", path: "/api/backoffice/userowner" },
     { method: "POST", path: "/api/owner/kasir" },

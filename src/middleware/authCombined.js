@@ -59,6 +59,22 @@ const authenticateBackofficeOrOwner = (options = {}) => {
   };
 };
 
+const authenticateBackofficeOrMobile = () => {
+  return async (req, res, next) => {
+    try {
+      req.user = await verifyBackofficeToken(req);
+      return next();
+    } catch (backofficeError) {
+      try {
+        req.user = await verifyMobileToken(req);
+        return next();
+      } catch (mobileError) {
+        return sendAuthError(res, selectAuthError(backofficeError, mobileError), next);
+      }
+    }
+  };
+};
+
 const authenticateBackofficeOrOwnerKasirCabang = (options = {}) => {
   const { cabangParam = "cabangId" } = options;
 
@@ -163,6 +179,7 @@ const authenticateBackofficeOrOwnerMachineControl = () => {
 
 module.exports = {
   authenticateBackofficeOrOwner,
+  authenticateBackofficeOrMobile,
   authenticateBackofficeOrOwnerKasirCabang,
   authenticateBackofficeOrOwnerKasir,
   authenticateBackofficeOrOwnerMachineControl,

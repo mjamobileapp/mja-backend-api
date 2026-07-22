@@ -2,19 +2,31 @@ const { BACKOFFICE_AUDIT_ACTIONS, BACKOFFICE_AUDIT_ENTITIES, sanitizeAuditValue,
 const { insertAudit } = require("../models/auditBackoffice");
 const globalLogger = require("../utils/logger");
 
+const limit = (v, n) => v == null ? null : String(v).slice(0, n);
+
+const buildBackofficeAuditData = (event = {}) => {
+  const req = event.req;
+  const actor = normalizeActor(event.actor || req?.user);
+  return {
+    userId: actor.userId,
+    username: actor.username,
+    role: actor.role,
+    actionType: event.actionType,
+    entityName: event.entityName,
+    entityId: normalizeEntityId(event.entityId),
+    oldValues: event.oldValues == null ? null : sanitizeAuditValue(event.oldValues),
+    newValues: event.newValues == null ? null : sanitizeAuditValue(event.newValues),
+    ipAddress: limit(req?.ip || req?.socket?.remoteAddress, 45),
+    userAgent: limit(req?.get?.("user-agent"), 1000),
+  };
+};
+
 const createBackofficeAuditRecorder = ({ insertAudit: save = insertAudit, logger = globalLogger } = {}) => async (event = {}) => {
   const actionType = event.actionType;
   const entityName = event.entityName;
   if (!Object.values(BACKOFFICE_AUDIT_ACTIONS).includes(actionType) || !Object.values(BACKOFFICE_AUDIT_ENTITIES).includes(entityName)) return false;
   try {
-    const req = event.req;
-    const actor = normalizeActor(event.actor || req?.user);
-    return Boolean(await save({
-      userId: actor.userId, username: actor.username, role: actor.role, actionType, entityName,
-      entityId: normalizeEntityId(event.entityId), oldValues: event.oldValues == null ? null : sanitizeAuditValue(event.oldValues),
-      newValues: event.newValues == null ? null : sanitizeAuditValue(event.newValues),
-      ipAddress: limit(req?.ip || req?.socket?.remoteAddress, 45), userAgent: limit(req?.get?.("user-agent"), 1000),
-    }));
+    return Boolean(await save(buildBackofficeAuditData(event)));
   } catch (error) {
     const requestLogger = event.logger || event.req?.log || logger;
     requestLogger.error(
@@ -30,6 +42,5 @@ const createBackofficeAuditRecorder = ({ insertAudit: save = insertAudit, logger
     return false;
   }
 };
-const limit = (v, n) => v == null ? null : String(v).slice(0, n);
 const recordBackofficeAudit = createBackofficeAuditRecorder();
-module.exports = { createBackofficeAuditRecorder, recordBackofficeAudit };
+module.exports = { buildBackofficeAuditData, createBackofficeAuditRecorder, recordBackofficeAudit };

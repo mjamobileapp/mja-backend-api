@@ -13,10 +13,10 @@ const getUserByUsername = async (username) => {
   return rows[0] || null;
 };
 
-const updateDeviceId = async (id, deviceId, deviceName) => {
+const updateDeviceId = async (id, deviceId, deviceName, appVersion, osType) => {
   await dbPool.execute(
-    "UPDATE tbl_users_mobile SET deviceId = ?, deviceName = ? WHERE id = ?",
-    [deviceId, deviceName, id]
+    "UPDATE tbl_users_mobile SET deviceId = ?, deviceName = ?, appVersion = ?, osType = ? WHERE id = ?",
+    [deviceId, deviceName, appVersion, osType, id]
   );
 };
 
@@ -48,6 +48,14 @@ const createNotifikasi = async (idMitra, cabangId, tipe, judul, pesan) => {
     [idMitra, cabangId, tipe, judul, pesan]
   );
   return result;
+};
+
+const getOwnerDeviceTokens = async (idMitra) => {
+  const [rows] = await dbPool.execute(
+    "SELECT deviceId FROM tbl_users_mobile WHERE idMitra = ? AND role = 'owner' AND statusAktif = 1 AND deviceId IS NOT NULL",
+    [idMitra]
+  );
+  return rows.map(({ deviceId }) => deviceId).filter(Boolean);
 };
 
 const updateStatusAktifByUsername = async (username) => {
@@ -95,6 +103,7 @@ module.exports = {
   updateDeviceId,
   createAbsensi,
   createNotifikasi,
+  getOwnerDeviceTokens,
   updateStatusAktifByUsername,
   updatePasswordByUsername,
   getUserByUsernameWithoutStatusFilter,
