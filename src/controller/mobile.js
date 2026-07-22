@@ -8,12 +8,21 @@ const { getRequiredJwtSecret } = require("../config/environment");
 const { createHttpError } = require("../utils/httpError");
 const { ACCOUNT_TYPES, MOBILE_ROLES, normalizeMobileRole } = require("../domain/auth");
 const EmailTokenModel = require("../models/emailToken");
+const { sendPushNotification } = require("../utils/firebase");
+const logger = require("../utils/logger");
 
 const loginUser = async (req, res) => {
   const { body } = req;
 
   // 1. Validasi Input
-  const missingFields = getMissingRequiredFields(body, ["username", "password", "deviceId", "deviceName"]);
+  const missingFields = getMissingRequiredFields(body, [
+    "username",
+    "password",
+    "deviceId",
+    "deviceName",
+    "appVersion",
+    "osType",
+  ]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -22,7 +31,7 @@ const loginUser = async (req, res) => {
     });
   }
 
-  const { username, password, deviceId, deviceName } = body;
+  const { username, password, deviceId, deviceName, appVersion, osType } = body;
 
   // 2. Cari User
     const user = await UserMobileModel.getUserByUsername(username);
@@ -42,10 +51,7 @@ const loginUser = async (req, res) => {
     }
 
     // 4. Validasi Device ID
-    if (user.deviceId === null) {
-      // Device pertama kali - binding device
-      await UserMobileModel.updateDeviceId(user.id, deviceId, deviceName);
-    } else {
+    if (user.deviceId !== null) {
       // Sudah terikat device - bandingkan
       if (user.deviceId !== deviceId) {
         return res.status(403).json({
@@ -53,6 +59,14 @@ const loginUser = async (req, res) => {
         });
       }
     }
+
+    await UserMobileModel.updateDeviceId(
+      user.id,
+      deviceId,
+      deviceName,
+      appVersion,
+      osType
+    );
 
         // 5. Generate Token
         const token = generateToken({
@@ -77,8 +91,27 @@ const loginUser = async (req, res) => {
         `Kasir ${user.namaLengkap} telah login dan memulai shift di cabang.`
       );
 
-      // c. Push Notification (opsional - untuk implementasi Firebase FCM nanti)
-      // TODO: Kirim push notification ke Firebase untuk user owner
+      const ownerDeviceTokens = await UserMobileModel.getOwnerDeviceTokens(user.idMitra);
+      const pushResults = await Promise.allSettled(
+        ownerDeviceTokens.map((ownerDeviceToken) =>
+          sendPushNotification({
+            token: ownerDeviceToken,
+            title: "Kasir Mulai Shift",
+            body: `Kasir ${user.namaLengkap} telah login dan memulai shift di cabang.`,
+            data: {
+              type: "ABSENSI",
+              idMitra: user.idMitra,
+              cabangId: user.cabangId,
+            },
+          })
+        )
+      );
+
+      pushResults.forEach((result) => {
+        if (result.status === "rejected") {
+          logger.warn({ err: result.reason, idMitra: user.idMitra }, "Firebase push notification failed");
+        }
+      });
     }
 
     // 7. Return Response Sukses
@@ -96,6 +129,8 @@ const loginUser = async (req, res) => {
         statusAktif: user.statusAktif,
         deviceId: user.deviceId === null ? deviceId : user.deviceId,
         deviceName: user.deviceName === null ? deviceName : user.deviceName,
+        appVersion,
+        osType,
         token: token,
       },
     });
