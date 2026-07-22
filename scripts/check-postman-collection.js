@@ -53,6 +53,7 @@ const publicCatalogRouteKeys = new Set([
   "GET /",
   "POST /api/backoffice/userowner/:param/resetpassword",
   "POST /api/backoffice/users/:param/resetpassword",
+  "GET /api/backoffice/appversion",
 ]);
 
 const catalogUrlReplacements = [

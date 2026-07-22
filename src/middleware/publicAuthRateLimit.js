@@ -55,10 +55,12 @@ const createPublicAuthRateLimiter = ({
 const publicLoginRateLimiter = createPublicAuthRateLimiter({ keyPrefix: "login", onBlocked: (req) => require("../services/auditBackoffice").recordBackofficeAudit({ req, actor: { username: req.body?.username || "unknown", role: "unknown", accountType: "backoffice" }, actionType: "LOGIN_BLOCKED", entityName: "backoffice_authentication", newValues: { reason: "RATE_LIMIT" } }) });
 const publicActivationRateLimiter = createPublicAuthRateLimiter({ keyPrefix: "activation" });
 const publicPasswordResetRateLimiter = createPublicAuthRateLimiter({ keyPrefix: "password-reset" });
+const publicAppVersionRateLimiter = createPublicAuthRateLimiter({ keyPrefix: "app-version" });
 
 module.exports = {
   createPublicAuthRateLimiter,
   publicActivationRateLimiter,
+  publicAppVersionRateLimiter,
   publicLoginRateLimiter,
   publicPasswordResetRateLimiter,
 };

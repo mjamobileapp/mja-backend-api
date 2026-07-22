@@ -18,6 +18,9 @@ Base URL: `http://localhost:9090`. Semua endpoint selain yang ditandai **public*
 | Item | `/api/backoffice/item` | `GET /`, `POST /`, `GET /:id`, `GET /tipe/:tipeItem`, `PUT /:id`, `DELETE /:id`, `POST /:id/restore` |
 | User owner | `/api/backoffice/userowner` | `GET /`, `POST /`, `GET /:id`, `PUT /:id`, `DELETE /:id`, `POST /:id/restore`, `PUT /:id/resetdeviceid`, `POST /:id/changepassword`, `POST /:email/resetpassword` **public, rate limited, generic HTTP 202** |
 | Dashboard | `/api/backoffice/dashboard` | `GET /getmitra`, `GET /getcabang`, `GET /getmesin` |
+| App version | `/api/backoffice/appversion` | `PUT /` (backoffice; upsert dan audit atomik), `GET /` **public, rate limited** |
+
+`PUT /api/backoffice/appversion` menerima body `{ versions: [...] }` dengan platform `android`/`ios`. Upsert versi dan setiap row audit `UPDATE` dilakukan pada transaction connection yang sama; kegagalan audit me-rollback perubahan versi.
 
 ## Mobile, owner, dan kasir
 
@@ -36,7 +39,7 @@ Base URL: `http://localhost:9090`. Semua endpoint selain yang ditandai **public*
 | Audit trail backoffice | `/api/report` | `GET /audit-logs` (Bearer backoffice; pagination dan filter action/entity/tanggal) |
 | Backoffice logout | `/api/backoffice/logout` | `POST /` (Bearer backoffice) |
 
-Semua operasi autentikasi dan perubahan data backoffice dicatat secara best-effort ke `tbl_audit_backoffice`; kegagalan pencatatan tidak mengubah response bisnis.
+Operasi autentikasi dan sebagian besar perubahan data backoffice dicatat secara best-effort ke `tbl_audit_backoffice`; `PUT /api/backoffice/appversion` adalah pengecualian karena audit dan perubahan versi bersifat atomik.
 
 Link aktivasi akun mobile dan reset password menggunakan token one-time yang disimpan pada `tbl_email_one_time_token`. Migration `docs/DB_EMAIL_ONE_TIME_TOKEN.sql` harus dijalankan sebelum deployment fitur email.
 

@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { createPublicAuthRateLimiter } = require("../src/middleware/publicAuthRateLimit");
+const { createPublicAuthRateLimiter, publicAppVersionRateLimiter } = require("../src/middleware/publicAuthRateLimit");
 
 const createResponse = () => ({
   statusCode: null,
@@ -58,4 +58,8 @@ test("public auth rate limiter tracks each client independently", () => {
   limiter({ ip: "127.0.0.2" }, createResponse(), next);
 
   assert.equal(nextCalls, 2);
+});
+
+test("app version exposes a dedicated public rate limiter", () => {
+  assert.equal(typeof publicAppVersionRateLimiter, "function");
 });

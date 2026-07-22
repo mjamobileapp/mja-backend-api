@@ -10,6 +10,7 @@ const BACKOFFICE_AUDIT_ENTITIES = Object.freeze({
   AUTHENTICATION: "backoffice_authentication", USER: "tbl_users", ROLE: "tbl_role", MENU: "tbl_menu",
   ACCESS: "tbl_akses", MITRA: "tbl_mitra", CABANG: "tbl_cabang", MACHINE_MASTER: "tbl_mesin_master",
   MACHINE_DETAIL: "tbl_mesin_detail", MASTER_ITEM: "tbl_master_item_expense", USER_OWNER: "tbl_users_mobile",
+  APP_VERSION: "tbl_app_versions",
 });
 
 const SENSITIVE_KEYS = new Set(["password", "oldpassword", "newpassword", "confirmnewpassword", "confirmpassword", "token", "accesstoken", "refreshtoken", "authorization", "jwt", "secret", "clientsecret"]);
