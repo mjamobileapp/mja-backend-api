@@ -57,3 +57,47 @@ test("menu create and update use authenticated audit identity", async () => {
     MasterMenuModel.updateMenu = originalUpdate;
   }
 });
+
+test("menu get by id returns parent fields required by edit form", async () => {
+  const originalGetById = MasterMenuModel.getById;
+  MasterMenuModel.getById = async () => [[{
+    id: 5,
+    namaMenu: "Report",
+    url: "#report",
+    parentId: 2,
+    menuParent: 2,
+    menuSubParent: null,
+    noUrut: 4,
+    levelMenu: 2,
+    tipeMenu: "Menu",
+    iconMenu: null,
+  }]];
+
+  try {
+    const response = createResponse();
+    await MenuController.getById({ params: { id: "5" } }, response);
+    assert.equal(response.body.data.menuParent, 2);
+    assert.equal(response.body.data.menuSubParent, 0);
+  } finally {
+    MasterMenuModel.getById = originalGetById;
+  }
+});
+
+test("menu get by id uses numeric root sentinel for Header menus", async () => {
+  const originalGetById = MasterMenuModel.getById;
+  MasterMenuModel.getById = async () => [[{
+    id: 1, namaMenu: "Dashboard", url: "/dashboard", parentId: null,
+    menuParent: null, menuSubParent: null, noUrut: 1, levelMenu: 1,
+    tipeMenu: "Header", iconMenu: null,
+  }]];
+
+  try {
+    const response = createResponse();
+    await MenuController.getById({ params: { id: "1" } }, response);
+    assert.equal(response.body.data.parentId, 0);
+    assert.equal(response.body.data.menuParent, 0);
+    assert.equal(response.body.data.menuSubParent, 0);
+  } finally {
+    MasterMenuModel.getById = originalGetById;
+  }
+});

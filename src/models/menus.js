@@ -67,9 +67,15 @@ const updateMenu = (body, id) => {
   const values = [
     body.url,
     body.namaMenu,
-    body.parentId,
-    body.menuParent === "" ? null : body.menuParent,
-    body.menuSubParent === "" ? null : body.menuSubParent,
+    body.parentId === "" || body.parentId === undefined || body.parentId === 0
+      ? null
+      : body.parentId,
+    body.menuParent === "" || body.menuParent === undefined || body.menuParent === 0
+      ? null
+      : body.menuParent,
+    body.menuSubParent === "" || body.menuSubParent === undefined || body.menuSubParent === 0
+      ? null
+      : body.menuSubParent,
     body.iconMenu === "" || body.iconMenu === undefined ? null : body.iconMenu,
     body.levelMenu,
     body.tipeMenu,

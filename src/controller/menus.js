@@ -27,7 +27,11 @@ const getById = async (req, res) => {
     id: item.id,
     namaMenu: item.namaMenu,
     url: item.url,
-    parentId: item.parentId,
+    // The edit form validates the selected parent as a number. Root/Header
+    // menus have no parent in the database, so expose the numeric sentinel 0.
+    parentId: item.parentId ?? 0,
+    menuParent: item.menuParent ?? 0,
+    menuSubParent: item.menuSubParent ?? 0,
     noUrut: item.noUrut,
     levelMenu: item.levelMenu,
     tipeMenu: item.tipeMenu,
