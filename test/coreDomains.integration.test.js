@@ -321,15 +321,15 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       [foreignMitra.insertId, `NOTIF-FOREIGN-${suffix}`, `Notifikasi Foreign ${suffix}`, "Integration test", "integration-test"]
     );
     const [ownNotification] = await db.execute(
-      "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan, createdDate) VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP())",
       [fixture.idMitra, fixture.cabangId, "TEST", "Own notification", "Notification within tenant"]
     );
     const [otherBranchNotification] = await db.execute(
-      "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan, createdDate) VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP())",
       [fixture.idMitra, otherCabang.insertId, "TEST", "Other branch notification", "Notification on another branch"]
     );
     const [foreignNotification] = await db.execute(
-      "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan, createdDate) VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP())",
       [foreignMitra.insertId, foreignCabang.insertId, "TEST", "Foreign notification", "Notification in another tenant"]
     );
 

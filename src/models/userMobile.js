@@ -44,7 +44,7 @@ const recordAbsensiLogout = async (idUserMobile, cabangId) => {
 
 const createNotifikasi = async (idMitra, cabangId, tipe, judul, pesan) => {
   const [result] = await dbPool.execute(
-    "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan, createdDate) VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP())",
     [idMitra, cabangId, tipe, judul, pesan]
   );
   return result;

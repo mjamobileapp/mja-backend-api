@@ -135,7 +135,7 @@ const reduceStockAndNotify = async (
   const batasMinimum = Number(thresholdRows[0].batasMinimum);
   if (latestStock <= batasMinimum) {
     await connection.execute(
-      "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO tbl_notifikasi (idMitra, cabangId, tipe, judul, pesan, createdDate) VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP())",
       [
         idMitra,
         cabangId,
