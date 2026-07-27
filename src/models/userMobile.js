@@ -21,9 +21,9 @@ const updateDeviceId = async (id, deviceId, deviceName, appVersion, osType) => {
 };
 
 const createAbsensi = async (idUserMobile, cabangId) => {
-  // Tutup shift yang belum logout (Asumsi shift maksimal 10 jam)
+  // Tutup shift yang belum logout
   await dbPool.execute(
-    "UPDATE `tbl_absensi` SET `waktuLogout` = `waktuLogin` + INTERVAL 10 HOUR WHERE `idUserMobile` = ? AND `waktuLogout` IS NULL",
+    "UPDATE `tbl_absensi` SET `waktuLogout` = UTC_TIMESTAMP() WHERE `idUserMobile` = ? AND `waktuLogout` IS NULL",
     [idUserMobile]
   );
 
