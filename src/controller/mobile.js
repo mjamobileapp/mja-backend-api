@@ -1,6 +1,10 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const UserMobileModel = require("../models/userMobile");
+const UserOwnerModel = require("../models/userOwner");
+const KasirModel = require("../models/kasir");
+const EmailService = require("../utils/email");
+const { sendResetPasswordAccepted } = require("../utils/publicAuth");
 const UsersModel = require("../models/users");
 const { generateToken, TOKEN_TYPES } = require("../utils/jwt");
 const { getMissingRequiredFields } = require("../utils/validation");
@@ -287,6 +291,31 @@ const activateAccount = async (req, res) => {
     }
 };
 
+const resetPassword = async (req, res) => {
+  try {
+    let result;
+    let role;
+
+    try {
+      result = await UserOwnerModel.resetPassword(req.params.email);
+      role = MOBILE_ROLES.OWNER;
+    } catch (_) {
+      result = await KasirModel.resetPassword(req.params.email);
+      role = MOBILE_ROLES.KASIR;
+    }
+
+    try {
+      await EmailService.sendResetPasswordEmail({ to: result.email, username: result.username, role });
+    } catch (emailError) {
+      req.log.error({ err: emailError, event: "mobile_password_reset_email_failed" }, "Gagal mengirim email reset password mobile");
+    }
+  } catch (error) {
+    req.log.error({ err: error, event: "mobile_password_reset_failed" }, "Gagal memproses permintaan reset password mobile");
+  }
+
+  return sendResetPasswordAccepted(res);
+};
+
 const logoutUser = async (req, res) => {
   const { username } = req.body;
 
@@ -332,5 +361,6 @@ const logoutUser = async (req, res) => {
 module.exports = {
   loginUser,
   activateAccount,
+  resetPassword,
   logoutUser,
 };

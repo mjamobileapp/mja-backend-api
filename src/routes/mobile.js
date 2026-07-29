@@ -2,13 +2,14 @@ const express = require("express");
 const MobileController = require("../controller/mobile");
 const NotifikasiController = require("../controller/notifikasi");
 const { authenticateMobile } = require("../middleware/authMobile");
-const { publicActivationRateLimiter, publicLoginRateLimiter } = require("../middleware/publicAuthRateLimit");
+const { publicActivationRateLimiter, publicLoginRateLimiter, publicPasswordResetRateLimiter } = require("../middleware/publicAuthRateLimit");
 const { catchAsync } = require("../utils/catchAsync");
 
 const router = express.Router();
 
 // Public route (tanpa authenticate middleware)
 router.post("/login", publicLoginRateLimiter, catchAsync(MobileController.loginUser));
+router.post("/login/:email/resetpassword", publicPasswordResetRateLimiter, catchAsync(MobileController.resetPassword));
 router.post("/activateaccount", publicActivationRateLimiter, catchAsync(MobileController.activateAccount));
 router.post("/logout", authenticateMobile, catchAsync(MobileController.logoutUser));
 
