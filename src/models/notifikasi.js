@@ -1,7 +1,8 @@
 const dbPool = require("../config/database");
 const { createHttpError } = require("../utils/httpError");
+const { MOBILE_ROLES } = require("../domain/auth");
 
-const getNotifikasi = async (idMitra, cabangId, filterCabangId) => {
+const getNotifikasi = async (idMitra, cabangId, filterCabangId, userRole) => {
   let sqlQuery = `
     SELECT
       id, cabangId, tipe, referenceId, judul, pesan, isRead, createdDate
@@ -9,6 +10,11 @@ const getNotifikasi = async (idMitra, cabangId, filterCabangId) => {
     WHERE idMitra = ?
   `;
   let queryParams = [idMitra];
+
+  if (userRole === MOBILE_ROLES.KASIR) {
+    sqlQuery += ` AND tipe <> ?`;
+    queryParams.push("ABSENSI");
+  }
 
   if (cabangId) {
     sqlQuery += ` AND (cabangId = ? OR cabangId IS NULL)`;

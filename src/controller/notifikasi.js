@@ -18,7 +18,7 @@ const getNotifikasi = async (req, res) => {
     cabangId = userCabangId;
   }
 
-  const rows = await NotifikasiModel.getNotifikasi(idMitra, cabangId, filterCabangId);
+  const rows = await NotifikasiModel.getNotifikasi(idMitra, cabangId, filterCabangId, userRole);
 
   let unreadCount = 0;
   const listNotifikasi = rows.map((row) => {
