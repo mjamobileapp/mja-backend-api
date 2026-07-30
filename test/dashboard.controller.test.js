@@ -26,3 +26,30 @@ test("dashboard controllers preserve successful response contracts and propagate
     DashboardModel.getMitra = originalGetMitra;
   }
 });
+
+test("dashboard getTransaksi returns the monthly transaction contract and propagates failures", async () => {
+  const originalGetTransaksi = DashboardModel.getTransaksi;
+  const data = [
+    { namaMitra: "PT Cahaya Mandiri", jumlahTransaksi: 1245 },
+  ];
+  DashboardModel.getTransaksi = async () => data;
+
+  try {
+    const successResponse = createResponse();
+    await DashboardController.getTransaksi({}, successResponse);
+    assert.deepEqual(successResponse.body, {
+      success: true,
+      message: "Berhasil mengambil jumlah transaksi (Bulan ini)",
+      data,
+    });
+
+    const expectedError = new Error("data not found");
+    DashboardModel.getTransaksi = async () => { throw expectedError; };
+    await assert.rejects(
+      DashboardController.getTransaksi({}, createResponse()),
+      (error) => error === expectedError
+    );
+  } finally {
+    DashboardModel.getTransaksi = originalGetTransaksi;
+  }
+});

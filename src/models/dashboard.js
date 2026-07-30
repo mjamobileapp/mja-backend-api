@@ -1,4 +1,6 @@
 const dbPool = require("../config/database");
+const { getDateFilterCondition } = require("../utils/date");
+const { createHttpError } = require("../utils/httpError");
 
 const getMitra = async () => {
   const [rows] = await dbPool.execute(
@@ -41,4 +43,29 @@ const getMesin = async () => {
   };
 };
 
-module.exports = { getMitra, getCabang, getMesin };
+const getTransaksi = async () => {
+  const dateFilter = getDateFilterCondition("o.waktuOrder", "bulanan");
+  const [rows] = await dbPool.execute(
+    `SELECT
+      m.namaMitra,
+      COUNT(o.id) AS jumlahTransaksi
+     FROM tbl_order_laundry o
+     INNER JOIN tbl_mitra m ON o.idMitra = m.id
+     WHERE m.statusAktif = 1
+       AND (o.statusPembayaran = 'PAID' OR o.statusPembayaran IS NULL)
+       AND ${dateFilter}
+     GROUP BY o.idMitra, m.namaMitra
+     ORDER BY jumlahTransaksi DESC, m.namaMitra ASC`
+  );
+
+  if (rows.length === 0) {
+    throw createHttpError(404, "data not found", "DATA_NOT_FOUND");
+  }
+
+  return rows.map((row) => ({
+    namaMitra: row.namaMitra,
+    jumlahTransaksi: Number(row.jumlahTransaksi) || 0,
+  }));
+};
+
+module.exports = { getMitra, getCabang, getMesin, getTransaksi };
