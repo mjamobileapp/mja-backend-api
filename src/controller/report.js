@@ -36,7 +36,7 @@ const getAuditLogs = async (req, res) => {
   }
   return res.status(200).json({
     success: true,
-    message: "Berhasil mengambil data audit trail",
+    message: "Berhasil mengambil data log aktivitas user",
     data: {
       items: rows.map(mapAuditLogRow),
       meta: {

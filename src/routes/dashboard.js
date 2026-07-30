@@ -14,4 +14,7 @@ router.get("/getcabang", authenticate, catchAsync(DashboardController.getCabang)
 // GET MESIN - GET
 router.get("/getmesin", authenticate, catchAsync(DashboardController.getMesin));
 
+// GET JUMLAH TRANSAKSI BULAN INI - GET
+router.get("/gettransaksi", authenticate, catchAsync(DashboardController.getTransaksi));
+
 module.exports = router;

@@ -31,8 +31,19 @@ const getMesin = async (req, res) => {
   });
 };
 
+const getTransaksi = async (req, res) => {
+  const data = await DashboardModel.getTransaksi();
+
+  return res.status(200).json({
+    success: true,
+    message: "Berhasil mengambil jumlah transaksi (Bulan ini)",
+    data,
+  });
+};
+
 module.exports = {
   getMitra,
   getCabang,
   getMesin,
+  getTransaksi,
 };
