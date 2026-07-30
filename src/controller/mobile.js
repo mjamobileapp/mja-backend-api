@@ -1,15 +1,32 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const UserMobileModel = require("../models/userMobile");
+const UserOwnerModel = require("../models/userOwner");
+const KasirModel = require("../models/kasir");
+const EmailService = require("../utils/email");
+const { sendResetPasswordAccepted } = require("../utils/publicAuth");
 const UsersModel = require("../models/users");
-const { generateToken } = require("../utils/jwt");
+const { generateToken, TOKEN_TYPES } = require("../utils/jwt");
+const { getMissingRequiredFields } = require("../utils/validation");
+const { getRequiredJwtSecret } = require("../config/environment");
+const { createHttpError } = require("../utils/httpError");
+const { ACCOUNT_TYPES, MOBILE_ROLES, normalizeMobileRole } = require("../domain/auth");
+const EmailTokenModel = require("../models/emailToken");
+const { sendPushNotification } = require("../utils/firebase");
+const logger = require("../utils/logger");
 
 const loginUser = async (req, res) => {
   const { body } = req;
 
   // 1. Validasi Input
-  const requiredFields = ["username", "password", "deviceId", "deviceName"];
-  const missingFields = requiredFields.filter((field) => !body[field]);
+  const missingFields = getMissingRequiredFields(body, [
+    "username",
+    "password",
+    "deviceId",
+    "deviceName",
+    "appVersion",
+    "osType",
+  ]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -18,10 +35,9 @@ const loginUser = async (req, res) => {
     });
   }
 
-  const { username, password, deviceId, deviceName } = body;
+  const { username, password, deviceId, deviceName, appVersion, osType } = body;
 
-  try {
-    // 2. Cari User
+  // 2. Cari User
     const user = await UserMobileModel.getUserByUsername(username);
 
     if (!user) {
@@ -39,10 +55,7 @@ const loginUser = async (req, res) => {
     }
 
     // 4. Validasi Device ID
-    if (user.deviceId === null) {
-      // Device pertama kali - binding device
-      await UserMobileModel.updateDeviceId(user.id, deviceId, deviceName);
-    } else {
+    if (user.deviceId !== null) {
       // Sudah terikat device - bandingkan
       if (user.deviceId !== deviceId) {
         return res.status(403).json({
@@ -51,17 +64,25 @@ const loginUser = async (req, res) => {
       }
     }
 
+    await UserMobileModel.updateDeviceId(
+      user.id,
+      deviceId,
+      deviceName,
+      appVersion,
+      osType
+    );
+
         // 5. Generate Token
         const token = generateToken({
       id: user.id,
       username: user.username,
       idMitra: user.idMitra,
       cabangId: user.cabangId || null,
-      id_role: user.role === "owner" ? 1 : 2, // Mapping role ke id_role
-    });
+      id_role: normalizeMobileRole(user.role) === MOBILE_ROLES.OWNER ? 1 : 2, // Mapping role ke id_role
+    }, TOKEN_TYPES.MOBILE);
 
     // 6. Proses Role Kasir
-    if (user.role === "kasir") {
+    if (normalizeMobileRole(user.role) === MOBILE_ROLES.KASIR) {
       // a. Insert absensi
       await UserMobileModel.createAbsensi(user.id, user.cabangId);
 
@@ -74,8 +95,27 @@ const loginUser = async (req, res) => {
         `Kasir ${user.namaLengkap} telah login dan memulai shift di cabang.`
       );
 
-      // c. Push Notification (opsional - untuk implementasi Firebase FCM nanti)
-      // TODO: Kirim push notification ke Firebase untuk user owner
+      const ownerDeviceTokens = await UserMobileModel.getOwnerDeviceTokens(user.idMitra);
+      const pushResults = await Promise.allSettled(
+        ownerDeviceTokens.map((ownerDeviceToken) =>
+          sendPushNotification({
+            token: ownerDeviceToken,
+            title: "Kasir Mulai Shift",
+            body: `Kasir ${user.namaLengkap} telah login dan memulai shift di cabang.`,
+            data: {
+              type: "ABSENSI",
+              idMitra: user.idMitra,
+              cabangId: user.cabangId,
+            },
+          })
+        )
+      );
+
+      pushResults.forEach((result) => {
+        if (result.status === "rejected") {
+          logger.warn({ err: result.reason, idMitra: user.idMitra }, "Firebase push notification failed");
+        }
+      });
     }
 
     // 7. Return Response Sukses
@@ -86,22 +126,18 @@ const loginUser = async (req, res) => {
         username: user.username,
         role: user.role,
         idMitra: String(user.idMitra),
+        cabangId: String(user.cabangId) || null,
         namaLengkap: user.namaLengkap,
         noTelp: user.noTelp,
         email: user.email,
         statusAktif: user.statusAktif,
         deviceId: user.deviceId === null ? deviceId : user.deviceId,
         deviceName: user.deviceName === null ? deviceName : user.deviceName,
+        appVersion,
+        osType,
         token: token,
       },
     });
-  } catch (error) {
-    console.error("Mobile Login error:", error);
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
 };
 
 const activateAccount = async (req, res) => {
@@ -109,8 +145,7 @@ const activateAccount = async (req, res) => {
   const { token, password, confirmPassword } = body;
 
   // 1. Validasi input
-  const requiredFields = ["token", "password", "confirmPassword"];
-  const missingFields = requiredFields.filter((field) => !body[field]);
+  const missingFields = getMissingRequiredFields(body, ["token", "password", "confirmPassword"]);
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -135,17 +170,33 @@ const activateAccount = async (req, res) => {
 
     try {
       // 4. Verifikasi token JWT
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || "MJA_SECRET_KEY");
+      const decoded = jwt.verify(token, getRequiredJwtSecret());
 
       const { username, role } = decoded;
-      const isBackoffice = role === "backoffice";
+      const isBackoffice = role === ACCOUNT_TYPES.BACKOFFICE;
+
+      // Token activation/reset baru memiliki jti dan dikonsumsi secara atomik
+      // satu kali. Token lama tanpa jti tetap kompatibel selama transisi.
+      if (["activation", "reset_password"].includes(decoded.type) && decoded.jti) {
+        const consumed = await EmailTokenModel.consumeOneTimeToken({
+          jti: decoded.jti,
+          username,
+          tokenType: decoded.type,
+        });
+        if (!consumed) {
+          const errorCode = decoded.type === "reset_password"
+            ? "ACCOUNT_RESET_TOKEN_USED"
+            : "ACCOUNT_ACTIVATION_TOKEN_USED";
+          throw createHttpError(400, "Token tidak valid atau sudah digunakan", errorCode);
+        }
+      }
 
       // 5. Cari user di database
       let user;
       if (isBackoffice) {
         const [rows] = await UsersModel.getUserByUsername(username);
         user = rows[0];
-        if (!user) throw new Error("data not found");
+        if (!user) throw createHttpError(400, "Token tidak valid atau sudah kedaluwarsa", "ACCOUNT_ACTIVATION_TOKEN_INVALID");
       } else {
         user = await UserMobileModel.getUserByUsernameWithoutStatusFilter(username);
       }
@@ -219,30 +270,50 @@ const activateAccount = async (req, res) => {
         data: activatedUser,
       });
     } catch (error) {
-      // Handle error spesifik
-      if (error.message === "data not found") {
-        return res.status(400).json({
-          error: "Token tidak valid atau sudah kedaluwarsa",
-        });
-      }
-
       if (error.name === "TokenExpiredError") {
-        return res.status(400).json({
-          error: "Token sudah kedaluwarsa",
-        });
+        throw createHttpError(400, "Token sudah kedaluwarsa", "ACCOUNT_ACTIVATION_TOKEN_EXPIRED");
       }
 
       if (error.name === "JsonWebTokenError") {
-        return res.status(400).json({
-          error: "Token tidak valid",
-        });
+        throw createHttpError(400, "Token tidak valid", "ACCOUNT_ACTIVATION_TOKEN_INVALID");
       }
 
-      res.status(500).json({
-        message: "Server Error",
-        serverMessage: error.message,
-      });
+      if (error.code === "MOBILE_USER_NOT_FOUND") {
+        throw createHttpError(
+          400,
+          "Token tidak valid atau sudah kedaluwarsa",
+          "ACCOUNT_ACTIVATION_TOKEN_INVALID"
+        );
+      }
+
+      if (error.statusCode) throw error;
+      throw createHttpError(500, "Internal account activation error", "ACCOUNT_ACTIVATION_INTERNAL_ERROR");
     }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    let result;
+    let role;
+
+    try {
+      result = await UserOwnerModel.resetPassword(req.params.email);
+      role = MOBILE_ROLES.OWNER;
+    } catch (_) {
+      result = await KasirModel.resetPassword(req.params.email);
+      role = MOBILE_ROLES.KASIR;
+    }
+
+    try {
+      await EmailService.sendResetPasswordEmail({ to: result.email, username: result.username, role });
+    } catch (emailError) {
+      req.log.error({ err: emailError, event: "mobile_password_reset_email_failed" }, "Gagal mengirim email reset password mobile");
+    }
+  } catch (error) {
+    req.log.error({ err: error, event: "mobile_password_reset_failed" }, "Gagal memproses permintaan reset password mobile");
+  }
+
+  return sendResetPasswordAccepted(res);
 };
 
 const logoutUser = async (req, res) => {
@@ -255,8 +326,7 @@ const logoutUser = async (req, res) => {
     });
   }
 
-  try {
-    // Cari user di database untuk memastikan username valid dan ambil datanya
+  // Cari user di database untuk memastikan username valid dan ambil datanya
     const user = await UserMobileModel.getUserByUsername(username);
 
     if (!user) {
@@ -266,7 +336,7 @@ const logoutUser = async (req, res) => {
     }
 
     // Proses khusus jika role = kasir
-    if (user.role === "kasir") {
+    if (normalizeMobileRole(user.role) === MOBILE_ROLES.KASIR) {
       // a. Input data logout ke tbl_absensi
       await UserMobileModel.recordAbsensiLogout(user.id, user.cabangId);
 
@@ -286,17 +356,11 @@ const logoutUser = async (req, res) => {
         username: user.username,
       },
     });
-  } catch (error) {
-    console.error("Mobile Logout error:", error);
-    res.status(500).json({
-      message: "Server Error",
-      serverMessage: error.message,
-    });
-  }
 };
 
 module.exports = {
   loginUser,
   activateAccount,
+  resetPassword,
   logoutUser,
 };

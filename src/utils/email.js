@@ -1,6 +1,10 @@
 const nodemailer = require("nodemailer");
 const EmailTemplateModel = require("../models/emailTemplate");
 const jwt = require("jsonwebtoken");
+const { getEmailSendTimeoutMs, getRequiredJwtSecret } = require("../config/environment");
+const { ACCOUNT_TYPES, MOBILE_ROLES } = require("../domain/auth");
+const { randomUUID } = require("node:crypto");
+const EmailTokenModel = require("../models/emailToken");
 
 const getTransporter = () => {
   const requiredConfig = [
@@ -16,8 +20,14 @@ const getTransporter = () => {
     throw new Error(`Konfigurasi email OAuth2 belum lengkap: ${missingConfig.join(", ")}`);
   }
 
+  const timeoutMs = getEmailSendTimeoutMs();
+
   return nodemailer.createTransport({
     service: "gmail",
+    connectionTimeout: timeoutMs,
+    greetingTimeout: timeoutMs,
+    socketTimeout: timeoutMs,
+    dnsTimeout: timeoutMs,
     auth: {
       type: "OAuth2",
       user: process.env.GMAIL_USER,
@@ -26,6 +36,28 @@ const getTransporter = () => {
       refreshToken: process.env.GMAIL_REFRESH_TOKEN,
     },
   });
+};
+
+const createEmailTimeoutError = (timeoutMs) => {
+  const error = new Error(`Pengiriman email melebihi batas waktu ${timeoutMs}ms`);
+  error.code = "EMAIL_SEND_TIMEOUT";
+  return error;
+};
+
+const sendMailWithTimeout = async (transporter, message, timeoutMs = getEmailSendTimeoutMs()) => {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      transporter.close?.();
+      reject(createEmailTimeoutError(timeoutMs));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([transporter.sendMail(message), timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 };
 
 /**
@@ -57,17 +89,25 @@ const sendUserMobileCredentialEmail = async ({ to, username, role }) => {
   const transporter = getTransporter();
   
   // Pilih template berdasarkan role
-  const kodeTemplate = role === "kasir" ? "CREATE_USER_KASIR" : "CREATE_USER_OWNER";
+  const kodeTemplate = role === MOBILE_ROLES.KASIR ? "CREATE_USER_KASIR" : "CREATE_USER_OWNER";
   const template = await EmailTemplateModel.getTemplateByKode(kodeTemplate);
 
   if (!template) throw new Error(`Email template ${kodeTemplate} not found`);
 
   // Generate Token dengan masa berlaku dari .env
+  const jti = randomUUID();
   const token = jwt.sign(
-    { username, type: 'activation', role }, 
-    process.env.JWT_SECRET || 'MJA_SECRET_KEY', 
+    { username, type: 'activation', role, jti },
+    getRequiredJwtSecret(),
     { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) }
   );
+  const decodedToken = jwt.decode(token);
+  await EmailTokenModel.registerOneTimeToken({
+    jti,
+    username,
+    tokenType: "activation",
+    expiresAt: new Date(decodedToken.exp * 1000),
+  });
 
   const placeholders = {
     APP_NAME: process.env.APP_NAME,
@@ -77,7 +117,7 @@ const sendUserMobileCredentialEmail = async ({ to, username, role }) => {
     YEAR: new Date().getFullYear(),
   };
 
-  return transporter.sendMail({
+  return sendMailWithTimeout(transporter, {
     from: process.env.MAIL_FROM,
     to,
     subject: compileTemplate(template.subject, placeholders),
@@ -90,9 +130,9 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
   
   // Pilih template berdasarkan role
   let kodeTemplate;
-  if (role === "backoffice") {
+  if (role === ACCOUNT_TYPES.BACKOFFICE) {
     kodeTemplate = "RESET_PASSWORD_BACKOFFICE";
-  }else if (role === "kasir") {
+  }else if (role === ACCOUNT_TYPES.KASIR) {
     kodeTemplate = "RESET_PASSWORD_KASIR";
   } else {
     kodeTemplate = "RESET_PASSWORD_OWNER"; // Default ke owner jika role tidak dikenali
@@ -103,11 +143,19 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
   if (!template) throw new Error(`Email template ${kodeTemplate} not found`);
 
   // Generate Token dengan masa berlaku dari .env
+  const jti = randomUUID();
   const token = jwt.sign(
-    { username, type: 'reset_password', role }, 
-    process.env.JWT_SECRET || 'MJA_SECRET_KEY', 
+    { username, type: 'reset_password', role, jti },
+    getRequiredJwtSecret(),
     { expiresIn: convertExpiryToJwt(process.env.EMAIL_EXPIRY_DURATION) }
   );
+  const decodedToken = jwt.decode(token);
+  await EmailTokenModel.registerOneTimeToken({
+    jti,
+    username,
+    tokenType: "reset_password",
+    expiresAt: new Date(decodedToken.exp * 1000),
+  });
 
   const placeholders = {
     APP_NAME: process.env.APP_NAME,
@@ -117,7 +165,7 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
     YEAR: new Date().getFullYear(),
   };
 
-  return transporter.sendMail({
+  return sendMailWithTimeout(transporter, {
     from: process.env.MAIL_FROM,
     to,
     subject: compileTemplate(template.subject, placeholders),
@@ -126,6 +174,7 @@ const sendResetPasswordEmail = async ({ to, username, role }) => {
 };
 
 module.exports = {
+  sendMailWithTimeout,
   sendUserMobileCredentialEmail,
   sendResetPasswordEmail,
 };

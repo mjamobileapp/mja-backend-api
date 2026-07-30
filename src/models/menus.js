@@ -1,4 +1,5 @@
 const dbPool = require("../config/database");
+const { getDatabaseTimestamp } = require("../utils/date");
 
 const getAll = () => {
   const SQLQuery = "SELECT * FROM tbl_menu order by createdDate desc";
@@ -7,16 +8,13 @@ const getAll = () => {
 };
 
 const getById = (id) => {
-  // console.log(id);
   const SQLQuery = `Select * from tbl_menu where id=?`;
   return dbPool.execute(SQLQuery, [id]);
 };
 
 const createNewMenu = (body) => {
-  console.log(body);
-  try {
-    const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
-    const SQLQuery = `  INSERT INTO tbl_menu
+  const dateNow = getDatabaseTimestamp();
+  const SQLQuery = `  INSERT INTO tbl_menu
       ( url,
       namaMenu,
       parentId,
@@ -44,17 +42,11 @@ const createNewMenu = (body) => {
       body.createdBy,
       dateNow,
     ];
-    return dbPool.execute(SQLQuery, values);
-  } catch (error) {
-    throw new Error("Failed to create new Code: " + error.message);
-  }
+  return dbPool.execute(SQLQuery, values);
 };
 
 const updateMenu = (body, id) => {
-  // console.log("id user: " + id);
-
-  console.log(body);
-  const dateNow = new Date().toISOString().slice(0, 19).replace("T", " ");
+  const modifiedDate = getDatabaseTimestamp();
   const SQLQuery = `
   UPDATE tbl_menu
   SET 
@@ -67,33 +59,38 @@ const updateMenu = (body, id) => {
     levelMenu = ?,
     tipeMenu = ?,
     noUrut = ?,
-    createdBy =?,
-    createdDate=?
+    modifiedBy =?,
+    modifiedDate=?
   WHERE id = ?
 `;
 
   const values = [
     body.url,
     body.namaMenu,
-    body.parentId,
-    body.menuParent === "" ? null : body.menuParent,
-    body.menuSubParent === "" ? null : body.menuSubParent,
+    body.parentId === "" || body.parentId === undefined || body.parentId === 0
+      ? null
+      : body.parentId,
+    body.menuParent === "" || body.menuParent === undefined || body.menuParent === 0
+      ? null
+      : body.menuParent,
+    body.menuSubParent === "" || body.menuSubParent === undefined || body.menuSubParent === 0
+      ? null
+      : body.menuSubParent,
     body.iconMenu === "" || body.iconMenu === undefined ? null : body.iconMenu,
     body.levelMenu,
     body.tipeMenu,
     body.noUrut,
-    body.createdBy, // ganti dari createdBy ke updatedBy
-    dateNow,
+    body.modifiedBy,
+    modifiedDate,
     id, // penting! ID untuk tahu record mana yang diupdate
   ];
-  // console.log(values);
   return dbPool.execute(SQLQuery, values);
 };
 
 const deleteMenu = (id) => {
-  const SQLQuery = `DELETE FROM tbl_menu WHERE id=${id}`;
+  const SQLQuery = "DELETE FROM tbl_menu WHERE id = ?";
 
-  return dbPool.execute(SQLQuery);
+  return dbPool.execute(SQLQuery, [id]);
 };
 
 const getMenuHeader = () => {

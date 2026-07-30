@@ -10,6 +10,8 @@ const dbPool = mysql.createPool({
   queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
+  // Seluruh DATETIME aplikasi disimpan sebagai UTC. Jangan interpretasikan melalui TZ proses.
+  timezone: "Z",
 });
 
 module.exports = dbPool.promise();

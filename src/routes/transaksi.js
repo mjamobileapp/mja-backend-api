@@ -1,13 +1,24 @@
 const express = require("express");
 const TransaksiController = require("../controller/transaksi");
 const { authenticateMobile } = require("../middleware/authMobile");
+const {
+  requireMobileKasir,
+  requireMobileOwnerOrKasirCabang,
+} = require("../middleware/authorization");
+const { validateTransaksiPayload } = require("../middleware/validateTransaksi");
+const { catchAsync } = require("../utils/catchAsync");
 
 const router = express.Router();
 
-router.get("/pending", authenticateMobile, TransaksiController.getPendingTransaksi);
-router.get("/", authenticateMobile, TransaksiController.getJumlahTransaksi);
-router.post("/", authenticateMobile, TransaksiController.createTransaksi);
-router.post("/startmesin", authenticateMobile, TransaksiController.startMesin);
-router.post("/stopmesin", authenticateMobile, TransaksiController.stopMesin);
+router.get(
+  "/pending",
+  authenticateMobile,
+  requireMobileOwnerOrKasirCabang({ allowKasirTokenCabang: true }),
+  catchAsync(TransaksiController.getPendingTransaksi)
+);
+router.get("/", authenticateMobile, requireMobileKasir, catchAsync(TransaksiController.getJumlahTransaksi));
+router.post("/", authenticateMobile, requireMobileKasir, validateTransaksiPayload, catchAsync(TransaksiController.createTransaksi));
+router.post("/startmesin", authenticateMobile, requireMobileKasir, catchAsync(TransaksiController.startMesin));
+router.post("/stopmesin", authenticateMobile, requireMobileKasir, catchAsync(TransaksiController.stopMesin));
 
 module.exports = router;

@@ -1,13 +1,23 @@
 const jwt = require("jsonwebtoken");
 
-const generateToken = (user) => {
-  console.log(user);
-  
+const TOKEN_TYPES = Object.freeze({
+  BACKOFFICE: "backoffice",
+  MOBILE: "mobile",
+});
+
+const generateToken = (user, tokenType) => {
+  if (!Object.values(TOKEN_TYPES).includes(tokenType)) {
+    throw new Error("Tipe token tidak valid");
+  }
+
+  const userId = user.id ?? user.id_user;
+
   // Bangun payload JWT
   const payload = {
-    id: user.id,
+    id: userId,
     username: user.username,
     role: user.id_role,
+    tokenType,
   };
   
     // Tambahkan idMitra jika ada
@@ -23,8 +33,8 @@ const generateToken = (user) => {
   return jwt.sign(
     payload,
     process.env.JWT_SECRET,
-    { expiresIn: "1d" }
+    { expiresIn: "8h" }
   );
 };
 
-module.exports = { generateToken };
+module.exports = { generateToken, TOKEN_TYPES };
