@@ -9,7 +9,7 @@ const router = express.Router();
 
 // Public route (tanpa authenticate middleware)
 router.post("/login", publicLoginRateLimiter, catchAsync(MobileController.loginUser));
-router.post("/login/:email/resetpassword", publicPasswordResetRateLimiter, catchAsync(MobileController.resetPassword));
+router.post("/login/:identifier/resetpassword", publicPasswordResetRateLimiter, catchAsync(MobileController.resetPassword));
 router.post("/activateaccount", publicActivationRateLimiter, catchAsync(MobileController.activateAccount));
 router.post("/logout", authenticateMobile, catchAsync(MobileController.logoutUser));
 

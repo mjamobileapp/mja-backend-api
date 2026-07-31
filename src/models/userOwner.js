@@ -251,11 +251,11 @@ const changePassword = async (id, body, updatedBy) => {
     return user.username;
 };
 
-const resetPassword = async (email) => {
-    // 1. Validasi eksistensi email
+const resetPassword = async (identifier) => {
+    // 1. Validasi eksistensi email atau username
     const [rows] = await dbPool.execute(
-      "SELECT username, email FROM tbl_users_mobile WHERE email = ? AND role = ? AND statusAktif = 1",
-      [email, MOBILE_ROLES.OWNER]
+      "SELECT username, email FROM tbl_users_mobile WHERE (email = ? OR username = ?) AND role = ? AND statusAktif = 1",
+      [identifier, identifier, MOBILE_ROLES.OWNER]
     );
 
     if (rows.length === 0) throw createHttpError(404, "data not found", "OWNER_NOT_FOUND");
