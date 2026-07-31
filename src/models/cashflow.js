@@ -82,9 +82,9 @@ const getPendapatan = async (cabangId, idMitra, filter) => {
       });
     });
 
-        // Urutkan DESC berdasarkan tanggal
+    // Urutkan DESC berdasarkan tanggalTampilan setelah proses grouping.
     const result = Object.values(groupedData).sort((a, b) => {
-      return String(b.tanggalTampilan).localeCompare(String(a.tanggalTampilan));
+      return new Date(b.tanggalTampilan).getTime() - new Date(a.tanggalTampilan).getTime();
     });
 
     return result;
@@ -143,9 +143,9 @@ const getPengeluaran = async (cabangId, idMitra, filter) => {
       });
     });
 
-        // Urutkan DESC berdasarkan tanggal
+    // Urutkan DESC berdasarkan tanggalTampilan setelah proses grouping.
     const result = Object.values(groupedData).sort((a, b) => {
-      return String(b.tanggalTampilan).localeCompare(String(a.tanggalTampilan));
+      return new Date(b.tanggalTampilan).getTime() - new Date(a.tanggalTampilan).getTime();
     });
 
     return result;
