@@ -211,6 +211,15 @@ test("mobile activation maps missing owner and kasir users to a typed 400 respon
   }
 });
 
+test("HTTPS dev frontend origin is allowed by CORS", async () => {
+  await withServer(async (server) => {
+    const response = await request(server, "/", { headers: { Origin: "https://dev.mjasmartlaundry.cloud" } });
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.headers["access-control-allow-origin"], "https://dev.mjasmartlaundry.cloud");
+  });
+});
+
 test("disallowed CORS origin is rejected with 403", async () => {
   await withServer(async (server) => {
     const response = await request(server, "/", { headers: { Origin: "https://untrusted.example" } });
