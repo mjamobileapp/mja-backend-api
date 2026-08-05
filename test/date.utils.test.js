@@ -27,3 +27,13 @@ test("date filters calculate Jakarta calendar days from UTC storage", () => {
   assert.equal(getDateFilterCondition("o.waktuOrder", "hari_ini"), `${jakartaDate} = ${jakartaToday}`);
   assert.equal(getDateFilterCondition("o.waktuOrder", "kemarin"), `${jakartaDate} = ${jakartaToday} - INTERVAL 1 DAY`);
 });
+
+test("date filters support previous-month aliases", () => {
+  const jakartaDate = "DATE(CONVERT_TZ(o.waktuOrder, '+00:00', '+07:00'))";
+  const jakartaToday = "DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+07:00'))";
+  const expected = `YEAR(${jakartaDate}) = YEAR(${jakartaToday} - INTERVAL 1 MONTH) AND MONTH(${jakartaDate}) = MONTH(${jakartaToday} - INTERVAL 1 MONTH)`;
+
+  for (const alias of ["last_month", "last-month", "bulan-lalu", "bulan_lalu"]) {
+    assert.equal(getDateFilterCondition("o.waktuOrder", alias), expected);
+  }
+});

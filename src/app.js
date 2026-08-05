@@ -71,7 +71,7 @@ const createApp = ({ environment = process.env } = {}) => {
   app.use("/api/backoffice/mesin", mesinRoutes);
   app.use("/api/backoffice/item", masterItemRoutes);
   app.use("/api/backoffice/userowner", userOwnerRoutes);
-  app.use("/api/report", reportRoutes);
+  app.use("/api/backoffice/report", reportRoutes);
   app.use("/api/backoffice/appversion", appVersionRoutes);
   app.use("/api/mobile", mobileRoutes);
   app.use("/api/transaksi", transaksiStartMesinRoutes);
