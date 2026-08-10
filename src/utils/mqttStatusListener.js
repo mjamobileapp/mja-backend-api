@@ -55,17 +55,13 @@ const parsePendingTransactionPayload = (message) => {
 };
 
 const updateMesinReadyByEspId = async ({ espId, machineType = null, status = null }) => {
- 
-  let machineStatus = null;
-  if (status !== null && status == MACHINE_STATUSES.READY) {
-    machineStatus = MACHINE_STATUSES.READY;
-    // params.push(machineType);
-  }else if (status !== null && status == MACHINE_STATUSES.IN_USE) {
-    machineStatus = MACHINE_STATUSES.IN_USE;
-    // params.push(machineType);
-  
+  const machineStatus = normalizeMachineStatus(status);
+  const supportedStatuses = [MACHINE_STATUSES.READY, MACHINE_STATUSES.IN_USE];
+
+  if (!supportedStatuses.includes(machineStatus)) {
+    return 0;
   }
- 
+
   const params = [machineStatus, espId];
 
   
@@ -73,7 +69,7 @@ const updateMesinReadyByEspId = async ({ espId, machineType = null, status = nul
 
   if (machineType) {
     machineFilter = " AND d.jenisMesin = ?";
-    params.push(machineType);
+    params.push(String(machineType).toUpperCase());
   }
 
   const [result] = await dbPool.execute(
@@ -94,22 +90,24 @@ const createStatusMessageHandler = ({ updateReady = updateMesinReadyByEspId, log
     if (!topicData) return;
 
     const payload = parseStatusPayload(message);
-    if (!payload || normalizeMachineStatus(payload.status) !== MACHINE_STATUSES.READY) {
+    const status = normalizeMachineStatus(payload?.status);
+    if (![MACHINE_STATUSES.READY, MACHINE_STATUSES.IN_USE].includes(status)) {
       return;
     }
 
-    const machineType = payload.machineType ? String(payload.machineType).toUpperCase() : null;
+    const machineType = payload?.machineType ? String(payload.machineType).toUpperCase() : null;
     const affectedRows = await updateReady({
       espId: topicData.espId,
       machineType,
-      status: payload.status,
+      status,
     });
 
     statusLogger.info({
       espId: topicData.espId,
       machineType: machineType || "ALL",
+      status,
       affectedRows,
-    }, "[MQTT STATUS] Mesin READY diterima");
+    }, "[MQTT STATUS] Status mesin diterima");
   };
 
 const handleStatusMessage = createStatusMessageHandler();
