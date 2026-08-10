@@ -54,8 +54,21 @@ const parsePendingTransactionPayload = (message) => {
   }
 };
 
-const updateMesinReadyByEspId = async ({ espId, machineType = null }) => {
-  const params = [MACHINE_STATUSES.READY, espId];
+const updateMesinReadyByEspId = async ({ espId, machineType = null, status = null }) => {
+ 
+  let machineStatus = null;
+  if (status !== null && status == MACHINE_STATUSES.READY) {
+    machineStatus = MACHINE_STATUSES.READY;
+    // params.push(machineType);
+  }else if (status !== null && status == MACHINE_STATUSES.IN_USE) {
+    machineStatus = MACHINE_STATUSES.IN_USE;
+    // params.push(machineType);
+  
+  }
+ 
+  const params = [machineStatus, espId];
+
+  
   let machineFilter = "";
 
   if (machineType) {
@@ -89,6 +102,7 @@ const createStatusMessageHandler = ({ updateReady = updateMesinReadyByEspId, log
     const affectedRows = await updateReady({
       espId: topicData.espId,
       machineType,
+      status
     });
 
     statusLogger.info({
