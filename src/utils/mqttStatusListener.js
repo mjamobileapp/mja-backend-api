@@ -102,7 +102,7 @@ const createStatusMessageHandler = ({ updateReady = updateMesinReadyByEspId, log
     const affectedRows = await updateReady({
       espId: topicData.espId,
       machineType,
-      status:
+      status: payload.status,
     });
 
     statusLogger.info({
