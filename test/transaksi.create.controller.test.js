@@ -18,6 +18,7 @@ const createResponse = () => ({
 });
 
 const validPayload = () => ({
+  namaPelanggan: "Budi Santoso",
   totalBayar: 20000,
   metodePembayaran: "CASH",
   items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 20000 }],
@@ -47,12 +48,14 @@ test("createTransaksi preserves the controller contract with typed business erro
       assert.equal(calls.at(-1).idMitra, 21);
       assert.equal(calls.at(-1).cabangId, 31);
       assert.equal(calls.at(-1).idUserMobile, 11);
+      assert.equal(calls.at(-1).namaPelanggan, "Budi Santoso");
     });
 
     await t.test("preserves numeric-string and two-decimal payload compatibility", async () => {
       const response = createResponse();
       await TransaksiController.createTransaksi(
         validRequest({
+          namaPelanggan: "  Ani Laundry  ",
           totalBayar: "20000.50",
           metodePembayaran: "CASH",
           items: [{ jenisLayanan: "cuci", jumlah: "1", subtotal: "20000.50" }],
@@ -62,11 +65,14 @@ test("createTransaksi preserves the controller contract with typed business erro
 
       assert.equal(response.statusCode, 201);
       assert.equal(calls.at(-1).totalBayar, 20000.5);
+      assert.equal(calls.at(-1).namaPelanggan, "Ani Laundry");
     });
 
     await t.test("rejects legacy invalid transport payloads before calling the model", async () => {
       const cases = [
         { name: "missing identity", req: { body: validPayload(), user: {} }, error: "Token tidak valid" },
+        { name: "missing customer name", body: { ...validPayload(), namaPelanggan: "" }, error: "namaPelanggan wajib diisi" },
+        { name: "long customer name", body: { ...validPayload(), namaPelanggan: "A".repeat(101) }, error: "namaPelanggan maksimal 100 karakter" },
         { name: "zero total", body: { ...validPayload(), totalBayar: 0 }, error: "totalBayar wajib diisi dan harus lebih dari 0" },
         { name: "negative total", body: { ...validPayload(), totalBayar: -1 }, error: "totalBayar wajib diisi dan harus lebih dari 0" },
         { name: "non-numeric total", body: { ...validPayload(), totalBayar: "invalid" }, error: "totalBayar wajib diisi dan harus lebih dari 0" },

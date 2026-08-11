@@ -6,6 +6,7 @@ const TransaksiService = require("../src/services/transaksi");
 
 test("transaction domain normalizes compatible numeric strings without mutating the input", () => {
   const input = {
+    namaPelanggan: "  Budi Santoso  ",
     totalBayar: "20000.50",
     metodePembayaran: " CASH ",
     items: [{ jenisLayanan: "cuci", jumlah: "1", subtotal: "20000.50" }],
@@ -13,6 +14,7 @@ test("transaction domain normalizes compatible numeric strings without mutating 
   const normalized = normalizeTransaksiPayload(input);
 
   assert.deepEqual(normalized, {
+    namaPelanggan: "Budi Santoso",
     totalBayar: 20000.5,
     metodePembayaran: "CASH",
     items: [{ jenisLayanan: "cuci", itemId: null, jumlah: 1, subtotal: 20000.5 }],
@@ -27,8 +29,12 @@ test("transaction domain rejects unsafe and malformed money before arithmetic", 
     assert.throws(() => normalizeMoney(value, "invalid money"), /invalid money/);
   }
   assert.throws(
-    () => normalizeTransaksiPayload({ totalBayar: 1, metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 0.001 }] }),
+    () => normalizeTransaksiPayload({ namaPelanggan: "Budi", totalBayar: 1, metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 0.001 }] }),
     /totalBayar harus sama/
+  );
+  assert.throws(
+    () => normalizeTransaksiPayload({ namaPelanggan: "A".repeat(101), totalBayar: 1, metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 1 }] }),
+    /namaPelanggan maksimal 100 karakter/
   );
 });
 
@@ -45,7 +51,7 @@ test("transaction validation errors expose the typed HTTP contract", () => {
 });
 
 test("transaction validation middleware stores a DTO without overwriting req.body", () => {
-  const req = { body: { totalBayar: "1", metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: "1", subtotal: "1" }] } };
+  const req = { body: { namaPelanggan: "Budi", totalBayar: "1", metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: "1", subtotal: "1" }] } };
   const res = { statusCode: null, body: null, status(statusCode) { this.statusCode = statusCode; return this; }, json(body) { this.body = body; return this; } };
   let nextCalled = false;
 
@@ -53,15 +59,16 @@ test("transaction validation middleware stores a DTO without overwriting req.bod
   assert.equal(nextCalled, true);
   assert.equal(req.body.totalBayar, "1");
   assert.equal(req.validatedBody.totalBayar, 1);
+  assert.equal(req.validatedBody.namaPelanggan, "Budi");
 });
 
 test("transaction service builds a model command without Express objects", async () => {
   let receivedCommand;
   const result = await TransaksiService.createTransaksi(
-    { idMitra: 1, cabangId: 2, idUserMobile: 3, payload: { totalBayar: 1, metodePembayaran: "CASH", items: [] } },
+    { idMitra: 1, cabangId: 2, idUserMobile: 3, payload: { namaPelanggan: "Budi", totalBayar: 1, metodePembayaran: "CASH", items: [] } },
     { async createTransaksi(command) { receivedCommand = command; return { id: 10 }; } }
   );
 
   assert.deepEqual(result, { id: 10 });
-  assert.deepEqual(receivedCommand, { idMitra: 1, cabangId: 2, idUserMobile: 3, totalBayar: 1, metodePembayaran: "CASH", items: [] });
+  assert.deepEqual(receivedCommand, { idMitra: 1, cabangId: 2, idUserMobile: 3, namaPelanggan: "Budi", totalBayar: 1, metodePembayaran: "CASH", items: [] });
 });

@@ -116,6 +116,7 @@ const getPendingTransaksi = async (req, res) => {
       return {
         idDetailPending: row.idDetailPending,
         invoiceNumber: row.invoiceNumber,
+        namaPelanggan: row.namaPelanggan,
         jenisLayanan: layananPending.toUpperCase(),
         waktuOrderLengkap: row.waktuOrder ? waktuMasuk.toISOString() : "",
         infoMesinAsal: row.idMesinAsal

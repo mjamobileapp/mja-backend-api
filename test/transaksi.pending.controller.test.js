@@ -55,3 +55,29 @@ test("owner pending transactions validate the requested branch tenant scope", as
     TransaksiModel.getPendingTransaksi = original.getPendingTransaksi;
   }
 });
+
+test("pending transaction response includes customer name", async () => {
+  const original = TransaksiModel.getPendingTransaksi;
+
+  TransaksiModel.getPendingTransaksi = async () => ([{
+    idDetailPending: 15,
+    invoiceNumber: "INV-9-20260811-0001",
+    namaPelanggan: "Siti Aminah",
+    layananPending: "cuci",
+    waktuOrder: "2026-08-11T03:00:00.000Z",
+    idMesinAsal: null,
+  }]);
+
+  try {
+    const response = createResponse();
+    await TransaksiController.getPendingTransaksi(
+      { query: {}, user: { idMitra: 7, cabangId: 9, role: "kasir" } },
+      response
+    );
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.data[0].namaPelanggan, "Siti Aminah");
+  } finally {
+    TransaksiModel.getPendingTransaksi = original;
+  }
+});

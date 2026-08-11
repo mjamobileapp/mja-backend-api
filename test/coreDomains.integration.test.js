@@ -494,7 +494,7 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       method: "POST",
       path: "/api/kasir/transaksi",
       token: mobileToken(),
-      body: { totalBayar: 100, metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 100 }] },
+      body: { namaPelanggan: "Pelanggan Harga Berubah", totalBayar: 100, metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 100 }] },
     });
     const [afterManipulation] = await db.execute(
       "SELECT COUNT(*) AS jumlah FROM tbl_order_laundry WHERE idMitra = ? AND cabangId = ?",
@@ -517,7 +517,7 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       method: "POST",
       path: "/api/kasir/transaksi",
       token: mobileToken(),
-      body: { totalBayar: 20000, metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 20000 }] },
+      body: { namaPelanggan: "Pelanggan Harga Kosong", totalBayar: 20000, metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 20000 }] },
     });
     assert.equal(notConfigured.statusCode, 409);
     assert.deepEqual(notConfigured.body, {
@@ -536,7 +536,7 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       method: "POST",
       path: "/api/kasir/transaksi",
       token: mobileToken(),
-      body: { totalBayar: 20000, metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 20000 }] },
+      body: { namaPelanggan: "Pelanggan Integrasi", totalBayar: 20000, metodePembayaran: "CASH", items: [{ jenisLayanan: "cuci", jumlah: 1, subtotal: 20000 }] },
     });
     assert.equal(create.statusCode, 201);
     assert.match(create.body.data.invoiceNumber, new RegExp(`^INV-${fixture.cabangId}-`));
@@ -549,8 +549,10 @@ test("core domains complete their HTTP flows on the isolated integration schema"
     assert.equal(count.body.data.Total, 1);
     assert.equal(pending.statusCode, 200);
     assert.equal(pending.body.data[0].invoiceNumber, create.body.data.invoiceNumber);
+    assert.equal(pending.body.data[0].namaPelanggan, "Pelanggan Integrasi");
     assert.equal(ownerPending.statusCode, 200);
     assert.equal(ownerPending.body.data[0].invoiceNumber, create.body.data.invoiceNumber);
+    assert.equal(ownerPending.body.data[0].namaPelanggan, "Pelanggan Integrasi");
     assert.equal(invalidStart.statusCode, 400);
 
     await db.execute(

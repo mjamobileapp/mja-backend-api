@@ -154,7 +154,7 @@ const reduceStockAndNotify = async (
 };
 
 const createTransaksi = async (data, requestLogger = globalLogger) => {
-  const { idMitra, cabangId, idUserMobile, totalBayar, metodePembayaran, items } = data;
+  const { idMitra, cabangId, idUserMobile, namaPelanggan, totalBayar, metodePembayaran, items } = data;
   return withTransaction(async (connection) => {
 
     const user = await validateMasterData(connection, idMitra, cabangId, idUserMobile);
@@ -190,12 +190,13 @@ const createTransaksi = async (data, requestLogger = globalLogger) => {
         idMitra,
         cabangId,
         idUserMobile,
+        namaPelanggan,
         totalBayar,
         metodePembayaran,
         statusPembayaran,
         waktuOrder
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
-      [invoiceNumber, idMitra, cabangId, idUserMobile, serverTotal, metodePembayaran, "PAID"]
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
+      [invoiceNumber, idMitra, cabangId, idUserMobile, namaPelanggan, serverTotal, metodePembayaran, "PAID"]
     );
 
     const orderId = orderResult.insertId;
@@ -226,7 +227,7 @@ const createTransaksi = async (data, requestLogger = globalLogger) => {
     }
 
     const [orderRows] = await connection.execute(
-      `SELECT id, invoiceNumber, idMitra, cabangId, idUserMobile, totalBayar, waktuOrder
+      `SELECT id, invoiceNumber, idMitra, cabangId, idUserMobile, namaPelanggan, totalBayar, waktuOrder
        FROM tbl_order_laundry
        WHERE id = ?`,
       [orderId]
@@ -247,6 +248,7 @@ const createTransaksi = async (data, requestLogger = globalLogger) => {
       idMitra: String(order.idMitra),
       cabangId: String(order.cabangId),
       idUserMobile: String(order.idUserMobile),
+      namaPelanggan: order.namaPelanggan,
       totalBayar: String(order.totalBayar),
       waktuOrder: order.waktuOrder ? new Date(order.waktuOrder).toISOString() : "",
       items: detailRows.map((item) => ({
@@ -982,6 +984,7 @@ const getPendingTransaksi = async (cabangId, idMitra) => {
     `SELECT 
       d_pending.id AS idDetailPending,
       o.invoiceNumber,
+      o.namaPelanggan,
       d_pending.jenisLayanan AS layananPending,
       o.waktuOrder,
       d_asal.mesinId AS idMesinAsal
