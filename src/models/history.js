@@ -1,8 +1,9 @@
 const dbPool = require("../config/database");
-const { formatTanggalWIB, formatJamWIB, getJakartaSqlDate } = require("../utils/date");
+const { formatTanggalWIB, formatJamWIB, getDateFilterCondition, getJakartaSqlDate } = require("../utils/date");
 const { createHttpError } = require("../utils/httpError");
 
-const getHistoryTransaksi = async (cabangId, idMitra) => {
+const getHistoryTransaksi = async (cabangId, idMitra, periode) => {
+  const dateFilter = getDateFilterCondition("o.waktuOrder", periode);
   const [rows] = await dbPool.execute(
     `SELECT
       ${getJakartaSqlDate("o.waktuOrder")} AS tanggalGroup,
@@ -16,6 +17,7 @@ const getHistoryTransaksi = async (cabangId, idMitra) => {
     WHERE o.cabangId = ?
       AND o.idMitra = ?
       AND (o.statusPembayaran = 'PAID' OR o.statusPembayaran IS NULL)
+      AND ${dateFilter}
     GROUP BY
       ${getJakartaSqlDate("o.waktuOrder")},
       o.idUserMobile,
@@ -61,7 +63,8 @@ const getHistoryTransaksi = async (cabangId, idMitra) => {
   return finalResponse;
 };
 
-const getHistoryTransaksiKasir = async ({ cabangId, tanggal, namaKasir }) => {
+const getHistoryTransaksiKasir = async ({ cabangId, tanggal, periode, namaKasir }) => {
+  const dateFilter = getDateFilterCondition("o.waktuOrder", periode);
   let SQLQuery = `
     SELECT
       ${getJakartaSqlDate("o.waktuOrder")} AS tanggalGroup,
@@ -71,6 +74,7 @@ const getHistoryTransaksiKasir = async ({ cabangId, tanggal, namaKasir }) => {
     LEFT JOIN tbl_users_mobile u ON o.idUserMobile = u.id
     LEFT JOIN tbl_detail_order d ON d.orderId = o.id
     WHERE o.cabangId = ?
+      AND ${dateFilter}
   `;
   const values = [cabangId];
 
@@ -103,7 +107,8 @@ const getHistoryTransaksiKasir = async ({ cabangId, tanggal, namaKasir }) => {
   }));
 };
 
-const getHistoryMesin = async (cabangId, idMitra) => {
+const getHistoryMesin = async (cabangId, idMitra, periode) => {
+  const dateFilter = getDateFilterCondition("l.waktuLog", periode);
   const [rows] = await dbPool.execute(
     `SELECT
       l.id AS idLog,
@@ -118,6 +123,7 @@ const getHistoryMesin = async (cabangId, idMitra) => {
     WHERE m.cabangId = ?
       AND m.idMitra = ?
       AND l.statusPerintah = 'success'
+      AND ${dateFilter}
     ORDER BY l.waktuLog DESC`,
     [cabangId, idMitra]
   );

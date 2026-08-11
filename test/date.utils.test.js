@@ -37,3 +37,13 @@ test("date filters support previous-month aliases", () => {
     assert.equal(getDateFilterCondition("o.waktuOrder", alias), expected);
   }
 });
+
+test("date filters support current-year aliases", () => {
+  const jakartaDate = "DATE(CONVERT_TZ(o.waktuOrder, '+00:00', '+07:00'))";
+  const jakartaToday = "DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+07:00'))";
+  const expected = `YEAR(${jakartaDate}) = YEAR(${jakartaToday})`;
+
+  for (const alias of ["yearly", "this_year", "this-year", "tahunan", "tahun"]) {
+    assert.equal(getDateFilterCondition("o.waktuOrder", alias), expected);
+  }
+});

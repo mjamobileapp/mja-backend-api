@@ -50,7 +50,7 @@ const resetPassword = async (req, res) => {
 };
 
 const getAbsensiKasir = async (req, res) => {
-  const { tanggal, namaKasir, cabangId: requestedCabangId } = req.query;
+  const { tanggal, periode, namaKasir, cabangId: requestedCabangId } = req.query;
   const idMitra = req.user?.idMitra;
   const role = normalizeMobileRole(req.user?.role);
   const tokenCabangId = req.user?.cabang_id || req.user?.cabangId;
@@ -65,7 +65,7 @@ const getAbsensiKasir = async (req, res) => {
     if (!await KasirModel.isCabangOwnedByMitra(requestedCabangId, idMitra)) return res.status(403).json({ error: "Cabang tidak dapat diakses oleh user owner mitra ini" });
     cabangId = requestedCabangId;
   } else return res.status(403).json({ error: "Role tidak diizinkan mengakses absensi kasir" });
-  const [data] = await KasirModel.getAbsensiKasir({ cabangId, idMitra, tanggal, namaKasir });
+  const [data] = await KasirModel.getAbsensiKasir({ cabangId, idMitra, tanggal, periode, namaKasir });
   const mappedData = data.map((item) => ({ id: item.absensiId, tanggalShift: formatTanggalWIB(item.tanggalShift), namaKasir: item.namaKasir, jamMasuk: item.jamMasuk, jamPulang: item.jamPulang }));
   return res.json({ message: "Get Data Absensi Kasir Success", data: mappedData });
 };

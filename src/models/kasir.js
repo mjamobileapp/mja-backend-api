@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt");
 const { createHttpError } = require("../utils/httpError");
 const { generateAndHashPassword } = require("../utils/password");
 const { MOBILE_ROLES } = require("../domain/auth");
-const { getJakartaSqlDate, getJakartaSqlTime } = require("../utils/date");
+const { getDateFilterCondition, getJakartaSqlDate, getJakartaSqlTime } = require("../utils/date");
 
 const createNewUserKasir = async (body) => {
     const {
@@ -315,7 +315,8 @@ const isCabangOwnedByMitra = async (cabangId, idMitra) => {
   return rows.length > 0;
 };
 
-const getAbsensiKasir = ({ cabangId, idMitra, tanggal, namaKasir }) => {
+const getAbsensiKasir = ({ cabangId, idMitra, tanggal, periode, namaKasir }) => {
+  const dateFilter = getDateFilterCondition("a.createdDate", periode);
   let SQLQuery = `
     SELECT
       a.id AS absensiId,
@@ -327,6 +328,7 @@ const getAbsensiKasir = ({ cabangId, idMitra, tanggal, namaKasir }) => {
     JOIN tbl_cabang c ON a.cabangId = c.id
     JOIN tbl_users_mobile u ON a.idUserMobile = u.id AND u.idMitra = c.idMitra
     WHERE a.cabangId = ? AND c.idMitra = ?
+      AND ${dateFilter}
   `;
   const values = [cabangId, idMitra];
 

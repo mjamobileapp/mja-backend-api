@@ -1,7 +1,7 @@
 const HistoryModel = require("../models/history");
 
 const getHistoryTransaksi = async (req, res) => {
-  const { cabangId } = req.query;
+  const { cabangId, periode } = req.query;
   const idMitra = req.user ? req.user.idMitra : null;
 
   if (!cabangId) {
@@ -16,7 +16,7 @@ const getHistoryTransaksi = async (req, res) => {
     });
   }
 
-  const data = await HistoryModel.getHistoryTransaksi(cabangId, idMitra);
+  const data = await HistoryModel.getHistoryTransaksi(cabangId, idMitra, periode);
   return res.status(200).json({
     success: true,
     data: data,
@@ -24,7 +24,7 @@ const getHistoryTransaksi = async (req, res) => {
 };
 
 const getHistoryTransaksiKasir = async (req, res) => {
-  const { tanggal, namaKasir } = req.query;
+  const { tanggal, periode, namaKasir } = req.query;
   const cabangId = req.user ? (req.user.cabang_id || req.user.cabangId) : null;
 
   if (!cabangId) {
@@ -36,6 +36,7 @@ const getHistoryTransaksiKasir = async (req, res) => {
   const data = await HistoryModel.getHistoryTransaksiKasir({
     cabangId,
     tanggal,
+    periode,
     namaKasir,
   });
 
@@ -46,7 +47,7 @@ const getHistoryTransaksiKasir = async (req, res) => {
 };
 
 const getHistoryMesin = async (req, res) => {
-  const { cabangId } = req.query;
+  const { cabangId, periode } = req.query;
   const idMitra = req.user ? req.user.idMitra : null;
 
   if (!cabangId) {
@@ -61,7 +62,7 @@ const getHistoryMesin = async (req, res) => {
     });
   }
 
-  const data = await HistoryModel.getHistoryMesin(cabangId, idMitra);
+  const data = await HistoryModel.getHistoryMesin(cabangId, idMitra, periode);
   return res.status(200).json({
     success: true,
     data: data,
