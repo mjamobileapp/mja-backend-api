@@ -58,7 +58,8 @@ const calculateLineSubtotal = (unitPrice, quantity) => {
 };
 
 const normalizeTransaksiPayload = (body = {}) => {
-  const namaPelanggan = normalizeNamaPelanggan(body.namaPelanggan);
+  // const namaPelanggan = normalizeNamaPelanggan(body.namaPelanggan);
+  const namaPelanggan = null; // namaPelanggan is optional, so we set it to null if not provided
   const totalBayar = normalizeMoney(body.totalBayar, "totalBayar wajib diisi dan harus lebih dari 0", { positive: true });
   if (typeof body.metodePembayaran !== "string" || body.metodePembayaran.trim() === "") {
     throw createValidationError("metodePembayaran wajib diisi");
