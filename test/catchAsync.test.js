@@ -75,6 +75,27 @@ test("global error handler preserves typed 4xx errors with the legacy error alia
   });
 });
 
+test("global error handler exposes safe MQTT command failures for mobile clients", () => {
+  const response = createResponse();
+  const message = "Mesin tidak merespons. Pastikan mesin menyala dan jaringan stabil, lalu coba lagi.";
+
+  errorHandler(
+    createHttpError(502, message, "MQTT_COMMAND_FAILED", { expose: true }),
+    createRequest(),
+    response,
+    () => {}
+  );
+
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.locals.exposeServerError, true);
+  assert.deepEqual(response.body, {
+    success: false,
+    code: "MQTT_COMMAND_FAILED",
+    message,
+    error: message,
+  });
+});
+
 test("global error handler delegates when headers were sent", () => {
   const res = createResponse();
   res.headersSent = true;

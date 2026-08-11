@@ -246,6 +246,30 @@ test("sanitizer removes implementation details from server-error payloads", () =
   );
 });
 
+test("sanitizer preserves explicitly exposed server-error payloads", () => {
+  const message = "Mesin tidak merespons. Pastikan mesin menyala dan jaringan stabil, lalu coba lagi.";
+
+  assert.deepEqual(
+    sanitizeServerErrorPayload(
+      {
+        success: false,
+        code: "MQTT_COMMAND_FAILED",
+        message,
+        error: message,
+        serverMessage: "ACK timeout",
+        details: "internal detail",
+      },
+      { expose: true }
+    ),
+    {
+      success: false,
+      code: "MQTT_COMMAND_FAILED",
+      message,
+      error: message,
+    }
+  );
+});
+
 test("sanitizer preserves client-error payloads", () => {
   let responsePayload;
   const response = {
