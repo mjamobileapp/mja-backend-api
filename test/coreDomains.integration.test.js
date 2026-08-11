@@ -706,6 +706,11 @@ test("core domains complete their HTTP flows on the isolated integration schema"
       const hargaAddon = kasirHarga.body.data.find(
         (row) => row.jenisLayanan === "addon_barang" && Number(row.itemId) === Number(fixture.itemId)
       );
+      const hargaCuci = kasirHarga.body.data.find((row) => row.jenisLayanan === "cuci");
+      const hargaKering = kasirHarga.body.data.find((row) => row.jenisLayanan === "kering");
+      assert.equal(hargaCuci.namaItem, null);
+      assert.equal(hargaKering.namaItem, null);
+      assert.equal(hargaAddon.namaItem, fixture.itemName);
       assert.equal(hargaAddon.stokSekarang, 7);
       assert.equal(hargaAddon.batasMinimum, 3);
       assert.equal(kasirHargaCabangLain.statusCode, 403);
