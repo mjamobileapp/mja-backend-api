@@ -10,6 +10,7 @@ const generateToken = (user, tokenType) => {
     throw new Error("Tipe token tidak valid");
   }
 
+  const expiresIn = String(process.env.JWT_EXPIRES_IN || "8h").trim() || "8h";
   const userId = user.id ?? user.id_user;
 
   // Bangun payload JWT
@@ -33,7 +34,7 @@ const generateToken = (user, tokenType) => {
   return jwt.sign(
     payload,
     process.env.JWT_SECRET,
-    { expiresIn: "8h" }
+    { expiresIn }
   );
 };
 
