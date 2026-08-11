@@ -245,7 +245,7 @@ const changePassword = async (id, body, updatedBy) => {
     const updatedDate = new Date().toISOString().slice(0, 19).replace("T", " ");
 
     // 4. Update password di database
-    const SQLQuery = "UPDATE tbl_users_mobile SET password = ?, updatedBy = ?, updatedDate = ? WHERE id = ?";
+    const SQLQuery = "UPDATE tbl_users_mobile SET password = ?, updatedBy = ?, updatedDate = ?, lastChangePassword = UTC_TIMESTAMP() WHERE id = ?";
     await dbPool.execute(SQLQuery, [hashedPassword, updatedBy, updatedDate, id]);
 
     return user.username;

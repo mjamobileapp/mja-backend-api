@@ -15,7 +15,7 @@ const getUserByUsername = async (username) => {
 
 const updateDeviceId = async (id, deviceId, deviceName, appVersion, osType) => {
   await dbPool.execute(
-    "UPDATE tbl_users_mobile SET deviceId = ?, deviceName = ?, appVersion = ?, osType = ? WHERE id = ?",
+    "UPDATE tbl_users_mobile SET deviceId = ?, deviceName = ?, appVersion = ?, osType = ?, lastLogin = UTC_TIMESTAMP() WHERE id = ?",
     [deviceId, deviceName, appVersion, osType, id]
   );
 };
@@ -73,7 +73,7 @@ const updateStatusAktifByUsername = async (username) => {
 
 const updatePasswordByUsername = async (username, hashedPassword) => {
   const [result] = await dbPool.execute(
-    "UPDATE tbl_users_mobile SET password = ? WHERE username = ?",
+    "UPDATE tbl_users_mobile SET password = ?, lastChangePassword = UTC_TIMESTAMP() WHERE username = ?",
     [hashedPassword, username]
   );
 
