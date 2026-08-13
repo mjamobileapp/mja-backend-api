@@ -1,6 +1,7 @@
 const dbPool = require("../config/database");
 const { getDateFilterCondition, getJakartaSqlDate } = require("../utils/date");
 const { createHttpError } = require("../utils/httpError");
+const logger = require("../utils/logger");
 
 const buildAuditWhere = (filters) => {
   const clauses = [];
@@ -51,16 +52,15 @@ const createReportModel = (executor = dbPool) => ({
     const dateFilter = getDateFilterCondition("waktuOrder", periode);
     const trendWhere = buildSummaryWhere(mitraId, cabangId, dateFilter);
     const dateGroup = getJakartaSqlDate("waktuOrder");
-    const [rows] = await executor.execute(
-      `SELECT
+    const query = `SELECT
         ${dateGroup} AS date,
         IFNULL(SUM(totalBayar), 0) AS omset
        FROM tbl_order_laundry
        WHERE ${trendWhere.sql}
        GROUP BY ${dateGroup}
-       ORDER BY date ASC`,
-      trendWhere.values
-    );
+       ORDER BY date ASC`;
+    logger.info({ event: "report_get_trend_query", query, values: trendWhere.values }, "[REPORT] Query getTrend");
+    const [rows] = await executor.execute(query, trendWhere.values);
 
     if (rows.length === 0) {
       throw createHttpError(404, "data not found", "DATA_NOT_FOUND");
@@ -73,8 +73,7 @@ const createReportModel = (executor = dbPool) => ({
     const expenseDateFilter = getDateFilterCondition("waktuPengeluaran", periode);
     const orderWhere = buildSummaryWhere(mitraId, cabangId, orderDateFilter);
     const expenseWhere = buildSummaryWhere(mitraId, cabangId, expenseDateFilter);
-    const [rows] = await executor.execute(
-      `SELECT
+    const query = `SELECT
         IFNULL(Omset.totalOmset, 0) AS totalOmset,
         IFNULL(Omset.jumlahOrder, 0) AS jumlahOrder,
         IFNULL(Pengeluaran.totalPengeluaran, 0) AS totalPengeluaran,
@@ -91,9 +90,10 @@ const createReportModel = (executor = dbPool) => ({
          FROM tbl_pengeluaran
          WHERE ${expenseWhere.sql}
            AND statusAktif = 1
-       ) AS Pengeluaran`,
-      [...orderWhere.values, ...expenseWhere.values]
-    );
+       ) AS Pengeluaran`;
+    const values = [...orderWhere.values, ...expenseWhere.values];
+    logger.info({ event: "report_get_summary_query", query, values }, "[REPORT] Query getSummary");
+    const [rows] = await executor.execute(query, values);
 
     if (rows.length === 0) {
       throw createHttpError(404, "data not found", "DATA_NOT_FOUND");

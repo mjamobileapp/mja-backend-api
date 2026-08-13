@@ -115,7 +115,8 @@ const getHistoryMesin = async (cabangId, idMitra, periode) => {
       m.namaGroupMesin AS namaMesin,
       d.jenisMesin,
       COALESCE(u.namaLengkap, NULLIF(l.actorUsername, '')) AS namaOperator,
-      l.waktuLog AS waktuLengkap
+      l.waktuLog AS waktuLengkap,
+      l.commandType AS perintahMesin
     FROM tbl_log_mesin l
     JOIN tbl_mesin_detail d ON l.mesinId = d.id
     JOIN tbl_mesin_master m ON d.idMesinMaster = m.id
@@ -141,6 +142,7 @@ const getHistoryMesin = async (cabangId, idMitra, periode) => {
       jenisMesin: row.jenisMesin,
       waktuAktifTampilan: formatJamWIB(row.waktuLengkap),
       waktuLengkap: row.waktuLengkap,
+      perintahMesin: row.perintahMesin,
     };
   });
 
