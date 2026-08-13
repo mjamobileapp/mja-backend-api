@@ -105,6 +105,7 @@ const getDateFilterCondition = (columnName, filter = "") => {
     case "monthly":
     case "this-month":
     case "this_month":
+    case "bulan_ini":
       return `YEAR(${jakartaDate}) = YEAR(${jakartaToday}) AND MONTH(${jakartaDate}) = MONTH(${jakartaToday})`;
     case "yearly":
     case "this_year":
