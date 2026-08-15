@@ -17,5 +17,6 @@ router.post("/:id/changepassword", authenticateBackofficeOrOwnerKasir(), catchAs
 router.post("/:email/resetpassword", publicPasswordResetRateLimiter, catchAsync(UserOwnerController.resetPassword));
 router.delete("/:id", authenticate, catchAsync(UserOwnerController.deleteUserOwner));
 router.post("/:id/restore", authenticate, catchAsync(UserOwnerController.restoreUserOwner));
+router.post("/:id/forceresetpassword", authenticate, catchAsync(UserOwnerController.forceResetPassword));
 
 module.exports = router;
