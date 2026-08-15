@@ -69,8 +69,28 @@ const getHistoryMesin = async (req, res) => {
   });
 };
 
+const getHistoryMesinBackoffice = async (req, res) => {
+  const { mitraId, cabangId, commandType, Date: date } = req.query;
+
+  const data = await HistoryModel.getHistoryMesinBackoffice({
+    mitraId,
+    cabangId,
+    commandType,
+    date,
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "Data log eksekusi mesin berhasil diambil",
+    data,
+  });
+};
+
+
 module.exports = {
   getHistoryTransaksi,
   getHistoryTransaksiKasir,
   getHistoryMesin,
+  getHistoryMesinBackoffice,
 };
+

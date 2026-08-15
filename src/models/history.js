@@ -149,8 +149,122 @@ const getHistoryMesin = async (cabangId, idMitra, periode) => {
   return finalResponse;
 };
 
+const getHistoryMesinBackoffice = async ({ mitraId, cabangId, commandType, date }) => {
+  // Base query
+  let sql = `
+    SELECT
+      lm.id,
+      lm.waktuLog,
+      lm.idMitra, m.namaMitra,
+      lm.cabangId, c.namaCabang,
+      lm.mesinId,
+      mm.namaGroupMesin,
+      tmd.jenisMesin,
+      lm.actorType,
+      lm.actorId,
+      lm.actorUsername,
+      lm.commandType,
+      lm.invoiceNumber,
+      lm.statusPerintah,
+      lm.errorMessage
+    FROM tbl_log_mesin lm
+    LEFT JOIN tbl_mitra m ON lm.idMitra = m.id
+    LEFT JOIN tbl_cabang c ON lm.cabangId = c.id
+    LEFT JOIN tbl_mesin_detail tmd ON lm.mesinId = tmd.id
+    LEFT JOIN tbl_mesin_master mm ON tmd.idMesinMaster = mm.id
+    WHERE 1=1
+  `;
+  const values = [];
+
+  // Dynamic WHERE clause
+  if (date) {
+    sql += " AND DATE(lm.waktuLog) = ?";
+    values.push(date);
+  }
+
+  if (mitraId && mitraId !== "all") {
+    sql += " AND lm.idMitra = ?";
+    values.push(mitraId);
+  }
+
+  if (cabangId && cabangId !== "all") {
+    sql += " AND lm.cabangId = ?";
+    values.push(cabangId);
+  }
+
+  if (commandType && commandType !== "all") {
+    sql += " AND lm.commandType = ?";
+    values.push(commandType);
+  }
+
+  sql += " ORDER BY lm.waktuLog DESC";
+
+  const [rows] = await dbPool.execute(sql, values);
+
+  // Formatting & Transformasi Data ke Nested JSON
+  const items = rows.map((row) => {
+    let jenisInstruksi = null;
+    let keteranganReferensi = null;
+
+    if (row.commandType === "ON" && row.invoiceNumber) {
+      jenisInstruksi = "START";
+      keteranganReferensi = "Sesuai transaksi";
+    } else if (row.commandType === "OFF" && row.invoiceNumber) {
+      jenisInstruksi = "STOP";
+      keteranganReferensi = "Sesuai transaksi";
+    } else if (row.commandType === "ON" && !row.invoiceNumber) {
+      jenisInstruksi = "BYPASS_ON";
+    } else if (row.commandType === "OFF" && !row.invoiceNumber) {
+      jenisInstruksi = "BYPASS_OFF";
+      keteranganReferensi =
+        row.actorType === "backoffice"
+          ? "Override Manual Internal"
+          : "Tanpa Transaksi POS";
+    }
+
+    return {
+      id: row.id,
+      waktuLog: row.waktuLog,
+      mitra: {
+        id: row.idMitra,
+        nama: row.namaMitra,
+      },
+      cabang: {
+        id: row.cabangId,
+        nama: row.namaCabang,
+      },
+      mesin: {
+        id: row.mesinId,
+        nama: row.namaGroupMesin,
+        jenis: row.jenisMesin,
+      },
+      aktor: {
+        type: row.actorType,
+        id: row.actorId,
+        username: row.actorUsername,
+      },
+      instruksi: {
+        command: row.commandType,
+        jenis: jenisInstruksi,
+      },
+      referensi: {
+        invoiceNumber: row.invoiceNumber || null,
+        keterangan: keteranganReferensi,
+      },
+      status: {
+        isSuccess: row.statusPerintah === "success",
+        message: row.statusPerintah,
+        errorMessage: row.errorMessage || null,
+      },
+    };
+  });
+
+  return { items };
+};
+
 module.exports = {
   getHistoryTransaksi,
   getHistoryTransaksiKasir,
   getHistoryMesin,
+  getHistoryMesinBackoffice,
 };
