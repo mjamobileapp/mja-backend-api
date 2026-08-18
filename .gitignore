@@ -3,6 +3,7 @@ node_modules/
 .vscode/
 uploads
 generateRefreshToken.js
-arduino.txt
+arduino-no-ssl.txt
+arduino-ssl.txt
 Arduino Existing.txt
 backend-api.code-workspace

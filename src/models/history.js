@@ -14,6 +14,7 @@ const getHistoryTransaksi = async (cabangId, idMitra, periode) => {
       SUM(CASE WHEN o.metodePembayaran = 'QRIS' THEN 1 ELSE 0 END) AS totalQris
     FROM tbl_order_laundry o
     LEFT JOIN tbl_users_mobile k ON o.idUserMobile = k.id
+    LEFT JOIN tbl_detail_order d ON d.orderId = o.id
     WHERE o.cabangId = ?
       AND o.idMitra = ?
       AND (o.statusPembayaran = 'PAID' OR o.statusPembayaran IS NULL)
