@@ -9,7 +9,7 @@ const getHistoryTransaksi = async (cabangId, idMitra, periode) => {
       ${getJakartaSqlDate("o.waktuOrder")} AS tanggalGroup,
       o.idUserMobile AS idKasir,
       k.namaLengkap AS namaKasir,
-      C SUM(CASE WHEN d.jenisLayanan IN ('cuci', 'kering') THEN 1 ELSE 0 END) AS totalTransaksiKasir,
+      SUM(CASE WHEN d.jenisLayanan IN ('cuci', 'kering') THEN 1 ELSE 0 END) AS totalTransaksiKasir,
       SUM(CASE WHEN o.metodePembayaran = 'CASH' AND d.jenisLayanan IN ('cuci', 'kering') THEN 1 ELSE 0 END) AS totalCash,
       SUM(CASE WHEN o.metodePembayaran = 'QRIS' AND d.jenisLayanan IN ('cuci', 'kering') THEN 1 ELSE 0 END) AS totalQris
     FROM tbl_order_laundry o
