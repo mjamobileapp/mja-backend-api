@@ -298,9 +298,8 @@ const insertLogMesin = async (
       invoiceNumber,
       commandType,
       statusPerintah,
-      errorMessage,
-      waktuLog
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
+      errorMessage
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       idMitra,
       cabangId,
