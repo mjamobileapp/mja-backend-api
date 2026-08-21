@@ -28,6 +28,19 @@ const normalizePositiveInteger = (value, message) => {
   return Number(value);
 };
 
+const normalizeNamaPelanggan = (value) => {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw createValidationError("namaPelanggan wajib diisi");
+  }
+
+  const namaPelanggan = value.trim();
+  if (namaPelanggan.length > 100) {
+    throw createValidationError("namaPelanggan maksimal 100 karakter");
+  }
+
+  return namaPelanggan;
+};
+
 const sumMoney = (values) => {
   const cents = values.reduce((sum, value) => sum + Math.round(value * 100), 0);
   if (!Number.isSafeInteger(cents)) throw createValidationError("Nilai transaksi terlalu besar");
@@ -45,6 +58,11 @@ const calculateLineSubtotal = (unitPrice, quantity) => {
 };
 
 const normalizeTransaksiPayload = (body = {}) => {
+  // const namaPelanggan = normalizeNamaPelanggan(body.namaPelanggan);
+  // const namaPelanggan = null; // namaPelanggan is optional, so we set it to null if not provided
+  
+  const namaPelanggan = body.namaPelanggan ? normalizeNamaPelanggan(body.namaPelanggan) : null;
+  
   const totalBayar = normalizeMoney(body.totalBayar, "totalBayar wajib diisi dan harus lebih dari 0", { positive: true });
   if (typeof body.metodePembayaran !== "string" || body.metodePembayaran.trim() === "") {
     throw createValidationError("metodePembayaran wajib diisi");
@@ -73,7 +91,7 @@ const normalizeTransaksiPayload = (body = {}) => {
     throw createValidationError("totalBayar harus sama dengan total subtotal items");
   }
 
-  return { totalBayar, metodePembayaran: body.metodePembayaran.trim(), items };
+  return { namaPelanggan, totalBayar, metodePembayaran: body.metodePembayaran.trim(), items };
 };
 
 module.exports = { calculateLineSubtotal, normalizeMoney, normalizeTransaksiPayload, sumMoney };

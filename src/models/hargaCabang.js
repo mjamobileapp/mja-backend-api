@@ -141,17 +141,18 @@ const getSettingHarga = async (idMitra, cabangId) => {
     const [rows] = await dbPool.execute(
       `WITH TemplateLayanan AS (
     -- Menentukan struktur kategori layanan statis
-    SELECT 'cuci' AS jenisLayanan, NULL AS itemId
+    SELECT 'cuci' AS jenisLayanan, NULL AS itemId, NULL AS namaItem
     UNION ALL
-    SELECT 'kering' AS jenisLayanan, NULL AS itemId
+    SELECT 'kering' AS jenisLayanan, NULL AS itemId, NULL AS namaItem
     UNION ALL
-    SELECT 'addon_barang' AS jenisLayanan, id AS itemId
+    SELECT 'addon_barang' AS jenisLayanan, id AS itemId, namaItem
     FROM tbl_master_item_expense
     WHERE tipeItem = 'stok' and statusAktif = 1
 )
 SELECT 
     t.jenisLayanan, 
     t.itemId, 
+    t.namaItem,
     IFNULL(h.harga, 0) AS harga,
     IFNULL(s.stokSekarang, 0) AS stokSekarang,
     IFNULL(ts.batasMinimum, 0) AS batasMinimum

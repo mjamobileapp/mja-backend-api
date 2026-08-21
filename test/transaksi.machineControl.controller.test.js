@@ -91,6 +91,47 @@ test("owner machine start does not require invoice number or update an order det
   }
 });
 
+test("backoffice machine start does not require invoice number", async () => {
+  const original = {
+    isActiveCabangForMitra: TransaksiModel.isActiveCabangForMitra,
+    startMesinByBackoffice: TransaksiModel.startMesinByBackoffice,
+  };
+  let receivedParams;
+
+  TransaksiModel.isActiveCabangForMitra = async (idMitra, cabangId) => idMitra === 7 && cabangId === 9;
+  TransaksiModel.startMesinByBackoffice = async (params) => {
+    receivedParams = params;
+  };
+
+  try {
+    const response = createResponse();
+    await TransaksiController.startMesinByBackoffice(
+      {
+        body: { mesinId: 3, idMitra: 7, cabangId: 9 },
+        user: { id: 22, username: "backoffice-test" },
+        machineControlActor: { type: "backoffice", id: 22, username: "backoffice-test" },
+      },
+      response
+    );
+
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.body, {
+      success: "Start Mesin By Backoffice Success",
+      data: null,
+    });
+    assert.deepEqual(receivedParams, {
+      idMitra: 7,
+      cabangId: 9,
+      kasirId: null,
+      actor: { type: "backoffice", id: 22, username: "backoffice-test" },
+      mesinId: 3,
+    });
+  } finally {
+    TransaksiModel.isActiveCabangForMitra = original.isActiveCabangForMitra;
+    TransaksiModel.startMesinByBackoffice = original.startMesinByBackoffice;
+  }
+});
+
 test("owner machine stop does not require invoice number", async () => {
   const original = {
     isActiveCabangForMitra: TransaksiModel.isActiveCabangForMitra,
@@ -125,6 +166,82 @@ test("owner machine stop does not require invoice number", async () => {
   } finally {
     TransaksiModel.isActiveCabangForMitra = original.isActiveCabangForMitra;
     TransaksiModel.stopMesinByOwner = original.stopMesinByOwner;
+  }
+});
+
+test("backoffice machine stop does not require invoice number", async () => {
+  const original = {
+    isActiveCabangForMitra: TransaksiModel.isActiveCabangForMitra,
+    stopMesinByBackoffice: TransaksiModel.stopMesinByBackoffice,
+  };
+  let receivedParams;
+
+  TransaksiModel.isActiveCabangForMitra = async (idMitra, cabangId) => idMitra === 7 && cabangId === 9;
+  TransaksiModel.stopMesinByBackoffice = async (params) => {
+    receivedParams = params;
+  };
+
+  try {
+    const response = createResponse();
+    await TransaksiController.stopMesinByBackoffice(
+      {
+        body: { mesinId: 3, idMitra: 7, cabangId: 9 },
+        user: { id: 22, username: "backoffice-test" },
+        machineControlActor: { type: "backoffice", id: 22, username: "backoffice-test" },
+      },
+      response
+    );
+
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.body, {
+      success: "Stop Mesin By Backoffice Success",
+      data: null,
+    });
+    assert.deepEqual(receivedParams, {
+      idMitra: 7,
+      cabangId: 9,
+      kasirId: null,
+      actor: { type: "backoffice", id: 22, username: "backoffice-test" },
+      mesinId: 3,
+    });
+  } finally {
+    TransaksiModel.isActiveCabangForMitra = original.isActiveCabangForMitra;
+    TransaksiModel.stopMesinByBackoffice = original.stopMesinByBackoffice;
+  }
+});
+
+test("kasir cannot stop a machine", async () => {
+  const original = {
+    isActiveCabangForMitra: TransaksiModel.isActiveCabangForMitra,
+    stopMesin: TransaksiModel.stopMesin,
+  };
+  let modelCalled = false;
+
+  TransaksiModel.isActiveCabangForMitra = async () => true;
+  TransaksiModel.stopMesin = async () => {
+    modelCalled = true;
+  };
+
+  try {
+    await assert.rejects(
+      TransaksiController.stopMesin(
+        {
+          body: { mesinId: 3, invoiceNumber: "INV-KASIR" },
+          user: { id: 33, idMitra: 7, cabangId: 9, role: "kasir", username: "kasir-test" },
+        },
+        createResponse()
+      ),
+      (error) => (
+        error.statusCode === 403 &&
+        error.code === "FORBIDDEN" &&
+        error.message === "Kasir tidak diizinkan menghentikan mesin"
+      )
+    );
+
+    assert.equal(modelCalled, false);
+  } finally {
+    TransaksiModel.isActiveCabangForMitra = original.isActiveCabangForMitra;
+    TransaksiModel.stopMesin = original.stopMesin;
   }
 });
 

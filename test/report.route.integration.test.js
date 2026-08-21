@@ -40,13 +40,13 @@ test("audit report route enforces auth and returns a backoffice audit page", asy
   const mobileToken = jwt.sign({ id: 12, username: "admin", role: 1, tokenType: "mobile" }, process.env.JWT_SECRET);
   const backofficeToken = jwt.sign({ id: 12, username: "admin", role: 1, tokenType: "backoffice" }, process.env.JWT_SECRET);
   try {
-    const noToken = await request(server, null, "/api/report/audit-logs");
+    const noToken = await request(server, null, "/api/backoffice/report/audit-logs");
     assert.equal(noToken.statusCode, 401);
 
-    const mobile = await request(server, mobileToken, "/api/report/audit-logs");
+    const mobile = await request(server, mobileToken, "/api/backoffice/report/audit-logs");
     assert.equal(mobile.statusCode, 401);
 
-    const success = await request(server, backofficeToken, "/api/report/audit-logs?page=1&limit=10&actionType=UPDATE&entityName=tbl_harga_cabang&startDate=2026-07-01&endDate=2026-07-31");
+    const success = await request(server, backofficeToken, "/api/backoffice/report/audit-logs?page=1&limit=10&actionType=UPDATE&entityName=tbl_harga_cabang&startDate=2026-07-01&endDate=2026-07-31");
     assert.equal(success.statusCode, 200);
     assert.equal(success.body.data.items[0].entityName, "tbl_harga_cabang");
     assert.equal(success.body.data.meta.totalItems, 1);

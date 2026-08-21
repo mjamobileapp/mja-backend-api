@@ -1,4 +1,7 @@
 const dbPool = require("../config/database");
+const { getDateFilterCondition, getJakartaSqlDate } = require("../utils/date");
+const { createHttpError } = require("../utils/httpError");
+const logger = require("../utils/logger");
 
 const buildAuditWhere = (filters) => {
   const clauses = [];
@@ -25,7 +28,79 @@ const buildAuditWhere = (filters) => {
   };
 };
 
+const isProvided = (value) => value !== undefined && value !== null && value !== "";
+
+const buildSummaryWhere = (mitraId, cabangId, dateFilter) => {
+  const clauses = ["1=1"];
+  const values = [];
+
+  if (isProvided(mitraId)) {
+    clauses.push("idMitra = ?");
+    values.push(mitraId);
+  }
+  if (isProvided(cabangId)) {
+    clauses.push("cabangId = ?");
+    values.push(cabangId);
+  }
+
+  clauses.push(dateFilter);
+  return { sql: clauses.join(" AND "), values };
+};
+
 const createReportModel = (executor = dbPool) => ({
+  async getTrend(mitraId, cabangId, periode) {
+    const dateFilter = getDateFilterCondition("waktuOrder", periode);
+    const trendWhere = buildSummaryWhere(mitraId, cabangId, dateFilter);
+    const dateGroup = getJakartaSqlDate("waktuOrder");
+    const query = `SELECT
+        ${dateGroup} AS date,
+        IFNULL(SUM(totalBayar), 0) AS omset
+       FROM tbl_order_laundry
+       WHERE ${trendWhere.sql}
+       GROUP BY ${dateGroup}
+       ORDER BY date ASC`;
+    logger.info({ event: "report_get_trend_query", query, values: trendWhere.values }, "[REPORT] Query getTrend");
+    const [rows] = await executor.execute(query, trendWhere.values);
+
+    if (rows.length === 0) {
+      throw createHttpError(404, "data not found", "DATA_NOT_FOUND");
+    }
+
+    return rows;
+  },
+  async getSummary(mitraId, cabangId, periode) {
+    const orderDateFilter = getDateFilterCondition("waktuOrder", periode);
+    const expenseDateFilter = getDateFilterCondition("waktuPengeluaran", periode);
+    const orderWhere = buildSummaryWhere(mitraId, cabangId, orderDateFilter);
+    const expenseWhere = buildSummaryWhere(mitraId, cabangId, expenseDateFilter);
+    const query = `SELECT
+        IFNULL(Omset.totalOmset, 0) AS totalOmset,
+        IFNULL(Omset.jumlahOrder, 0) AS jumlahOrder,
+        IFNULL(Pengeluaran.totalPengeluaran, 0) AS totalPengeluaran,
+        (IFNULL(Omset.totalOmset, 0) - IFNULL(Pengeluaran.totalPengeluaran, 0)) AS pendapatanBersih
+       FROM (
+         SELECT
+           SUM(totalBayar) AS totalOmset,
+           COUNT(id) AS jumlahOrder
+         FROM tbl_order_laundry
+         WHERE ${orderWhere.sql}
+       ) AS Omset
+       CROSS JOIN (
+         SELECT SUM(nominal) AS totalPengeluaran
+         FROM tbl_pengeluaran
+         WHERE ${expenseWhere.sql}
+           AND statusAktif = 1
+       ) AS Pengeluaran`;
+    const values = [...orderWhere.values, ...expenseWhere.values];
+    logger.info({ event: "report_get_summary_query", query, values }, "[REPORT] Query getSummary");
+    const [rows] = await executor.execute(query, values);
+
+    if (rows.length === 0) {
+      throw createHttpError(404, "data not found", "DATA_NOT_FOUND");
+    }
+
+    return rows[0];
+  },
   async getAuditLogs(filters) {
     const where = buildAuditWhere(filters);
     const [countRows] = await executor.execute(
@@ -48,4 +123,4 @@ const createReportModel = (executor = dbPool) => ({
   },
 });
 
-module.exports = { ...createReportModel(), createReportModel, buildAuditWhere };
+module.exports = { ...createReportModel(), createReportModel, buildAuditWhere, buildSummaryWhere };

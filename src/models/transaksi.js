@@ -15,6 +15,12 @@ const jenisMesinToLayanan = {
 
 const normalizeEspId = (espId) => String(espId || "").trim().toUpperCase();
 const isMqttDebugEnabled = () => String(process.env.MQTT_DEBUG || "").toLowerCase() === "true";
+const createMqttCommandError = () => createHttpError(
+  502,
+  "Mesin tidak merespons. Pastikan mesin menyala dan jaringan stabil, lalu coba lagi.",
+  "MQTT_COMMAND_FAILED",
+  { expose: true }
+);
 
 const getInvoiceDate = () => getTodayStringYYYYMMDD();
 
@@ -148,7 +154,7 @@ const reduceStockAndNotify = async (
 };
 
 const createTransaksi = async (data, requestLogger = globalLogger) => {
-  const { idMitra, cabangId, idUserMobile, totalBayar, metodePembayaran, items } = data;
+  const { idMitra, cabangId, idUserMobile, namaPelanggan, totalBayar, metodePembayaran, items } = data;
   return withTransaction(async (connection) => {
 
     const user = await validateMasterData(connection, idMitra, cabangId, idUserMobile);
@@ -184,12 +190,13 @@ const createTransaksi = async (data, requestLogger = globalLogger) => {
         idMitra,
         cabangId,
         idUserMobile,
+        namaPelanggan,
         totalBayar,
         metodePembayaran,
         statusPembayaran,
         waktuOrder
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
-      [invoiceNumber, idMitra, cabangId, idUserMobile, serverTotal, metodePembayaran, "PAID"]
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
+      [invoiceNumber, idMitra, cabangId, idUserMobile, namaPelanggan, serverTotal, metodePembayaran, "PAID"]
     );
 
     const orderId = orderResult.insertId;
@@ -220,7 +227,7 @@ const createTransaksi = async (data, requestLogger = globalLogger) => {
     }
 
     const [orderRows] = await connection.execute(
-      `SELECT id, invoiceNumber, idMitra, cabangId, idUserMobile, totalBayar, waktuOrder
+      `SELECT id, invoiceNumber, idMitra, cabangId, idUserMobile, namaPelanggan, totalBayar, waktuOrder
        FROM tbl_order_laundry
        WHERE id = ?`,
       [orderId]
@@ -241,6 +248,7 @@ const createTransaksi = async (data, requestLogger = globalLogger) => {
       idMitra: String(order.idMitra),
       cabangId: String(order.cabangId),
       idUserMobile: String(order.idUserMobile),
+      namaPelanggan: order.namaPelanggan,
       totalBayar: String(order.totalBayar),
       waktuOrder: order.waktuOrder ? new Date(order.waktuOrder).toISOString() : "",
       items: detailRows.map((item) => ({
@@ -290,9 +298,8 @@ const insertLogMesin = async (
       invoiceNumber,
       commandType,
       statusPerintah,
-      errorMessage,
-      waktuLog
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
+      errorMessage
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       idMitra,
       cabangId,
@@ -606,7 +613,7 @@ const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceN
 
       await connection.commit();
       shouldRollback = false;
-      throw createHttpError(502, "Gagal mengirim perintah ke mesin", "MQTT_COMMAND_FAILED");
+      throw createMqttCommandError();
     }
 
     await connection.execute(
@@ -652,7 +659,15 @@ const startMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceN
   }
 };
 
-const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }, requestLogger = globalLogger) => {
+const startMesinManual = async (
+  { idMitra, cabangId, kasirId, actor, mesinId },
+  requestLogger = globalLogger,
+  {
+    debugMessage = "[TRANSAKSI] Start mesin manual MQTT command",
+    rollbackEvent = "start_machine_manual_rollback_failed",
+    rollbackMessage = "Rollback start mesin manual gagal",
+  } = {}
+) => {
   const connection = await dbPool.getConnection();
   let shouldRollback = false;
 
@@ -681,7 +696,7 @@ const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId },
           topic,
           ackTopic,
           requestId,
-        }, "[TRANSAKSI] Start mesin by owner MQTT command");
+        }, debugMessage);
       }
 
       await publishAndWaitAck({
@@ -706,7 +721,7 @@ const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId },
 
       await connection.commit();
       shouldRollback = false;
-      throw createHttpError(502, "Gagal mengirim perintah ke mesin", "MQTT_COMMAND_FAILED");
+      throw createMqttCommandError();
     }
 
     await connection.execute(
@@ -735,7 +750,7 @@ const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId },
       try {
         await connection.rollback();
       } catch (rollbackError) {
-        requestLogger.error({ err: rollbackError, event: "start_machine_owner_rollback_failed" }, "Rollback start mesin by owner gagal");
+        requestLogger.error({ err: rollbackError, event: rollbackEvent }, rollbackMessage);
       }
     }
 
@@ -744,6 +759,18 @@ const startMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId },
     connection.release();
   }
 };
+
+const startMesinByOwner = (params, requestLogger = globalLogger) => startMesinManual(params, requestLogger, {
+  debugMessage: "[TRANSAKSI] Start mesin by owner MQTT command",
+  rollbackEvent: "start_machine_owner_rollback_failed",
+  rollbackMessage: "Rollback start mesin by owner gagal",
+});
+
+const startMesinByBackoffice = (params, requestLogger = globalLogger) => startMesinManual(params, requestLogger, {
+  debugMessage: "[TRANSAKSI] Start mesin by backoffice MQTT command",
+  rollbackEvent: "start_machine_backoffice_rollback_failed",
+  rollbackMessage: "Rollback start mesin by backoffice gagal",
+});
 
 const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNumber = null }, requestLogger = globalLogger) => {
   const connection = await dbPool.getConnection();
@@ -799,7 +826,7 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
 
       await connection.commit();
       shouldRollback = false;
-      throw createHttpError(502, "Gagal mengirim perintah off ke mesin", "MQTT_COMMAND_FAILED");
+      throw createMqttCommandError();
     }
 
     await connection.execute(
@@ -838,7 +865,15 @@ const stopMesin = async ({ idMitra, cabangId, kasirId, actor, mesinId, invoiceNu
   }
 };
 
-const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }, requestLogger = globalLogger) => {
+const stopMesinManual = async (
+  { idMitra, cabangId, kasirId, actor, mesinId },
+  requestLogger = globalLogger,
+  {
+    debugMessage = "[TRANSAKSI] Stop mesin manual MQTT command",
+    rollbackEvent = "stop_machine_manual_rollback_failed",
+    rollbackMessage = "Rollback stop mesin manual gagal",
+  } = {}
+) => {
   const connection = await dbPool.getConnection();
   let shouldRollback = false;
 
@@ -867,7 +902,7 @@ const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }, 
           topic,
           ackTopic,
           requestId,
-        }, "[TRANSAKSI] Stop mesin by owner MQTT command");
+        }, debugMessage);
       }
 
       await publishAndWaitAck({
@@ -892,7 +927,7 @@ const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }, 
 
       await connection.commit();
       shouldRollback = false;
-      throw createHttpError(502, "Gagal mengirim perintah off ke mesin", "MQTT_COMMAND_FAILED");
+      throw createMqttCommandError();
     }
 
     await connection.execute(
@@ -921,7 +956,7 @@ const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }, 
       try {
         await connection.rollback();
       } catch (rollbackError) {
-        requestLogger.error({ err: rollbackError, event: "stop_machine_owner_rollback_failed" }, "Rollback stop mesin by owner gagal");
+        requestLogger.error({ err: rollbackError, event: rollbackEvent }, rollbackMessage);
       }
     }
 
@@ -931,11 +966,24 @@ const stopMesinByOwner = async ({ idMitra, cabangId, kasirId, actor, mesinId }, 
   }
 };
 
+const stopMesinByOwner = (params, requestLogger = globalLogger) => stopMesinManual(params, requestLogger, {
+  debugMessage: "[TRANSAKSI] Stop mesin by owner MQTT command",
+  rollbackEvent: "stop_machine_owner_rollback_failed",
+  rollbackMessage: "Rollback stop mesin by owner gagal",
+});
+
+const stopMesinByBackoffice = (params, requestLogger = globalLogger) => stopMesinManual(params, requestLogger, {
+  debugMessage: "[TRANSAKSI] Stop mesin by backoffice MQTT command",
+  rollbackEvent: "stop_machine_backoffice_rollback_failed",
+  rollbackMessage: "Rollback stop mesin by backoffice gagal",
+});
+
 const getPendingTransaksi = async (cabangId, idMitra) => {
   const [rows] = await dbPool.execute(
     `SELECT 
       d_pending.id AS idDetailPending,
       o.invoiceNumber,
+      o.namaPelanggan,
       d_pending.jenisLayanan AS layananPending,
       o.waktuOrder,
       d_asal.mesinId AS idMesinAsal
@@ -990,6 +1038,8 @@ module.exports = {
   recoverPendingTransaksi,
   startMesin,
   startMesinByOwner,
+  startMesinByBackoffice,
   stopMesin,
   stopMesinByOwner,
+  stopMesinByBackoffice,
 };

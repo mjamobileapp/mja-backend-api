@@ -177,10 +177,28 @@ const authenticateBackofficeOrOwnerMachineControl = () => {
   };
 };
 
+const authenticateBackofficeMachineControl = () => {
+  return async (req, res, next) => {
+    try {
+      const user = await verifyBackofficeToken(req);
+      req.user = user;
+      req.machineControlActor = {
+        type: MACHINE_CONTROL_ACTOR_TYPES.BACKOFFICE,
+        id: user.id,
+        username: user.username,
+      };
+      return next();
+    } catch (error) {
+      return sendAuthError(res, error, next);
+    }
+  };
+};
+
 module.exports = {
   authenticateBackofficeOrOwner,
   authenticateBackofficeOrMobile,
   authenticateBackofficeOrOwnerKasirCabang,
   authenticateBackofficeOrOwnerKasir,
   authenticateBackofficeOrOwnerMachineControl,
+  authenticateBackofficeMachineControl,
 };

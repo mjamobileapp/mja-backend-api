@@ -1,7 +1,8 @@
-const createHttpError = (statusCode, message, code) => {
+const createHttpError = (statusCode, message, code, options = {}) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   error.code = code;
+  error.expose = options.expose === true;
   return error;
 };
 

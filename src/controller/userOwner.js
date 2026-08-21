@@ -68,6 +68,16 @@ const changePassword = async (req, res) => {
   return res.status(200).json({ message: "Password changed successfully", data: { username } });
 };
 
+const forceResetPassword = async (req, res) => {
+  const requiredFields = ["newPassword", "ConfirmNewPassword"];
+  const missingFields = requiredFields.filter((field) => !req.body[field]);
+  if (missingFields.length > 0) return res.status(400).json({ message: "Bad request, missing required fields", missingFields });
+  if (req.body.newPassword !== req.body.ConfirmNewPassword) return res.status(400).json({ error: "Password baru dan konfirmasi tidak cocok" });
+  const username = await UserOwnerModel.forceResetPassword(req.params.id, req.body, req.user.username);
+  await audit(req, A.FORCE_RESET_PASSWORD, E.USER_OWNER, req.params.id, null, { username });
+  return res.status(200).json({ message: "Force Reset Password success", data: { username } });
+};
+
 const resetPassword = async (req, res) => {
   try {
     const result = await UserOwnerModel.resetPassword(req.params.email);
@@ -82,4 +92,4 @@ const resetPassword = async (req, res) => {
   return sendResetPasswordAccepted(res);
 };
 
-module.exports = { createNewUserOwner, getAllUserOwner, getUserOwnerById, updateUserOwner, deleteUserOwner, restoreUserOwner, resetDeviceId, changePassword, resetPassword };
+module.exports = { createNewUserOwner, getAllUserOwner, getUserOwnerById, updateUserOwner, deleteUserOwner, restoreUserOwner, resetDeviceId, changePassword, forceResetPassword, resetPassword };

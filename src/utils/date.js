@@ -97,11 +97,28 @@ const getDateFilterCondition = (columnName, filter = "") => {
     case "mingguan":
     case "minggu":
     case "weekly":
+    case "this-week":
+    case "this_week":
+    case "minggu_ini":
       return `YEARWEEK(${jakartaDate}, 1) = YEARWEEK(${jakartaToday}, 1)`;
     case "bulanan":
     case "bulan":
     case "monthly":
+    case "this-month":
+    case "this_month":
+    case "bulan_ini":
       return `YEAR(${jakartaDate}) = YEAR(${jakartaToday}) AND MONTH(${jakartaDate}) = MONTH(${jakartaToday})`;
+    case "yearly":
+    case "this_year":
+    case "this-year":
+    case "tahunan":
+    case "tahun":
+      return `YEAR(${jakartaDate}) = YEAR(${jakartaToday})`;
+    case "last_month":
+    case "last-month":
+    case "bulan-lalu":
+    case "bulan_lalu":
+      return `YEAR(${jakartaDate}) = YEAR(${jakartaToday} - INTERVAL 1 MONTH) AND MONTH(${jakartaDate}) = MONTH(${jakartaToday} - INTERVAL 1 MONTH)`;
     case "hari_ini":
     case "hari-ini":
     case "today":

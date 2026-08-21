@@ -24,3 +24,59 @@ test("report controller returns typed not-found for an empty page", async () => 
   try { await assert.rejects(ReportController.getAuditLogs({ query: {} }, response()), (error) => error.code === "DATA_NOT_FOUND" && error.statusCode === 404); }
   finally { ReportModel.getAuditLogs = original; }
 });
+
+test("report controller returns the financial summary response contract", async () => {
+  const original = ReportModel.getSummary;
+  const calls = [];
+  ReportModel.getSummary = async (...args) => {
+    calls.push(args);
+    return { totalOmset: "15500000", totalPengeluaran: "3200000", pendapatanBersih: "12300000", jumlahOrder: "450" };
+  };
+  try {
+    const res = response();
+    await ReportController.getSummary({ query: { mitraId: "10", cabangId: "1", periode: "hari_ini" } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.body, {
+      success: true,
+      message: "Data ringkasan finansial berhasil diambil",
+      data: { summary: { totalOmset: 15500000, totalPengeluaran: 3200000, pendapatanBersih: 12300000, jumlahOrder: 450 } },
+    });
+    assert.deepEqual(calls, [[10, 1, "hari_ini"]]);
+  } finally { ReportModel.getSummary = original; }
+});
+
+test("report controller allows summary without tenant or branch filters", async () => {
+  const original = ReportModel.getSummary;
+  const calls = [];
+  ReportModel.getSummary = async (...args) => {
+    calls.push(args);
+    return { totalOmset: 0, totalPengeluaran: 0, pendapatanBersih: 0, jumlahOrder: 0 };
+  };
+  try {
+    const res = response();
+    await ReportController.getSummary({ query: { periode: "last_month" } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(calls, [[undefined, undefined, "last_month"]]);
+    assert.deepEqual(res.body.data.summary, { totalOmset: 0, totalPengeluaran: 0, pendapatanBersih: 0, jumlahOrder: 0 });
+  } finally { ReportModel.getSummary = original; }
+});
+
+test("report controller returns the financial trend response contract", async () => {
+  const original = ReportModel.getTrend;
+  const calls = [];
+  ReportModel.getTrend = async (...args) => {
+    calls.push(args);
+    return [{ date: "2026-07-01", omset: "950000" }, { date: "2026-07-02", omset: "1100000" }];
+  };
+  try {
+    const res = response();
+    await ReportController.getTrend({ query: { mitraId: "10", cabangId: "1", periode: "hari_ini" } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.body, {
+      success: true,
+      message: "Data ringkasan finansial berhasil diambil",
+      data: { trend: [{ date: "2026-07-01", omset: 950000 }, { date: "2026-07-02", omset: 1100000 }] },
+    });
+    assert.deepEqual(calls, [[10, 1, "hari_ini"]]);
+  } finally { ReportModel.getTrend = original; }
+});

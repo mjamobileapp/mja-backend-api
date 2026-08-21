@@ -115,7 +115,7 @@ test("fake MQTT rejects when the connection closes before ACK", async () => {
   assert.deepEqual(client.endCalls, [true]);
 });
 
-test("fake MQTT status listener updates READY only for a valid status topic and payload", async () => {
+test("fake MQTT status listener updates READY and IN_USE for valid status payloads", async () => {
   const client = new FakeMqttClient();
   const updates = [];
   const messageHandler = createStatusMessageHandler({
@@ -139,12 +139,15 @@ test("fake MQTT status listener updates READY only for a valid status topic and 
 
     client.emit("message", "modul/ESP-READY/status", Buffer.from('{"status":"READY","machineType":"dryer"}'));
     await waitForAsyncHandler();
-    assert.deepEqual(updates, [{ espId: "ESP-READY", machineType: "DRYER" }]);
+    assert.deepEqual(updates, [{ espId: "ESP-READY", machineType: "DRYER", status: "READY" }]);
 
     client.emit("message", "modul/ESP-READY/other", Buffer.from('{"status":"READY"}'));
-    client.emit("message", "modul/ESP-READY/status", Buffer.from('{"status":"IN_USE"}'));
+    client.emit("message", "modul/ESP-READY/status", Buffer.from('{"status":"IN_USE","machineType":"WASHER"}'));
     await waitForAsyncHandler();
-    assert.equal(updates.length, 1);
+    assert.deepEqual(updates, [
+      { espId: "ESP-READY", machineType: "DRYER", status: "READY" },
+      { espId: "ESP-READY", machineType: "WASHER", status: "IN_USE" },
+    ]);
   } finally {
     await stopMqttStatusListener();
   }

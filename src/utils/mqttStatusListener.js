@@ -54,13 +54,22 @@ const parsePendingTransactionPayload = (message) => {
   }
 };
 
-const updateMesinReadyByEspId = async ({ espId, machineType = null }) => {
-  const params = [MACHINE_STATUSES.READY, espId];
+const updateMesinReadyByEspId = async ({ espId, machineType = null, status = null }) => {
+  const machineStatus = normalizeMachineStatus(status);
+  const supportedStatuses = [MACHINE_STATUSES.READY, MACHINE_STATUSES.IN_USE];
+
+  if (!supportedStatuses.includes(machineStatus)) {
+    return 0;
+  }
+
+  const params = [machineStatus, espId];
+
+  
   let machineFilter = "";
 
   if (machineType) {
     machineFilter = " AND d.jenisMesin = ?";
-    params.push(machineType);
+    params.push(String(machineType).toUpperCase());
   }
 
   const [result] = await dbPool.execute(
@@ -81,21 +90,24 @@ const createStatusMessageHandler = ({ updateReady = updateMesinReadyByEspId, log
     if (!topicData) return;
 
     const payload = parseStatusPayload(message);
-    if (!payload || normalizeMachineStatus(payload.status) !== MACHINE_STATUSES.READY) {
+    const status = normalizeMachineStatus(payload?.status);
+    if (![MACHINE_STATUSES.READY, MACHINE_STATUSES.IN_USE].includes(status)) {
       return;
     }
 
-    const machineType = payload.machineType ? String(payload.machineType).toUpperCase() : null;
+    const machineType = payload?.machineType ? String(payload.machineType).toUpperCase() : null;
     const affectedRows = await updateReady({
       espId: topicData.espId,
       machineType,
+      status,
     });
 
     statusLogger.info({
       espId: topicData.espId,
       machineType: machineType || "ALL",
+      status,
       affectedRows,
-    }, "[MQTT STATUS] Mesin READY diterima");
+    }, "[MQTT STATUS] Status mesin diterima");
   };
 
 const handleStatusMessage = createStatusMessageHandler();

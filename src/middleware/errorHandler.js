@@ -19,6 +19,8 @@ const errorHandler = (error, req, res, next) => {
   const requestedStatusCode = Number(error.statusCode || error.status);
   const statusCode = requestedStatusCode >= 400 && requestedStatusCode < 600 ? requestedStatusCode : 500;
   const isServerError = statusCode >= 500;
+  const shouldExposeMessage = !isServerError || error.expose === true;
+  const message = shouldExposeMessage ? error.message : "Internal Server Error";
 
   if (isServerError) {
     req.log.error(
@@ -33,15 +35,19 @@ const errorHandler = (error, req, res, next) => {
     );
   }
 
+  if (isServerError && error.expose === true) {
+    res.locals = res.locals || {};
+    res.locals.exposeServerError = true;
+  }
+
   const response = {
     success: false,
     code: error.code || getDefaultErrorCode(statusCode),
-    message: isServerError ? "Internal Server Error" : error.message,
+    message,
   };
 
-  // Keep the legacy client-facing `error` field for 4xx responses only.
-  // Never expose the original server error text on 5xx responses.
-  if (!isServerError) response.error = error.message;
+  // Keep the legacy client-facing `error` field when the message is safe.
+  if (shouldExposeMessage) response.error = message;
 
   return res.status(statusCode).json(response);
 };

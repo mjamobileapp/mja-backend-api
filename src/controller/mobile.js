@@ -295,12 +295,13 @@ const resetPassword = async (req, res) => {
   try {
     let result;
     let role;
+    const identifier = req.params.identifier || req.params.email;
 
     try {
-      result = await UserOwnerModel.resetPassword(req.params.email);
+      result = await UserOwnerModel.resetPassword(identifier);
       role = MOBILE_ROLES.OWNER;
     } catch (_) {
-      result = await KasirModel.resetPassword(req.params.email);
+      result = await KasirModel.resetPassword(identifier);
       role = MOBILE_ROLES.KASIR;
     }
 

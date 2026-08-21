@@ -116,6 +116,7 @@ const getPendingTransaksi = async (req, res) => {
       return {
         idDetailPending: row.idDetailPending,
         invoiceNumber: row.invoiceNumber,
+        namaPelanggan: row.namaPelanggan,
         jenisLayanan: layananPending.toUpperCase(),
         waktuOrderLengkap: row.waktuOrder ? waktuMasuk.toISOString() : "",
         infoMesinAsal: row.idMesinAsal
@@ -209,6 +210,27 @@ const startMesinByOwner = async (req, res) => {
   });
 };
 
+const startMesinByBackoffice = async (req, res) => {
+  const { mesinId } = req.body;
+
+  if (!isPositiveInteger(mesinId)) {
+    return res.status(400).json({
+      error: "mesinId wajib diisi dan harus integer lebih dari 0",
+    });
+  }
+
+  const context = await getMachineControlContext(req);
+  await TransaksiModel.startMesinByBackoffice({
+    ...context,
+    mesinId: Number(mesinId),
+  }, req.log);
+
+  return res.status(200).json({
+    success: "Start Mesin By Backoffice Success",
+    data: null,
+  });
+};
+
 const stopMesin = async (req, res) => {
   const { mesinId, invoiceNumber } = req.body;
 
@@ -222,6 +244,13 @@ const stopMesin = async (req, res) => {
     return res.status(400).json({
       error: "invoiceNumber tidak valid",
     });
+  }
+
+  if (
+    req.machineControlActor?.type === MACHINE_CONTROL_ACTOR_TYPES.KASIR ||
+    normalizeMobileRole(req.user?.role) === MOBILE_ROLES.KASIR
+  ) {
+    throw createHttpError(403, "Kasir tidak diizinkan menghentikan mesin", "FORBIDDEN");
   }
 
   const context = await getMachineControlContext(req);
@@ -258,12 +287,35 @@ const stopMesinByOwner = async (req, res) => {
   });
 };
 
+const stopMesinByBackoffice = async (req, res) => {
+  const { mesinId } = req.body;
+
+  if (!isPositiveInteger(mesinId)) {
+    return res.status(400).json({
+      error: "mesinId wajib diisi dan harus integer lebih dari 0",
+    });
+  }
+
+  const context = await getMachineControlContext(req);
+  await TransaksiModel.stopMesinByBackoffice({
+    ...context,
+    mesinId: Number(mesinId),
+  }, req.log);
+
+  return res.status(200).json({
+    success: "Stop Mesin By Backoffice Success",
+    data: null,
+  });
+};
+
 module.exports = {
   getJumlahTransaksi,
   getPendingTransaksi,
   createTransaksi,
   startMesin,
   startMesinByOwner,
+  startMesinByBackoffice,
   stopMesin,
   stopMesinByOwner,
+  stopMesinByBackoffice,
 };
